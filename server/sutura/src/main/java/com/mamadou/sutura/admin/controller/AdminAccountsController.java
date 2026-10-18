@@ -76,7 +76,7 @@ public class AdminAccountsController {
         if(before!=UserStatus.ACTIVE && before!=UserStatus.SUSPENDED)
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Only active or suspended accounts can use this action");
         if(before==next)return Map.of("status",next.name());
-        user.setUserStatus(next);users.save(user);
+        user.setUserStatus(next);if(next==UserStatus.SUSPENDED)user.setTokenVersion(user.getTokenVersion()+1);users.save(user);
         if(next==UserStatus.SUSPENDED)tokens.revokeAllUserRefreshTokens(user);
         record(admin,user,"ACCOUNT_STATUS",before.name(),next.name(),request.reason());
         return Map.of("status",next.name());

@@ -55,6 +55,6 @@ export const authApi = {
       twoFactorEnabled: false,
     }),
 
-  login: (username: string, password: string) =>
-    post<AuthPayload>("/api/auth/login", { username, password }),
+  login: (username: string, password: string, verification?: {challengeId:string;code:string}) =>
+    post<AuthPayload>("/api/auth/login", { username, password,twoFactorChallengeId:verification?.challengeId,twoFactorCode:verification?.code }),
 };

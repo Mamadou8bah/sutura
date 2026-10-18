@@ -1,3 +1,4 @@
+import type { VerificationCode } from "./twoFactor";
 import { availabilityFetch } from "./demo";
 import { API_BASE } from "./config";
 import { authFetch, readAuthJson } from "./sessionAuth";
@@ -9,6 +10,8 @@ type ApiEnvelope<T> = {
 };
 
 export type AuthSession = {
+  twoFactorRequired?: boolean;
+  twoFactorChallengeId?: string | null;
   accessToken: string;
   refreshToken: string;
   username: string;
@@ -65,10 +68,10 @@ export const agentApi = {
       body: JSON.stringify({ userId, amount, currency, idempotencyKey,
         ...(type === "DEPOSIT" ? { paymentMethod: "agent" } : { withdrawalMethod: "agent" }) }),
     }),
-  login: (email: string, password: string) =>
+  login: (email: string, password: string, verification?: VerificationCode) =>
     envelopeRequest<AuthSession>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ username: email, password }),
+      body: JSON.stringify({ username: email, password, twoFactorChallengeId: verification?.challengeId, twoFactorCode: verification?.code }),
     }),
 
   lookup: (reference: string) =>

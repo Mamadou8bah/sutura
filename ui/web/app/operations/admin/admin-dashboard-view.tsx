@@ -73,6 +73,7 @@ export function AdminDashboardView() {
   const [txnLookupId, setTxnLookupId] = useState("");
   const [txnLookupRef, setTxnLookupRef] = useState("");
   const [webhookReplayId, setWebhookReplayId] = useState("");
+  const [webhookReplayReason,setWebhookReplayReason]=useState("");
   const [chartRange, setChartRange] = useState<DateRangeKey>("7d");
   const [globalSearch, setGlobalSearch] = useState("");
   const [fraudHealth, setFraudHealth] = useState<{ enabled: boolean; healthy: boolean; baseUrl: string } | null>(null);
@@ -444,12 +445,13 @@ export function AdminDashboardView() {
   async function handleWebhookReplay(e: React.FormEvent) {
     e.preventDefault();
     const webhookId = Number(webhookReplayId);
-    if(hasApiSession()){try{await adminApi.reprocessWebhook(webhookId,webhookForm.reason);await loadAdminLiveData();notify("success",`Webhook ${webhookId} marked for reprocessing`);return;}catch(err){notify("error",err instanceof Error?err.message:"Could not reprocess webhook");return;}}
+    if(!Number.isSafeInteger(webhookId)||webhookId<=0||!webhookReplayReason.trim())return notify("error","Enter a valid event ID and a replay reason");
+    if(hasApiSession()){try{const result=await adminApi.replayWebhook(webhookId,webhookReplayReason.trim());await loadAdminLiveData();notify("success",result.message);return;}catch(err){notify("error",err instanceof Error?err.message:"Could not replay webhook");return;}}
     const webhook = data.webhooks.find((w) => w.id === webhookId);
     if (!webhook) return notify("error", `Webhook ${webhookId} not found`);
-    addAudit({ actionType: "REPLAY_WEBHOOK", entityType: "WEBHOOK_EVENT", entityId: webhookId, actor: "admin@sutura.local", changeDescription: "Replay via POST /api/v1/webhooks/replay", success: true });
+    addAudit({ actionType: "REPLAY_WEBHOOK", entityType: "WEBHOOK_EVENT", entityId: webhookId, actor: "admin@sutura.local", changeDescription: webhookReplayReason.trim(), success: true });
     notify("success", `Webhook ${webhookId} replay queued`);
-    setWebhookReplayId("");
+    setWebhookReplayId("");setWebhookReplayReason("");
   }
 
   const attentionItems = [
@@ -641,6 +643,7 @@ export function AdminDashboardView() {
               {action==="replay"&&<PanelCard title="Replay webhook">
                 <form className="space-y-3" onSubmit={handleWebhookReplay}>
                   <Field label="Webhook event ID"><input type="number" min="1" step="1" inputMode="numeric" className={inputClass} value={webhookReplayId} onChange={(e) => setWebhookReplayId(e.target.value)} required /></Field>
+                  <Field label="Replay reason"><textarea required maxLength={1000} className={inputClass} value={webhookReplayReason} onChange={e=>setWebhookReplayReason(e.target.value)} /></Field>
                   <SecondaryButton type="submit" className="w-full">Replay delivery</SecondaryButton>
                 </form>
               </PanelCard>}

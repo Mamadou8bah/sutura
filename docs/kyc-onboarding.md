@@ -36,7 +36,7 @@ record. Attempts are logged without exposing API keys or identity evidence.
 ## Customer and merchant screen
 
 Open `/app/verification` in the Sutura web client. Customers can reach it from
-Profile â†’ Verify your identity; live merchants have an owner-verification link
+Profile > Verify your identity; live merchants have an owner-verification link
 in their dashboard. The page creates a link on request, opens Sentinel in a
 separate tab, and refreshes the result after submission. It polls on page load
 when a session exists, while retaining the stored result on an outage.
@@ -47,15 +47,7 @@ A verified identity does not automatically approve a merchant application.
 
 ## Database and configuration
 
-Use `SUTURA_SENTINEL_BASE_URL` and `SUTURA_SENTINEL_API_KEY`, as described in
-`sentinel-integration.md`. Local `ddl-auto=update` creates the KYC table.
-Deployments using `ddl-auto=validate` must first apply
-`server/sutura/db/migrations/001_kyc_verifications.sql` to the Sutura database.
-The SQL is a manual migration; there is no automatic migration runner configured.
-
-No real database or externally hosted service was changed during this work.
-The new table's production schema still needs to be applied and validated in
-the intended deployment.
+Use `SUTURA_SENTINEL_BASE_URL` and `SUTURA_SENTINEL_API_KEY`, as described in [the integration contract](sentinel-integration.md). Local development can use Hibernate updates. Production runs packaged Flyway migrations V1-V16 before Hibernate schema validation; see [Render deployment](deploy-render.md) for existing-schema adoption. The historical SQL files are upgrade references.
 
 ## Verification and remaining work
 
@@ -76,7 +68,7 @@ limits automatically.
 Signed KYC callbacks now trigger an authoritative session fetch; polling remains
 available. See [sentinel-integration.md](sentinel-integration.md) for signature,
 tenant configuration and database upgrade instructions. Durable KYC event audit,
-approved higher cap values and runnable identity inference remain outstanding.
+approved higher cap values and independently accepted identity artifacts remain outstanding.
 Synthetic evidence still cannot grant a verified result.
 
 ## Mobile onboarding
@@ -113,3 +105,5 @@ Mobile validation: both Expo apps pass `tsc --noEmit` and export their web
 bundles successfully. Validation exports are under each app’s ignored
 `.expo/kyc-validation` directory and use an example API origin; they are build
 checks, not a deployed or live-backend demonstration.
+
+Automatic onboarding now queues a hosted session after verified contact/merchant submission. A durable worker retries outages; opening the verification screen also starts or reuses the session. Developer account owners can verify their integration identity. Changing owner identity in a merchant correction invalidates the prior local result and restarts onboarding. The queue never grants verification itself.

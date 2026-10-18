@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class WithdrawalService {
 
+    private final com.mamadou.sutura.operations.OperationalAlerts alerts;
     private final WithdrawalRepository withdrawalRepository;
     private final UserRepository userRepository;
     private final TransactionRepository transactionRepository;
@@ -238,7 +239,8 @@ public class WithdrawalService {
                 }
             }
         } catch (Exception ex) {
-            log.warn("ModemPay payout creation failed for withdrawal {}: {}", withdrawal.getReference(), ex.getMessage());
+            log.warn("ModemPay payout creation failed for withdrawal {}; outcome retained for reconciliation", withdrawal.getReference());
+            alerts.enqueue("payout-unknown:"+withdrawal.getId(),"Payout requires reconciliation","Payout "+withdrawal.getReference()+" has an unknown provider outcome. Its reservation is retained. Verify the provider status before any refund or redispatch.");
             withdrawal.setRejectionReason("Provider outcome unknown; reservation retained for reconciliation");
             withdrawalRepository.save(withdrawal);
         }

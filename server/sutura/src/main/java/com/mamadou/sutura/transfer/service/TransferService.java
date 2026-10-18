@@ -34,6 +34,7 @@ public class TransferService {
     private final CurrentUserService currentUserService;
     private final com.mamadou.sutura.user.repository.UserRepository userRepository;
     private final TransferComplianceService transferComplianceService;
+    private final TransferFailureRecorder failureRecorder;
 
     @Transactional(readOnly = true)
     public List<TransferListItem> listForCurrentUser() {
@@ -81,6 +82,7 @@ public class TransferService {
                                 validationResult.getInitiatedBy(), request.getAmount(),
                                 validationResult.getSourceWallet().getCurrency(), request.getDescription(), request.getReference());
                         if (transferComplianceService.assess(transaction)) {
+                            failureRecorder.track(transaction, idempotencyKey, fingerprint);
                             transaction = transferExecutionService.executePending(transaction);
                         }
                         idempotencyService.saveKey(idempotencyKey, fingerprint, transaction);

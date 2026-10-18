@@ -27,10 +27,15 @@ public class RateLimitingService {
     }
 
     public boolean isApiKeyAllowed(String apiKey, String operation) {
-        String key = "apikey:" + apiKey + ":" + operation;
+        String key = "apikey:" + keyFingerprint(apiKey) + ":" + operation;
         long requests = rateLimitConfig.getApiKeyLimit(operation);
         long windowSeconds = rateLimitConfig.getWindowSeconds(operation);
         return distributedRateLimiter.tryConsume(key, requests, Duration.ofSeconds(windowSeconds));
+    }
+
+    private String keyFingerprint(String key) {
+        try{return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(key.getBytes(java.nio.charset.StandardCharsets.UTF_8)));}
+        catch(java.security.NoSuchAlgorithmException e){throw new IllegalStateException("SHA-256 unavailable",e);}
     }
 
     public long getUserRemainingTokens(Long userId, String operation) {
@@ -46,7 +51,7 @@ public class RateLimitingService {
     }
 
     public void resetApiKeyLimit(String apiKey, String operation) {
-        log.info("Rate limit reset requested for apiKey={} operation={} (Redis keys expire automatically)", apiKey, operation);
+        log.info("Rate limit reset requested for key fingerprint={} operation={} (Redis keys expire automatically)", keyFingerprint(apiKey), operation);
     }
 
     @org.springframework.boot.context.properties.ConfigurationProperties(prefix = "sutura.ratelimit")

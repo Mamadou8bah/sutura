@@ -58,18 +58,17 @@ public class AuditLog extends AuditableEntity {
 
     private String userAgent;
 
-    private boolean success;
+    @Builder.Default
+    private boolean success = true;
 
     @Column(columnDefinition = "TEXT")
     private String errorDetails;
 
     @PrePersist
     protected void onCreate() {
+        super.onCreate();
         if (this.timestamp == null) {
             this.timestamp = LocalDateTime.now();
-        }
-        if (this.success == false) {
-            this.success = true;
         }
     }
 }

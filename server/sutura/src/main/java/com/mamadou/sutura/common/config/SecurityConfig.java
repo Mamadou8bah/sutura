@@ -53,6 +53,10 @@ public class SecurityConfig {
             CorrelationIdFilter correlationIdFilter,
             RateLimitingFilter rateLimitingFilter) throws Exception {
         return http
+                .cors(org.springframework.security.config.Customizer.withDefaults())
+                .exceptionHandling(errors -> errors
+                    .authenticationEntryPoint((request,response,error)->{response.setStatus(401);response.setContentType("application/json");response.getWriter().write("{\"message\":\"Authentication required\"}");})
+                    .accessDeniedHandler((request,response,error)->{response.setStatus(403);response.setContentType("application/json");response.getWriter().write("{\"message\":\"Access denied\"}");}))
                 .csrf((csrf) -> csrf.disable())
                 .httpBasic((httpBasic) -> httpBasic.disable())
                 .formLogin((formLogin) -> formLogin.disable())
@@ -63,6 +67,8 @@ public class SecurityConfig {
                                 "/api/auth/merchant/register/**",
                                 "/api/auth/login",
                                 "/api/auth/refresh",
+                                "/api/auth/recovery/request",
+                                "/api/auth/recovery/confirm",
                                 "/api/v1/webhooks/modempay/deposits",
                                 "/api/v1/webhooks/sentinel",
                                 "/api/v1/webhooks/modem-pay/**",

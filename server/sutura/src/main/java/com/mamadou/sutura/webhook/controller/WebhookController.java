@@ -37,9 +37,10 @@ public class WebhookController {
         return ResponseEntity.status(status).body(response);
     }
 
+    @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/replay")
-    public ResponseEntity<WebhookResponse> replay(@Valid @RequestBody WebhookReplayRequest request) {
-        WebhookResponse response = webhookRetryService.replay(request.webhookEventId());
+    public ResponseEntity<WebhookResponse> replay(@Valid @RequestBody WebhookReplayRequest request, @org.springframework.security.core.annotation.AuthenticationPrincipal com.mamadou.sutura.user.entity.User actor) {
+        WebhookResponse response = webhookRetryService.replay(request.webhookEventId(),request.reason(),actor);
         return ResponseEntity.status(response.accepted() ? HttpStatus.OK : HttpStatus.UNPROCESSABLE_ENTITY).body(response);
     }
 
@@ -85,7 +86,7 @@ public class WebhookController {
         } catch (Exception e) {
             log.error("Error processing Modem Pay webhook", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(new ModemPayWebhookResponse("ERROR", "Failed to process webhook: " + e.getMessage()));
+                    .body(new ModemPayWebhookResponse("ERROR", "Failed to process webhook"));
         }
     }
 

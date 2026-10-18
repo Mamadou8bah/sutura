@@ -63,6 +63,7 @@ public class RiskFlag extends AuditableEntity {
 
     @PrePersist
     protected void onCreate() {
+        super.onCreate();
         if (this.flaggedAt == null) {
             this.flaggedAt = LocalDateTime.now();
         }

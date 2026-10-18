@@ -30,6 +30,7 @@ import java.util.Map;
 public class RiskFlagService {
 
     private final RiskFlagRepository riskFlagRepository;
+    private final com.mamadou.sutura.operations.OperationalAlerts alerts;
     private final WalletRepository walletRepository;
 
     @Transactional
@@ -51,6 +52,7 @@ public class RiskFlagService {
             .build();
 
         RiskFlag saved = riskFlagRepository.save(flag);
+        if(riskLevel==RiskLevel.CRITICAL)alerts.enqueue("critical-risk:"+saved.getId(),"Critical risk flag","Critical risk flag #"+saved.getId()+" requires operator review. Wallet #"+walletId+", transaction #"+transactionId+". Inspect the risk desk before taking action.");
         log.info("Risk flag created: walletId={}, transactionId={}, riskLevel={}, score={}",
             walletId, transactionId, riskLevel, riskScore);
         return saved;

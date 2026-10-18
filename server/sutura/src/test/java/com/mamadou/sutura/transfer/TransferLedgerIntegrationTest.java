@@ -109,6 +109,31 @@ class TransferLedgerIntegrationTest {
 
     @AfterEach void clear() { SecurityContextHolder.clearContext(); }
 
+    @Test void pendingMerchantCannotCreateCollectionsOrReceiveTransfer() {
+        recipient.setRole(Role.MERCHANT);recipient.setUserStatus(UserStatus.PENDING_REVIEW);users.saveAndFlush(recipient);
+        var collection=new com.mamadou.sutura.paymentlink.dto.CreatePaymentLinkRequest();
+        collection.setWalletId(destination);collection.setAmount(new BigDecimal("50"));collection.setCurrency("GMD");
+        authenticate(recipient);
+        assertThatThrownBy(()->collections.create(recipient.getId(),collection)).hasMessageContaining("approved and active");
+        authenticate(sender);
+        assertThatThrownBy(()->transfers.transfer(request("50"),"pending-merchant-"+UUID.randomUUID())).hasMessageContaining("awaiting account approval");
+        assertBalances("100","0");
+    }
+
+    @Test void suspendedRecipientCannotReceiveANewTransfer() {
+        recipient.setUserStatus(UserStatus.SUSPENDED);users.saveAndFlush(recipient);
+        assertThatThrownBy(()->transfers.transfer(request("50"),"suspended-recipient-"+UUID.randomUUID())).hasMessageContaining("not active");
+        assertBalances("100","0");
+    }
+
+    @Test void activeDeveloperCanCreateCollectionsOnlyForItsOwnWallet() {
+        recipient.setRole(Role.DEVELOPER);users.saveAndFlush(recipient);authenticate(recipient);
+        var collection=new com.mamadou.sutura.paymentlink.dto.CreatePaymentLinkRequest();collection.setWalletId(destination);collection.setAmount(new BigDecimal("50"));collection.setCurrency("GMD");
+        assertThat(collections.create(recipient.getId(),collection).getStatus()).isEqualTo("ACTIVE");
+        collection.setWalletId(source);
+        assertThatThrownBy(()->collections.create(recipient.getId(),collection)).hasMessageContaining("does not belong");
+    }
+
     @Test void phoneTransferResolvesFormattedNumberAndReplaysOnce() {
         String local = String.format("%07d", 7000000L + recipient.getId());
         recipient.setPhoneNumber("+220 " + local.substring(0, 3) + " " + local.substring(3));
@@ -225,17 +250,22 @@ class TransferLedgerIntegrationTest {
         assertBalances("100", "0");
     }
 
-    @Test void completionFailureRollsBackPostingsUsageReservationAndProduct() {
+    @Test void completionFailureRollsBackMoneyAndRetainsFailedProduct() {
         var request = request("50");
         doThrow(new IllegalStateException("Injected completion failure")).when(transactionService).markCompleted(any(), anyString());
         assertThatThrownBy(() -> transfers.transfer(request, request.getReference())).hasMessageContaining("Injected");
         assertThat(postings.existsByTraceId(request.getReference())).isFalse();
         assertThat(traces.existsById(request.getReference())).isFalse();
-        assertThat(transactions.existsByReference(request.getReference())).isFalse();
+        assertThat(transactions.findByReference(request.getReference()).orElseThrow().getStatus()).isEqualTo(TransactionStatus.FAILED);
         assertThat(limits.findByWalletId(source).orElseThrow().getAmountSpentToday()).isEqualByComparingTo("0");
         assertBalances("100", "0");
         doCallRealMethod().when(transactionService).markCompleted(any(), anyString());
-        assertThat(transfers.transfer(request, request.getReference()).getTransaction().getStatus()).isEqualTo(TransactionStatus.COMPLETED);
+        var failedReplay=transfers.transfer(request, request.getReference());
+        assertThat(failedReplay.isIdempotentReplay()).isTrue();
+        assertThat(failedReplay.getTransaction().getStatus()).isEqualTo(TransactionStatus.FAILED);
+        assertBalances("100", "0");
+        var fresh=request("50");
+        assertThat(transfers.transfer(fresh, fresh.getReference()).getTransaction().getStatus()).isEqualTo(TransactionStatus.COMPLETED);
     }
 
     @Test void concurrentSpendingCannotOverdraw() throws Exception {

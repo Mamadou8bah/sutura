@@ -104,6 +104,16 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.BAD_REQUEST, message);
     }
 
+    @ExceptionHandler(org.springframework.dao.DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> recordConflict(org.springframework.dao.DataIntegrityViolationException e) {
+        return error(HttpStatus.CONFLICT,"Request conflicts with an existing record");
+    }
+
+    @ExceptionHandler(org.springframework.http.converter.HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> malformedJson(org.springframework.http.converter.HttpMessageNotReadableException e) {
+        return error(HttpStatus.BAD_REQUEST, "Invalid JSON request");
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> unhandledException(Exception e) {
         log.error("Unhandled exception", e);

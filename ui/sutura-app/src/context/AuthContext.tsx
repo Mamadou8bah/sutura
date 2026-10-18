@@ -1,3 +1,4 @@
+import {assertVerifiedSession, type VerificationCode} from "../api/twoFactor";
 import { demoSession, isDemoMode, serverAvailable, setDemoMode, subscribeDemo } from "../api/demo";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, type AuthSession, type CustomerRegistration } from "../api/client";
@@ -11,7 +12,7 @@ type AuthContextValue = {
   loading: boolean;
   newlyRegistered: boolean;
   signUp: (payload: CustomerRegistration) => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, verification?: VerificationCode) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -20,6 +21,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [newlyRegistered, setNewlyRegistered] = useState(false);
+  const pendingSignup=useRef<Pick<CustomerRegistration,"firstName"|"lastName"|"phoneNumber">|null>(null);
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const [loading, setLoading] = useState(true);
@@ -56,12 +58,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(async () => { if (!(await serverAvailable())) setDemoMode(true); setLoading(false); });
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const auth = await api.login(email, password);
-    if (auth.twoFactorRequired) {
-      throw new Error("Two-factor authentication is required for this account");
-    }
-    if (auth.role === "AGENT") {
+  const signIn = useCallback(async (email: string, password: string, verification?: VerificationCode) => {
+    const auth = await api.login(email, password, verification);
+    assertVerifiedSession(auth);
+    if (auth.role !== "USER") {
       throw new Error("Agent accounts must use the Sutura Agent app");
     }
     const stored: AuthSession = {
@@ -69,15 +69,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       refreshToken: auth.refreshToken,
       username: auth.username,
       role: auth.role,
-      firstName: auth.firstName,
-      lastName: auth.lastName,
+      firstName: auth.firstName ?? (pendingSignup.current?.phoneNumber===auth.username?pendingSignup.current.firstName:undefined),
+      lastName: auth.lastName ?? (pendingSignup.current?.phoneNumber===auth.username?pendingSignup.current.lastName:undefined),
     };
     await persistSession(stored);
+    if(pendingSignup.current?.phoneNumber===auth.username)setNewlyRegistered(true);
+    pendingSignup.current=null;
   }, [persistSession]);
 
   const signUp = useCallback(async (payload: CustomerRegistration) => {
     const auth = await api.register(payload);
+    pendingSignup.current={firstName:payload.firstName,lastName:payload.lastName,phoneNumber:payload.phoneNumber};
     if (auth.role !== "USER") throw new Error("Registration did not create a customer account");
+    assertVerifiedSession(auth);
     await persistSession({ ...auth, firstName: payload.firstName, lastName: payload.lastName });
     setNewlyRegistered(true);
   }, [persistSession]);

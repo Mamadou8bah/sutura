@@ -48,7 +48,7 @@ export const developerTabs: Tab[] = [
   { id: "overview", label: "Home", icon: homeIcon },
   { id: "keys", label: "API keys", icon: <NavIcon><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M7 11V8a5 5 0 0 1 9.9-1" /><path d="M8 11h8v8H8v-8Z" /></svg></NavIcon> },
   { id: "payments", label: "Payments", icon: <NavIcon><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 8h16v8H4V8Z" /><path d="M4 11h16" /></svg></NavIcon> },
-  { id: "webhooks", label: "Webhooks", icon: <NavIcon><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v3M6.2 17.8l2.1-2.1" /></svg></NavIcon> },
+  { id: "webhooks", label: "Integration", icon: <NavIcon><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v3M6.2 17.8l2.1-2.1" /></svg></NavIcon> },
 ];
 
 export function getTabsForRole(role: DemoRole): Tab[] {

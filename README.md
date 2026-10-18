@@ -16,6 +16,8 @@ Sutura is a digital payments platform built around a double-entry ledger. It sup
 
 The balance a user sees in an app is not a field that gets incremented and decremented in isolation. Every wallet is linked to a ledger account. Every movement of money is recorded as balanced debit and credit postings under a unique trace. The displayed balance is computed from those postings.
 
+Backend deployment on Render is configured in [render.yaml](render.yaml). Follow the [Render deployment runbook](docs/deploy-render.md) for credentials, migrations, first-admin setup and acceptance checks.
+
 Identity verification (KYC) and fraud scoring are handled through the separate **Sentinel** API. Hosted onboarding, transfer review and signed callbacks are implemented. The remaining validation and model requirements are tracked in [docs/readiness.md](docs/readiness.md).
 
 <div align="center">
@@ -631,3 +633,7 @@ This project is licensed under the [MIT License](LICENSE).
 <img src="https://capsule-render.vercel.app/api?type=waving&color=0:0a1628,100:123c91&height=100&section=footer&animation=fadeIn" width="100%" alt="" />
 
 </div>
+
+Production hardening, validation evidence and external go-live gates: [production readiness](docs/production-readiness.md).
+
+Proposal requirements, verification evidence and remaining acceptance work: [Sutura proposal audit](docs/proposal-audit.md).

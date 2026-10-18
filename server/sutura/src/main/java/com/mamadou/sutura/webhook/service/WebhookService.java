@@ -85,7 +85,7 @@ public class WebhookService {
             event.setStatus("FAILED");
             event.setFailureReason(ex.getMessage());
             webhookEventRepository.save(event);
-            return new WebhookResponse(false, event.getId(), event.getStatus(), ex.getMessage());
+            return new WebhookResponse(false, event.getId(), event.getStatus(), "Webhook processing failed; operator review required");
         }
     }
 

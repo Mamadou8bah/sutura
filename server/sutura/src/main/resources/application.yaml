@@ -1,4 +1,6 @@
 spring:
+  flyway:
+    enabled: false
   application:
     name: sutura
 
@@ -102,6 +104,8 @@ logging:
     max-history: 10
 
 sutura:
+  cors:
+    allowed-origins: ${SUTURA_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:8081,http://localhost:8082,http://localhost:8083}
   notifications:
     sms:
       provider: ${SUTURA_SMS_PROVIDER:noop}

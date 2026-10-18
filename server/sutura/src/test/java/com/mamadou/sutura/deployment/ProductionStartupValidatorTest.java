@@ -1,0 +1,120 @@
+package com.mamadou.sutura.deployment;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+import com.mamadou.sutura.common.config.ProductionStartupValidator;
+import org.junit.jupiter.api.Test;
+import org.springframework.mock.env.MockEnvironment;
+
+class ProductionStartupValidatorTest {
+  MockEnvironment valid() {
+    var env = new MockEnvironment().withProperty("sutura.auth.require-second-factor", "true");
+    for (String key :
+        new String[] {
+          "sutura.notifications.alert-email",
+          "spring.datasource.password",
+          "spring.data.redis.password",
+          "sutura.notifications.sms.twilio.account-sid",
+          "sutura.notifications.sms.twilio.auth-token",
+          "sutura.notifications.sms.twilio.from-number",
+          "spring.mail.host",
+          "spring.mail.username",
+          "spring.mail.password",
+          "sutura.notifications.email.from",
+          "sutura.webhooks.modempay.api-key",
+          "sutura.sentinel-webhook.tenant-code",
+          "sutura.fraud-detection.api-key"
+        }) env.withProperty(key, "configured-test-value");
+    env.withProperty("spring.jpa.hibernate.ddl-auto", "validate")
+        .withProperty("spring.flyway.enabled", "true")
+        .withProperty("spring.flyway.baseline-on-migrate", "false")
+        .withProperty("sutura.notifications.sms.provider", "twilio")
+        .withProperty("sutura.notifications.email.provider", "smtp")
+        .withProperty(
+            "sutura.webhooks.modempay.signing-secret", "provider-signing-test-secret-long-enough")
+        .withProperty(
+            "sutura.sentinel-webhook.signing-secret", "sentinel-signing-test-secret-long-enough")
+        .withProperty(
+            "jwt.secret",
+            java.util.Base64.getEncoder()
+                .encodeToString(
+                    "deployment-test-signing-key-at-least-32-bytes"
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+        .withProperty("sutura.cors.allowed-origins", "https://app.example.com")
+        .withProperty("sutura.webhooks.modempay.api-url", "https://api.modempay.com")
+        .withProperty("sutura.fraud-detection.base-url", "http://sentinel:8080")
+        .withProperty("sutura.fraud-detection.enabled", "true")
+        .withProperty("sutura.ratelimit.fail-open", "false")
+        .withProperty("spring.mail.properties.mail.smtp.starttls.required", "true");
+    return env;
+  }
+
+  @Test
+  void acceptsCompleteConfiguration() {
+    assertDoesNotThrow(() -> new ProductionStartupValidator(valid()).afterPropertiesSet());
+  }
+
+  @Test
+  void acceptsOnlyAuthenticatedOrRenderPrivateRedisUrls() {
+    assertDoesNotThrow(
+        () ->
+            new ProductionStartupValidator(
+                    valid()
+                        .withProperty(
+                            "spring.data.redis.url",
+                            "rediss://default:private-password@cache.example.com:6379"))
+                .afterPropertiesSet());
+    assertDoesNotThrow(
+        () ->
+            new ProductionStartupValidator(
+                    valid()
+                        .withProperty("spring.data.redis.url", "redis://red-internal:6379")
+                        .withProperty("RENDER", "true"))
+                .afterPropertiesSet());
+    assertThrows(
+        IllegalStateException.class,
+        () ->
+            new ProductionStartupValidator(
+                    valid().withProperty("spring.data.redis.url", "redis://cache.example.com:6379"))
+                .afterPropertiesSet());
+  }
+
+  @Test
+  void rejectsUnsafeDatabaseAndDisabledDelivery() {
+    for (String[] pair :
+        new String[][] {
+          {"spring.jpa.hibernate.ddl-auto", "update"},
+          {"spring.flyway.enabled", "false"},
+          {"spring.flyway.baseline-on-migrate", "true"},
+          {"sutura.notifications.sms.provider", "noop"},
+          {"sutura.notifications.email.provider", "noop"},
+          {"sutura.ratelimit.fail-open", "true"}
+        })
+      assertThrows(
+          IllegalStateException.class,
+          () ->
+              new ProductionStartupValidator(valid().withProperty(pair[0], pair[1]))
+                  .afterPropertiesSet());
+  }
+
+  @Test
+  void rejectsInvalidOriginsAndSecretsWithoutLeakingValues() {
+    for (String[] pair :
+        new String[][] {
+          {"sutura.cors.allowed-origins", "*"},
+          {"sutura.cors.allowed-origins", "http://app.example.com"},
+          {"sutura.cors.allowed-origins", "https://app.example.com/path"},
+          {"jwt.secret", "private-invalid-secret"},
+          {"sutura.sentinel-webhook.signing-secret", "private-short-secret"},
+          {"spring.mail.password", ""}
+        }) {
+      var error =
+          assertThrows(
+              IllegalStateException.class,
+              () ->
+                  new ProductionStartupValidator(valid().withProperty(pair[0], pair[1]))
+                      .afterPropertiesSet());
+      assertFalse(error.getMessage().contains("private-"));
+    }
+  }
+}

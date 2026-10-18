@@ -63,6 +63,7 @@ public class ReconciliationMismatch extends AuditableEntity {
 
     @PrePersist
     protected void onCreate() {
+        super.onCreate();
         if (this.resolved == false) {
             this.resolved = false;
         }

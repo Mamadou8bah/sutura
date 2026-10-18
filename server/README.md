@@ -2,6 +2,8 @@
 
 A comprehensive, high-performance payment processing platform built with Spring Boot 4.0.4, designed to handle complex financial transactions, wallet management, risk assessment, and reconciliation at scale.
 
+For the production Render deployment, configuration, migrations and first administrator, follow [Deploy Sutura on Render](../docs/deploy-render.md). The root `render.yaml` is the deployment definition; production uses Flyway and schema validation, not Hibernate schema updates.
+
 ## [CONTENTS] Table of Contents
 
 - [Overview](#overview)

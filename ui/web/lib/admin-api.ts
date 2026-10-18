@@ -5,6 +5,7 @@ async function rawRequest<T>(path: string, init?: RequestInit): Promise<T> {
   if (response.status === 204) {
     return undefined as T;
   }
+  if(response.ok&&!response.headers.get("content-type")?.includes("json"))return await response.text() as T;
   return readAuthenticatedJson<T>(response);
 }
 
@@ -52,6 +53,7 @@ export type AuditPage = {
 };
 
 export const adminApi = {
+  replayWebhook:(id:number,reason:string)=>rawRequest<{accepted:boolean;status:string;message:string}>("/api/v1/webhooks/replay",{method:"POST",body:JSON.stringify({webhookEventId:id,reason})}),
   listPayments:()=>rawRequest<{content:{id:number;reference:string;status:string;amount:number;currency:string;sourceWalletId:number|null;destinationWalletId:number|null;createdAt:string}[]}>("/api/v1/admin/operations/payments"),
   resolveMismatch:(id:number,reason:string)=>rawRequest(`/api/v1/reconciliation/mismatches/${id}/resolve?resolutionAction=${encodeURIComponent(reason)}`,{method:"PUT"}),
   getDashboard: () => rawRequest<AdminDashboard>("/api/v1/admin/dashboard"),

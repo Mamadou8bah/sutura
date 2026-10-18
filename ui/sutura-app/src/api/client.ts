@@ -1,3 +1,4 @@
+import type { VerificationCode } from "./twoFactor";
 import { availabilityFetch } from "./demo";
 import { API_BASE } from "./config";
 import { authFetch, readAuthJson } from "./sessionAuth";
@@ -9,6 +10,8 @@ type ApiEnvelope<T> = {
 };
 
 export type AuthSession = {
+  twoFactorRequired?: boolean;
+  twoFactorChallengeId?: string | null;
   accessToken: string;
   refreshToken: string;
   username: string;
@@ -104,10 +107,10 @@ export const api = {
   lookupMerchantPayment: (reference: string) => authRequest<MerchantPayment>(`/api/v1/payment-links/ref/${encodeURIComponent(reference)}`),
   payMerchant: (reference: string, walletId: number) => authRequest<MerchantPayment>(`/api/v1/payment-links/ref/${encodeURIComponent(reference)}/pay`, {method:"POST", body:JSON.stringify({walletId})}),
   register: (payload: CustomerRegistration) => envelopeRequest<AuthSession>("/api/auth/register", { method: "POST", body: JSON.stringify({ ...payload, role: "USER", twoFactorEnabled: false }) }),
-  login: (email: string, password: string) =>
+  login: (email: string, password: string, verification?: VerificationCode) =>
     envelopeRequest<AuthSession & { twoFactorRequired?: boolean }>("/api/auth/login", {
       method: "POST",
-      body: JSON.stringify({ username: email, password }),
+      body: JSON.stringify({ username: email, password, twoFactorChallengeId: verification?.challengeId, twoFactorCode: verification?.code }),
     }),
 
   listWallets: () => authRequest<WalletResponse[]>("/api/v1/wallets"),

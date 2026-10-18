@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public class AuthMapper {
 
     public User toUser(RegisterRequest request, String passwordHash) {
-        Role role = request.role() == null ? Role.DEVELOPER : request.role();
+        Role role = request.role() == null ? Role.USER : request.role();
 
         return User.builder()
                 .firstName(request.firstName())

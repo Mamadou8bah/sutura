@@ -1,3 +1,6 @@
+import { applicationApi, type MerchantApplication } from "../api/application";
+import { useAutoRefresh } from "../hooks/useAutoRefresh";
+import {assertVerifiedSession, type VerificationCode} from "../api/twoFactor";
 import { demoSession, isDemoMode, serverAvailable, setDemoMode, subscribeDemo } from "../api/demo";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { authApi } from "../api/merchantRegistration";
@@ -55,7 +58,9 @@ type AppContextValue = {
   updateReg: (patch: Partial<RegistrationDraft>) => void;
   resetReg: () => void;
   refreshSession: () => Promise<void>;
-  signIn: (email: string, password: string) => Promise<void>;
+  application: MerchantApplication | null;
+  refreshApplication: () => Promise<void>;
+  signIn: (email: string, password: string, verification?: VerificationCode) => Promise<void>;
   signOut: () => Promise<void>;
   completeRegistration: (businessName: string, userStatus: string) => void;
 };
@@ -91,6 +96,7 @@ const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [screen, setScreen] = useState<Screen>("welcome");
+  const [application,setApplication]=useState<MerchantApplication|null>(null);
   const [session, setSession] = useState<MerchantSession | null>(null);
   const sessionRef = useRef(session);
   sessionRef.current = session;
@@ -104,6 +110,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refreshSession = useCallback(async () => {
     const stored = await getSession();
+    sessionRef.current=stored;
     setSession(stored);
     if (stored?.userStatus === "PENDING_REVIEW") {
       setScreen("pending");
@@ -115,12 +122,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     if (!isDemoMode()) await clearSession();
     setDemoMode(false);
+    sessionRef.current=null;
+    setApplication(null);
     setSession(null);
     setScreen("welcome");
   }, []);
 
   const persistSession = useCallback(async (stored: MerchantSession) => {
     await updateStoredSession(stored);
+    sessionRef.current=stored;
     setSession(stored);
   }, []);
 
@@ -136,6 +146,19 @@ export function AppProvider({ children }: { children: ReactNode }) {
     refreshSession().finally(async () => { if (!(await serverAvailable())) setDemoMode(true); setLoading(false); });
   }, [refreshSession]);
 
+  const refreshApplication=useCallback(async()=>{
+    if(!sessionRef.current||isDemoMode())return;
+    const email=sessionRef.current.email;
+    const value=await applicationApi.status();
+    // Ignore a response belonging to a previous sign-in.
+    const current=sessionRef.current;if(!current||current.email!==email)return;
+    const updated={...current,businessName:value.businessName,userStatus:value.userStatus};
+    sessionRef.current=updated;await updateStoredSession(updated);setSession(updated);setApplication(value);
+    if(value.userStatus==="ACTIVE")setScreen(current=>current==="pending"?"home":current);
+  },[]);
+  useEffect(()=>{if(session&&!isDemoMode())void refreshApplication().catch(err=>setError(err instanceof Error?err.message:"Could not refresh application"));},[session?.email,refreshApplication]);
+  useAutoRefresh(refreshApplication,!!session&&!isDemoMode());
+
   const value = useMemo<AppContextValue>(
     () => ({
       screen,
@@ -148,12 +171,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       updateReg: (patch) => setReg((prev) => ({ ...prev, ...patch })),
       resetReg: () => setReg(emptyReg()),
       refreshSession,
-      signIn: async (email, password) => {
+      application,refreshApplication,
+      signIn: async (email, password, verification) => {
         setError("");
-        const auth = await authApi.login(email.trim(), password);
+        const auth = await authApi.login(email.trim(), password, verification);
         if (auth.role !== "MERCHANT") {
           throw new Error("This app is for merchant accounts only");
         }
+        assertVerifiedSession(auth);
         await saveSession(auth, "");
         await refreshSession();
       },
@@ -162,7 +187,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setScreen("verification");
       },
     }),
-    [screen, session, loading, error, reg, refreshSession, signOut],
+    [screen, session, loading, error, reg, refreshSession, signOut,application,refreshApplication],
   );
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

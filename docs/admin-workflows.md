@@ -10,7 +10,7 @@ The seven new directories load admin-only paginated server records (50 per page)
 
 
 
-Merchant application review supports APPROVED, REJECTED and MORE_INFO_REQUIRED with a required explanation. Live approval requires a pending merchant account and stored VERIFIED identity. Review locks the profile and account, records reviewer/reason/state in the audit trail, and activates the merchant account only on approval. Repeated identical decisions do not duplicate the audit or activation. Rejected applications require a future resubmission workflow; admins cannot silently turn a rejected application into approval.
+Merchant application review supports APPROVED, REJECTED and MORE_INFO_REQUIRED with a required explanation. Live approval requires a pending merchant account and stored VERIFIED identity. Review locks the profile and account, records reviewer/reason/state in the audit trail, and activates the merchant account only on approval. Repeated identical decisions do not duplicate the audit or activation. Rejected applications can be corrected and resubmitted by their authenticated merchant owner. Admins cannot silently turn a rejected application into approval.
 
 
 
@@ -26,7 +26,11 @@ Agent provisioning now creates a fixed-role AGENT account with a hashed initial 
 
 
 
-Limits: merchant resubmission, credential rotation and broader provider acceptance remain work. These additions do not certify deployment or override Sentinel review decisions.
+Merchant resubmission and credential recovery are implemented. Broader provider acceptance remains external validation. These additions do not certify deployment or override Sentinel review decisions.
 
 
 Admin navigation now uses separate `/dashboard/{section}` routes with a desktop sidebar. Account/operation details use `/dashboard/{section}/{id}`, and agent creation uses `/dashboard/agents/new`. Wallet freeze/unfreeze, payment reversal/search/lookups and webhook reprocessing/replay each have a dedicated task page. Record pages support direct loading and reload via an admin-only lookup endpoint, and back navigation returns to the list. Merchant details also expose separate account access state and suspension/restoration, without changing application approval status. Pending applications cannot be activated through the account control. Browser checks covered routed agent creation, suspension/restoration, back navigation, direct record loading/reload and mobile overflow.
+
+Proposal review update (18 October): pending merchant accounts cannot create collection links or receive new transfers; suspended/disabled wallet owners cannot participate in new or approved transfers. Developer keys are revoked through an owned public-ID endpoint. See [proposal audit](proposal-audit.md) for current evidence.
+
+Merchant decision refresh and corrections use `/api/v1/merchant/application` and `/resubmit`. Identity changes invalidate the local KYC grant and queue new verification. Approval provisions a single ledger-linked GMD collections wallet.

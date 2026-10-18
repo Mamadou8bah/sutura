@@ -1,6 +1,6 @@
 # Readiness checklist
 
-Updated 11 October 2026. Virtual cards are excluded by the user's explicit scope
+Updated 18 October 2026. Virtual cards are excluded by the user's explicit scope
 decision; the Sentinel LaTeX proposal has been updated accordingly.
 
 ## Implemented and checked
@@ -62,11 +62,9 @@ The web admin now includes customer and agent directories, merchant onboarding r
    supplied. Separate labelled identity/attack data is still needed; PaySim
    cannot train face, OCR, tampering or anti-spoof models. Verification stays
    unavailable until all four artifacts meet independent holdout gates.
-2. **Standalone document scoring.** Sentinel's non-stub gateway calls
-   `/cv/document-verify`, which is not implemented by the image service. Its
-   invoice/cheque OCR and signature models still need a supported contract and
-   appropriate labelled data; the identity OCR baseline must not be presented
-   as an invoice/cheque model.
+2. **Proposal scope boundary.** Standalone cheque, invoice and signature verification
+   are explicitly excluded by the current proposal. They are not Sutura completion
+   blockers. Sentinel identity-model acceptance remains a separate dependency.
 3. **Payment model acceptance.** Versions 1, 2 and 3 are trained locally.
    Version 3's optional pre-debit balance model detected 1,645/1,646 fraud cases
    with one false positive on the previously used PaySim window (99.94% recall
@@ -93,14 +91,18 @@ The web admin now includes customer and agent directories, merchant onboarding r
    collections, reversals/reconciliation, native camera permissions and failure
    recovery still need complete scenario coverage. Existing client build checks
    do not replace device/browser and two-application acceptance tests.
-7. **Deployment.** Apply the manual migrations, configure independent credentials,
-   and validate the intended PostgreSQL/Redis deployment. Docker builds/Compose
-   execution have not been tested because Docker is unavailable in this shell.
+7. **Render deployment acceptance.** The Blueprint, Docker image setup, Flyway migrations,
+   production guards, SMTP delivery adapter and bootstrap command are implemented.
+   See [deploy-render.md](deploy-render.md). Configure real provider credentials,
+   verify Render readiness and OTP/payment workflows, and rehearse database restore.
+   Docker/Redis runtime checks are configured in CI; they cannot run in this shell.
 
 ## Database upgrade
 
-Apply `server/sutura/db/migrations/001` through `009` in order on an existing
-Sutura PostgreSQL schema. Reconcile historical duplicate non-null payment keys
+New Render databases use the packaged Flyway V1-V16 migrations automatically.
+Existing schemas require a backup, staging rehearsal and explicit Flyway adoption;
+see [the Render runbook](deploy-render.md). The historical scripts
+`server/sutura/db/migrations/001` through `009` remain upgrade references. Reconcile historical duplicate non-null payment keys
 before adding the new unique indexes. New scoped keys are different from old
 global keys; drain old in-flight requests before switching versions. Do not
 reissue an old provider request under a new key without reconciliation.
@@ -109,8 +111,8 @@ Sentinel has a separate outbox migration in
 `sentinel/backend/db/migrations/001_signed_webhook_outbox.sql` and
 `sentinel/backend/db/migrations/002_transaction_type.sql` and
 `sentinel/backend/db/migrations/003_transaction_balance_context.sql` from the workspace
-root. Fresh schemas are created by Hibernate locally; that is not an automatic
-production migration strategy.
+root. Local development can use Hibernate schema updates; production uses Flyway and
+Hibernate validation only.
 
 ## Provider references
 
@@ -129,8 +131,56 @@ results and remaining acceptance work. These changes are local and uncommitted.
 
 ### Admin account actions
 
-Agent provisioning and customer/agent suspension/restoration now have live admin endpoints and demo UI actions. Provisioning validates international phone/email and password length, hashes the password, fixes the AGENT role and records an audit reason. Suspension revokes refresh sessions; access-token authentication and refresh reject suspended, banned, disabled or locked accounts. Restoration cannot activate pending merchant applications. The existing backend regression suite passed (122 tests), followed by 11 focused account/access/admin tests; web TypeScript and browser demo create/suspend/restore checks passed. Merchant resubmission and credential rotation remain unfinished.
+Agent provisioning and customer/agent suspension/restoration now have live admin endpoints and demo UI actions. Provisioning validates international phone/email and password length, hashes the password, fixes the AGENT role and records an audit reason. Suspension revokes refresh sessions; access-token authentication and refresh reject suspended, banned, disabled or locked accounts. Restoration cannot activate pending merchant applications. The existing backend regression suite passed (122 tests), followed by 11 focused account/access/admin tests; web TypeScript and browser demo create/suspend/restore checks passed. Merchant resubmission and credential recovery are implemented in the completion pass below.
 
 Admin navigation now uses separate `/dashboard/{section}` routes with a desktop sidebar. Account/operation details use `/dashboard/{section}/{id}`, and agent creation uses `/dashboard/agents/new`. Wallet freeze/unfreeze, payment reversal/search/lookups and webhook reprocessing/replay each have a dedicated task page. Record pages support direct loading and reload via an admin-only lookup endpoint, and back navigation returns to the list. Merchant details also expose separate account access state and suspension/restoration, without changing application approval status. Pending applications cannot be activated through the account control. Browser checks covered routed agent creation, suspension/restoration, back navigation, direct record loading/reload and mobile overflow.
 
-Validation for the routed admin screens: web TypeScript passed; 13 focused backend tests passed, including role-restricted record lookup and management-only account details. Browser checks passed for merchant suspension preserving application approval, pending-merchant control restrictions, missing records, and the routed create/detail/task flows. This restructuring does not complete merchant resubmission or external-provider acceptance.
+Validation for the routed admin screens: web TypeScript passed; 13 focused backend tests passed, including role-restricted record lookup and management-only account details. Browser checks passed for merchant suspension preserving application approval, pending-merchant control restrictions, missing records, and the routed create/detail/task flows. Merchant resubmission is completed in the later implementation pass; external-provider acceptance remains separate.
+
+## Render backend deployment pass - 18 October
+
+- Added a Render Blueprint for the API, PostgreSQL and private Key Value, validated against the official Render schema.
+- Added packaged Flyway migrations, tested on fresh PostgreSQL and explicit adoption of an existing schema without losing a stored receipt.
+- Production checks reject noop OTP delivery, missing/weak credentials, unsafe origins, disabled migrations and schema auto-updates. SMTP and bounded Twilio delivery are wired.
+- Added CORS and JSON authentication failures, restricted disabled/suspended API-key owners, fingerprinted API-key rate-limit keys and made Redis counters atomic with production fail-closed behavior.
+- Added a real Redis Actuator contributor, Render readiness checks, graceful container shutdown and a one-time first-admin command with required email 2FA.
+- Fixed audit/risk/reconciliation timestamp callbacks and preservation of failed audit status after a packaged production bootstrap exposed persistence failures.
+- See the Render runbook for external go-live gates and operational recovery. This pass does not assert live provider acceptance or a completed Render deployment.
+
+Deployment validation: PostgreSQL regression passed 148 tests; the additional HTTP readiness/security check passed. Final test reports contain 149 passes and two opt-in skips. The packaged prod/render bootstrap and duplicate-admin guard were exercised against an isolated PostgreSQL database. Render Blueprint schema validation passed. Docker and real Redis concurrency still require CI execution.
+
+
+## Production hardening pass - 18 October
+
+- Production requires second-factor verification; all four clients handle challenges before persisting sessions. Customer signup remains unverified until its SMS challenge succeeds.
+- Refresh tokens rotate atomically, use full-token SHA-256 fingerprints and reject reuse. Account token versions invalidate access tokens after logout-all, suspension, lockout and recovery.
+- Login and merchant OTP failures persist, are bounded and use database locks. OTP delivery and recovery requests have distributed per-account/contact limits.
+- Customer, agent and merchant password recovery uses a verified phone, single-use expiring codes and session revocation. Staff recovery is a separate audited infrastructure command.
+- Admin-only webhook replay and reconciliation resolution require reasons and record the actual actor. Restricted accounts cannot authenticate integration keys; public customer signup no longer creates developer accounts.
+- Transactional operational alerts persist uncertain payouts, critical risk and reconciliation incidents, retry SMTP delivery and expose failed alerts with audited admin retries.
+- PostgreSQL migration and regression run: 168 passed, two opt-in skips; follow-up account-control checks passed (169 passes across the current reports). All four TypeScript checks and 26 customer/merchant tests passed. Mocked browser checks confirmed admin 2FA and replay payloads.
+- [Production readiness and remaining external checks](production-readiness.md). Real provider acceptance and Render deployment remain outstanding.
+
+Packaged prod/render first-admin and staff-recovery commands passed on isolated PostgreSQL with V15; operator audit and queued recovery alert were verified. The updated Render Blueprint passed official schema validation.
+
+The production web build passed with its required HTTPS API URL configured. Backend packaging and all four TypeScript checks passed.
+
+Proposal-by-proposal evidence and remaining differences: [Sutura proposal audit](proposal-audit.md). This supersedes older completion notes where they conflict.
+
+
+## Proposal completion review - 18 October
+
+The proposal audit found and corrected missing transfer counterparty context, pre-approval merchant collections, developer collection permissions, non-persistent developer key revocation, a generated-key response-field mismatch and unsupported reconciliation requests reporting success. Execution rollback now preserves a FAILED product/idempotency result after rolling back all financial writes. Clean/broken-history reconciliation is exercised directly.
+
+The proposal verification script passed on PostgreSQL: 177 passed, two optional skips, zero failures/errors. Web TypeScript and production build passed; mocked browser checks verified generated key display and persistent revoke requests. See [proposal audit](proposal-audit.md) and [defense guide](sutura-demo.md) for exact scope, evidence and remaining acceptance work. This supersedes the old claim that all failure-path product records roll back without a durable outcome.
+
+Final role/error-response checks passed seven tests and backend packaging passed. Current reports contain 178 passes and two optional skips; the full PostgreSQL run preceded the added malformed-JSON test.
+
+
+## Sutura implementation completion
+
+Automatic KYC onboarding now follows verified contact/merchant registration through a durable retry queue (V16). Customer, merchant and developer verification screens can create/reuse the session automatically; pending results refresh while visible. Developer account owners can complete identity verification for integration payouts. Merchant applications refresh server-side decisions, expose correction/resubmission, invalidate changed owner identity and provision one ledger-linked GMD wallet on approval.
+
+The PostgreSQL implementation suite passed 184 tests with no failures/errors and two optional skips. Proposal-scope Sutura application implementation is complete based on the traced workflows; model training/acceptance, credentials, live provider/deployment checks and academic reporting remain separate. See [the current proposal audit](proposal-audit.md).
+
+Completion validation: all four TypeScript checks, backend packaging, the production web build, merchant Expo web export and 26 customer/merchant regression tests passed. Chromium checks against the production web build and exported merchant app confirmed review reasons, correction submission, approval status persistence and transition to active navigation. A developer verification check confirmed automatic hosted-session creation. External API responses were mocked for those browser checks; native hardware and live providers remain acceptance work.

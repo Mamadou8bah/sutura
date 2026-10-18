@@ -1,3 +1,4 @@
+import {assertVerifiedSession, type VerificationCode} from "../api/twoFactor";
 import { demoSession, isDemoMode, serverAvailable, setDemoMode, subscribeDemo } from "../api/demo";
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { agentApi, type AuthSession } from "../api/client";
@@ -9,7 +10,7 @@ const SESSION_KEY = "sutura_agent_session";
 type AuthContextValue = {
   session: AuthSession | null;
   loading: boolean;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string, verification?: VerificationCode) => Promise<void>;
   signOut: () => Promise<void>;
 };
 
@@ -50,11 +51,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .finally(async () => { if (!(await serverAvailable())) setDemoMode(true); setLoading(false); });
   }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const auth = await agentApi.login(email, password);
+  const signIn = useCallback(async (email: string, password: string, verification?: VerificationCode) => {
+    const auth = await agentApi.login(email, password, verification);
     if (auth.role !== "AGENT" && auth.role !== "ADMIN") {
       throw new Error("This app is for Sutura agents only");
     }
+    assertVerifiedSession(auth);
     await persistSession(auth);
   }, [persistSession]);
 

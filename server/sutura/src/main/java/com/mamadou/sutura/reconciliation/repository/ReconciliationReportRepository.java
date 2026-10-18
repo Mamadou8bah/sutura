@@ -16,6 +16,9 @@ import java.util.Optional;
 
 @Repository
 public interface ReconciliationReportRepository extends JpaRepository<ReconciliationReport, Long> {
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("update ReconciliationReport r set r.mismatchesResolved = r.mismatchesResolved + 1, r.updatedAt = CURRENT_TIMESTAMP where r.id = :id")
+    void incrementResolved(@Param("id") Long id);
 
     @Query("SELECT r FROM ReconciliationReport r WHERE r.reconciliationType = :type ORDER BY r.startedAt DESC")
     List<ReconciliationReport> findByTypeOrderedRecent(@Param("type") ReconciliationType type);

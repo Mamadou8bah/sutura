@@ -1,129 +1,54 @@
-# SuturaÃ¢â‚¬â€œSentinel scoring contract
+# Sutura and Sentinel integration contract
 
-Sutura calls Sentinel's Java API. Sentinel calls inference services and owns its
-cases. Only Sutura posts money to its ledger.
+Checked against the proposal and current Sutura source on 18 October 2026. Sentinel remains a separate repository and service. Only Sutura posts money.
 
-## Configuration
+## Configuration and ownership
 
-Set `SUTURA_SENTINEL_BASE_URL` to the Sentinel API origin (normally
-`http://localhost:8080` for direct local runs), and `SUTURA_SENTINEL_API_KEY` to
-the API key issued for Sutura's Sentinel tenant. Do not use a staff JWT or expose
-this key to mobile/browser clients. For Docker Desktop talking to a host API,
-the example origin is `http://host.docker.internal:8080`; other environments
-need an address reachable from the Sutura container.
+Sutura calls Sentinel's Java API using `SUTURA_SENTINEL_BASE_URL` and the tenant service credential `SUTURA_SENTINEL_API_KEY` in `X-Api-Key`. The key stays server-side. `externalCustomerId` is the authenticated Sutura user ID as a string. Configure `SUTURA_SENTINEL_TENANT_CODE` and the independent `SUTURA_SENTINEL_WEBHOOK_SECRET` for inbound signed callbacks.
 
-The previous direct-Python fraud URL/key and fail-open/review bypass settings
-are retired. Set the two Sentinel variables in existing private `.env` files
-and external deployment secrets. Sentinel runs separately from the Sutura
-production Compose file.
+## Onboarding
 
-## Request and response
+Registration automatically queues hosted identity onboarding after customer/developer contact verification or verified-phone merchant submission. The durable worker creates the Sentinel session and retries outages with backoff; repeated failures queue an operations alert. The clients route new accounts into verification and can immediately call `POST /api/v1/kyc/sessions`, reusing a worker-created session under the same account lock. Sutura stores the session reference and returns its hosted URL. Identity evidence is supplied only on the hosted page. `GET /api/v1/kyc` reads stored status and `POST /api/v1/kyc/refresh` polls the stored session. Signed KYC callbacks also fetch the authoritative status using the service key.
 
-`POST /api/integration/transactions/score`, with `X-Api-Key` and JSON:
+Customer, merchant and developer account owners can use these endpoints. Admin and agent roles cannot. Callers cannot supply another user ID or fabricate a result. Pending sessions are reused until expiry; flagged sessions retain their review history. Stored VERIFIED identity is required for elevated tiers/caps and merchant approval. Weak/invalid evidence and service failures cannot grant verification.
 
-```json
-{
-  "externalCustomerId": "7",
-  "externalTransactionId": "transfer-42",
-  "amount": 100.00,
-  "currency": "GMD",
-  "timestamp": "2026-10-04T10:00:00Z",
-  "channel": "api",
-  "location": "GM",
-  "counterparty": null
-}
-```
+## Scoring
 
-Customer IDs currently map to the Sutura user ID as a string. Sentinel requires
-that customer to exist in the calling tenant: its KYC completion currently
-creates/updates the customer. Sutura now provides hosted KYC through `/api/v1/kyc/sessions`;
-a missing Sentinel customer fails closed instead of being silently registered
-by the scoring client. Actual transfer counterparty context is a follow-up.
+Before transfer execution or cash/provider settlement, Sutura calls `POST /api/integration/transactions/score` with:
 
-The client requires matching external customer/transaction IDs, a nonempty
-Sentinel transaction ID, a finite anomaly score in `[0,1]`, an explanation and
-one of `ALLOW`, `REVIEW`, `BLOCK`. It adapts these to the existing Sutura fraud
-decision DTO; `features` stores provider, Sentinel transaction/case references
-and any model attribution supplied by Sentinel. Local admin fraud labels remain
-local audit annotations; Sentinel staff resolve Sentinel cases.
+- authenticated customer ID and stable external transaction reference;
+- amount, currency, timestamp, operation type, channel and location;
+- actual ledger balance before debit operations (never the credited recipient's balance);
+- the actual recipient customer ID for persisted wallet transfers, including collection payments. External deposit/payout counterparties remain absent when no trusted identity is available.
 
-| Result | Transfer behaviour |
+The response must match customer and transaction references and contain a Sentinel transaction ID, finite score in [0,1], explanation and ALLOW/REVIEW/BLOCK recommendation. Attribution and case references are retained in Sutura's evaluation records. Missing customers, credentials, timeouts and malformed responses fail closed.
+
+| Operation/result | Sutura action |
 | --- | --- |
-| Allow | Post synchronously and complete under one reserved ledger trace |
-| Review | Persist pending with a linked case; no money moves until signed approval |
-| Block | Persist failed; no posting |
-| Timeout, authentication failure or invalid response | Persist failed; no posting and no automatic rescore |
+| Transfer ALLOW | Balanced posting and history/limit updates commit atomically; complete once under the trace |
+| Transfer REVIEW | Persist PENDING with case references; no posting |
+| Transfer BLOCK or scoring outage | Persist FAILED; no posting |
+| Cash review approval | Mark APPROVED; an agent must complete within 15 minutes; the callback never exchanges cash |
+| Provider deposit review approval | Credit the matched original deposit once after current wallet checks |
+| Provider payout review approval | Recovery worker reserves funds before dispatch; approval itself does not send money |
+| Case rejection | Fail the pending operation without posting; already received provider funds require reconciliation/refund handling |
+| Case escalation | Keep the operation pending |
+| Unknown payout outcome | Retain the funds hold until reconciliation establishes the result |
 
-Transfers create the product record before scoring. Posting, limit usage, and
-completion share its database transaction. Review does not reserve funds: an
-approval rechecks current balance, active wallets, currency and limits. Failed
-rechecks mark the transfer failed. Request keys are scoped to the authenticated
-user; retries with changed request details are rejected. Sentinel also rejects
-reusing a tenant's external transaction reference with changed payment details.
+See [settlement review](settlement-reviews.md) for product-specific states. Retries reuse stored decisions and stable references rather than opening a new financial operation.
 
-Existing deposit/withdrawal gates still run at initiation. Their settlement-time
-decisions and durable review paths remain follow-up work. Execution errors can
-still roll back a transfer's evaluation record; this is not a complete durable
-failed-attempt audit for all exception paths.
+Posting and completion exceptions roll back ledger, history and limits together. After rollback, a separate transaction records a FAILED product and the request key, so retries return that failure and cannot post. A fresh attempt requires a new request/reference. This recovery write depends on the database being available and the application reaching rollback completion; a database outage or process termination still requires operational investigation. Normal scoring rejection/outage paths persist FAILED in the original transaction.
 
 ## Signed callbacks
 
-Configure the Sutura Sentinel tenant using the tenant administrator's
-`PUT /api/admin/settings/webhook` with `webhookUrl` pointing to Sutura's
-`/api/v1/webhooks/sentinel` and `signingSecret` containing a random secret of
-32–256 characters. Configure that same secret as
-`SUTURA_SENTINEL_WEBHOOK_SECRET` in Sutura and set
-`SUTURA_SENTINEL_TENANT_CODE` to the tenant's code. The signing secret is separate
-from its API key and must stay server-side. Omitting `signingSecret` in later
-settings updates retains the existing secret.
+The receiver is `POST /api/v1/webhooks/sentinel`. Required headers are `X-Sentinel-Event-Id`, `X-Sentinel-Timestamp` and `X-Sentinel-Signature`. The signature is lowercase hexadecimal HMAC-SHA256 over UTF-8 `timestamp + "." + exact raw JSON body`, using the configured signing secret. The timestamp permits 300 seconds of skew. Payload tenant and event IDs must match configuration and headers.
 
-The payload contains `eventId`, `tenantCode`, and `event`. Requests carry:
+Sutura stores a payload hash with each event receipt. Identical retries are acknowledged; a changed body under an existing event ID is rejected. Case callbacks must match case ID, Sentinel transaction ID, external reference and customer. Approval rechecks balance, wallet/account state, currency and limits. Resolved transfers cannot post again. KYC callbacks fetch authoritative status instead of accepting caller-supplied scores.
 
-- `X-Sentinel-Event-Id`: the matching payload event ID.
-- `X-Sentinel-Timestamp`: decimal Unix seconds; Sutura allows 300 seconds of skew.
-- `X-Sentinel-Signature`: lowercase hex HMAC-SHA256 of the UTF-8 timestamp,
-  a literal period, and the exact raw request body bytes.
+## Database deployment
 
-Sentinel stores events in its database transaction and dispatches committed rows
-every five seconds. Acknowledgement marks delivery complete; failures retry with
-backoff up to one hour, retaining the event ID/body and using a fresh timestamp.
-Events are enqueued only when the tenant has a webhook URL configured. This is
-at-least-once delivery; Sutura stores the payload hash with each processed event.
-An identical replay is acknowledged; reusing an ID with another body is rejected.
-Receipt and domain updates commit together.
+Sutura uses packaged Flyway migrations V1-V16 and `ddl-auto=validate` in production. Existing schemas need explicit adoption and an upgrade rehearsal; see [Render deployment](deploy-render.md). Historical `db/migrations` files are references, not an additional migration runner. Sentinel owns its separate migrations and outbound delivery mechanism.
 
-Transfer `CASE_DECIDED` events must match case ID, Sentinel transaction ID,
-external transaction reference and initiating customer. `APPROVE` revalidates
-and executes a pending review; `REJECT` fails it; `ESCALATE` keeps it pending.
-Terminal transfers cannot execute again. Sentinel serializes decisions and
-refuses changes to resolved cases. KYC callbacks cause an authenticated status
-fetch from Sentinel rather than trusting verification scores in the event body.
+## Acceptance evidence
 
-## Database upgrade
-
-Existing PostgreSQL deployments must manually apply Sutura migrations `001`
-and `002` under `server/sutura/db/migrations` and Sentinel's
-`backend/db/migrations/001_signed_webhook_outbox.sql`. There is no automatic
-migration runner. Local `ddl-auto=update` can create schema additions, but the
-SQL also reserves historical ledger traces. The unique Sentinel reference index
-requires reconciling any historical duplicate references before applying it.
-These migrations have not been applied to a live PostgreSQL database.
-
-## Local verification
-
-From `server/sutura`, run:
-
-```powershell
-.\mvnw.cmd -B '-Dtest=FraudDetectionClientTest,FraudDetectionServiceTest,KycServiceTest,SentinelKycClientTest,WalletPrivilegeTest,TransferComplianceTest,SentinelCallbackTest,LedgerReservationTest,LedgerPostingValidationTest' test
-```
-
-Tests use local HTTP servers, domain mocks, and an isolated H2 database for
-concurrent trace reservation/rollback. They do not demonstrate a running
-PostgreSQL/Redis/two-system deployment or all settled payment scenarios.
-The broader proposal review is in
-`../sentinel/docs/proposal/implementation-review.md` from the repository root.
-
-Hosted-KYC start/status/refresh APIs and the web verification screen are
-documented in [kyc-onboarding.md](kyc-onboarding.md). Mobile registration routes
-to verification. Elevated wallet tiers/caps require a stored VERIFIED result;
-verification does not automatically increase limits.
+`KycServiceTest`, `SentinelKycClientTest`, `WalletPrivilegeTest`, `FraudDetectionClientTest`, `FraudDetectionServiceTest`, `TransferComplianceTest`, `SentinelCallbackTest` and `TransferLedgerIntegrationTest` exercise Sutura's contract and settlement behavior. Stubbed responses establish caller behavior, not measured identity-model accuracy or a live two-service demonstration. See [proposal audit](proposal-audit.md).

@@ -28,7 +28,7 @@ public class CorrelationIdFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String correlationId = request.getHeader(CORRELATION_ID_HEADER);
-        if (correlationId == null || correlationId.isBlank()) {
+        if (correlationId == null || !correlationId.matches("[A-Za-z0-9._:-]{1,128}")) {
             correlationId = UUID.randomUUID().toString();
         }
 

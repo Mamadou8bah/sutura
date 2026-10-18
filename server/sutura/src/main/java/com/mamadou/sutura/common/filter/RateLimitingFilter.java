@@ -43,6 +43,7 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
             if (!distributedRateLimiter.tryConsume(bucketKey, rateLimit, Duration.ofMinutes(1))) {
                 response.setStatus(429);
+                response.setHeader("Retry-After","60");
                 response.setContentType("application/json");
                 response.getWriter().write(
                         "{\"success\":false,\"message\":\"Rate limit exceeded. Try again in 1 minute.\"}"
@@ -57,6 +58,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private boolean isRateLimitedEndpoint(String path) {
         return path.contains("/api/auth/login")
                 || path.contains("/api/auth/register")
+                || path.startsWith("/api/auth/merchant/register")
+                || path.startsWith("/api/auth/recovery/")
                 || path.contains("/api/auth/refresh");
     }
 

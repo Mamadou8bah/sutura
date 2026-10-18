@@ -1,46 +1,29 @@
 package com.mamadou.sutura.common.health;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
+import org.springframework.boot.health.contributor.Health;
+import org.springframework.boot.health.contributor.HealthIndicator;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.stereotype.Component;
 
-/**
- * Redis Health Indicator
- * Monitors Redis connection and reports health status
- * Access via: GET /actuator/health/redis
- *
- * Note: Health indicator functionality is disabled in this version.
- * Actuator health checks are not required for concurrency implementation.
- */
-@Slf4j
+/** A real Actuator contributor: Redis failure removes the API from readiness. */
 @Component
-public class RedisHealthIndicator {
+public class RedisHealthIndicator implements HealthIndicator {
+  private final RedisConnectionFactory connections;
 
-    private final RedisConnectionFactory connectionFactory;
+  public RedisHealthIndicator(RedisConnectionFactory connections) {
+    this.connections = connections;
+  }
 
-    public RedisHealthIndicator(RedisConnectionFactory connectionFactory) {
-        this.connectionFactory = connectionFactory;
-        log.info("Redis Health Indicator initialized");
+  @Override
+  public Health health() {
+    return isRedisHealthy() ? Health.up().build() : Health.down().build();
+  }
+
+  public boolean isRedisHealthy() {
+    try (var connection = connections.getConnection()) {
+      return "PONG".equalsIgnoreCase(connection.ping());
+    } catch (Exception error) {
+      return false;
     }
-
-    /**
-     * Check Redis connection health (manual check)
-     */
-    public boolean isRedisHealthy() {
-        try {
-            var connection = connectionFactory.getConnection();
-            if (connection != null) {
-                connection.ping();
-                connection.close();
-                log.debug("Redis health check passed");
-                return true;
-            } else {
-                log.warn("Redis connection is null");
-                return false;
-            }
-        } catch (Exception e) {
-            log.error("Redis health check failed", e);
-            return false;
-        }
-    }
+  }
 }

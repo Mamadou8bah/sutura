@@ -26,7 +26,7 @@ function IntegrationSteps() {
   const steps = [
     { n: "1", title: "Create an API key", body: "Generate a test or live key. Use it in the X-Api-Key header on every request." },
     { n: "2", title: "Create a payment", body: "Call the payment-links API from your backend. Redirect your customer to the checkout URL." },
-    { n: "3", title: "Confirm with webhooks", body: "Listen for payment.paid events on your server to fulfil orders or unlock access." },
+    { n: "3", title: "Check payment status", body: "Retrieve the collection reference from your server and fulfil the order only when its status is PAID." },
   ];
 
   return (
@@ -47,7 +47,6 @@ export function DeveloperDashboardView() {
   const [tab, setTab] = useState<Tab>("overview");
   const [message, setMessage] = useState<Message>(null);
   const [keyForm, setKeyForm] = useState({ name: "" });
-  const [webhookUrl, setWebhookUrl] = useState(data.webhookUrl);
   const [newKeySecret, setNewKeySecret] = useState<string | null>(null);
 
   const hasApiSession = () => Boolean(getAuthSession()?.accessToken);
@@ -66,7 +65,8 @@ export function DeveloperDashboardView() {
           status: k.revoked ? "revoked" : "active",
         })),
       }));
-    }).catch(() => undefined);
+    }).catch(err => notify("error",err instanceof Error?err.message:"Could not load API keys"));
+    void developerApi.listPayments().then(payments=>setData(prev=>({...prev,payments:payments.map(p=>({id:String(p.id),reference:p.reference,amount:`${p.currency} ${p.amount}`,status:p.status.toLowerCase(),customer:"Account payment",time:p.createdAt})),stats:[{label:"Payments",value:String(payments.length),hint:"Account history"},{label:"Completed",value:String(payments.filter(p=>p.status==="COMPLETED").length),hint:"Settled payments"},{label:"Active API keys",value:String(prev.apiKeys.filter(k=>k.status==="active").length),hint:"Server integrations"}]}))).catch(err=>notify("error",err instanceof Error?err.message:"Could not load payments"));
   }, []);
 
   function notify(type: "success" | "error", text: string) {
@@ -79,7 +79,7 @@ export function DeveloperDashboardView() {
     if (hasApiSession()) {
       try {
         const created = await developerApi.createApiKey(keyForm.name, 365);
-        if (created.apiToken) setNewKeySecret(created.apiToken);
+        if (created.apiKey) setNewKeySecret(created.apiKey);
         const keys = await developerApi.listApiKeys();
         setData((prev) => ({
           ...prev,
@@ -104,7 +104,11 @@ export function DeveloperDashboardView() {
     notify("error", "Please sign in to create API keys");
   }
 
-  function handleRevokeKey(id: string) {
+  async function handleRevokeKey(id: string) {
+    if(hasApiSession()) {
+      try { await developerApi.revokeApiKey(id); }
+      catch(err) { notify("error",err instanceof Error?err.message:"Could not revoke key");return; }
+    }
     setData((prev) => ({
       ...prev,
       apiKeys: prev.apiKeys.map((k) => (k.id === id ? { ...k, status: "revoked" } : k)),
@@ -112,11 +116,6 @@ export function DeveloperDashboardView() {
     notify("success", "API key revoked");
   }
 
-  function handleSaveWebhook(e: React.FormEvent) {
-    e.preventDefault();
-    setData((prev) => ({ ...prev, webhookUrl }));
-    notify("success", "Webhook URL saved");
-  }
 
   return (
     <DashboardShell tabs={developerTabs} activeTab={tab} onTabChange={(id) => setTab(id as Tab)} message={message}>
@@ -124,7 +123,7 @@ export function DeveloperDashboardView() {
         <div className="space-y-5">
           <PanelCard title="Accept payments in your app" subtitle="Three steps to go live">
             <p className="mb-5 max-w-2xl text-sm leading-relaxed text-slate-600">
-              Sutura lets developers collect payments by creating checkout links from their backend. Your app stays in control — we handle the payment flow and notify you when money arrives.
+              Sutura lets developers collect payments by creating checkout links from their backend. Your app stays in control — check the collection status through the API before fulfilling an order.
             </p>
             <IntegrationSteps />
             <div className="mt-6 flex flex-wrap gap-3">
@@ -141,7 +140,7 @@ export function DeveloperDashboardView() {
             {data.stats.map((stat) => (
               <div key={stat.label} className="rounded-2xl border border-slate-200 bg-white p-5">
                 <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{stat.label}</p>
-                <p className="mt-2 text-2xl font-black text-slate-950">{stat.value}</p>
+                <p className="mt-2 text-2xl font-black text-slate-950">{stat.label === "Active API keys" ? data.apiKeys.filter(k=>k.status === "active").length : stat.value}</p>
                 <p className="mt-1 text-xs text-slate-500">{stat.hint}</p>
               </div>
             ))}
@@ -246,41 +245,13 @@ Content-Type: application/json`}</pre>
         />
       )}
 
-      {tab === "webhooks" && (
-        <div className="grid gap-5 xl:grid-cols-[1fr_0.9fr]">
-          <div className="space-y-5">
-            <PanelCard title="Webhook endpoint" subtitle="We'll POST payment events to this URL">
-              <form className="space-y-3" onSubmit={handleSaveWebhook}>
-                <Field label="Endpoint URL">
-                  <input className={inputClass} value={webhookUrl} onChange={(e) => setWebhookUrl(e.target.value)} placeholder="https://your-app.com/webhooks/sutura" required />
-                </Field>
-                <PrimaryButton type="submit">Save endpoint</PrimaryButton>
-              </form>
-            </PanelCard>
+      {tab === "webhooks" && <PanelCard title="Integration status" subtitle="Confirm payment from your server">
+        <p className="text-sm leading-relaxed text-slate-600">Use your server-side API key to create a collection for a wallet owned by your integration account. Query the reference after checkout. PAID confirms settlement; REVIEW remains pending, FAILED must not fulfil an order, and REFUNDED records a reversal.</p>
+        <pre className="mt-4 overflow-x-auto rounded-xl bg-slate-950 p-4 font-mono text-xs text-emerald-100">{`GET /api/v1/payment-links/ref/<reference>\nX-Api-Key: <your server key>`}</pre>
+        <Link href="/app/verification" className="mt-4 inline-block text-sm font-bold underline">Verify integration account owner</Link>
+        <p className="mt-4 text-sm text-slate-600">Provider and Sentinel settlement callbacks are configured by platform operators. Merchant-configured outbound event delivery is not available.</p>
+      </PanelCard>}
 
-            <PanelCard title="Events you'll receive" subtitle="Handle these on your server">
-              <ul className="space-y-2 text-sm text-slate-700">
-                <li className="rounded-xl bg-slate-50 px-4 py-3"><span className="font-mono font-bold text-[#123c91]">payment.paid</span> — customer completed checkout</li>
-                <li className="rounded-xl bg-slate-50 px-4 py-3"><span className="font-mono font-bold text-[#123c91]">payment.failed</span> — payment did not go through</li>
-              </ul>
-            </PanelCard>
-          </div>
-
-          <DataTable
-            title="Recent deliveries"
-            subtitle="Webhook delivery log"
-            exportFilename="sutura-webhook-events"
-            dateKey="time"
-            pageSize={8}
-            rows={data.webhookEvents as unknown as Record<string, unknown>[]}
-            columns={[
-              { key: "type", label: "Event", render: (r) => <span className="font-mono text-xs">{String(r.type)}</span> },
-              { key: "status", label: "Status", render: (r) => <span className="capitalize">{String(r.status)}</span> },
-              { key: "time", label: "Time", render: (r) => formatTimestamp(String(r.time)), exportValue: (r) => formatTimestamp(String(r.time)) },
-            ]}
-          />
-        </div>
-      )}
     </DashboardShell>
   );
 }

@@ -20,10 +20,11 @@ export type ApiKeyInfo = {
   publicId: string;
   expiresAt: string;
   revoked: boolean;
-  apiToken: string | null;
+  apiKey: string | null;
 };
 
 export const developerApi = {
+  listPayments: async () => readAuthenticatedJson<Array<{id:number;reference:string;amount:number;currency:string;status:string;createdAt:string}>>(await authenticatedFetch("/api/v1/transactions")),
   listApiKeys: () => request<ApiKeyInfo[]>("/api/auth/api-keys"),
 
   createApiKey: (name: string, expiresInDays: number) =>
@@ -32,11 +33,8 @@ export const developerApi = {
       body: JSON.stringify({ name, expiresInDays }),
     }),
 
-  revokeApiKey: (apiKey: string) =>
-    request<string>("/api/auth/api-keys/revoke", {
-      method: "POST",
-      headers: { "X-Api-Key": apiKey },
-    }),
+  revokeApiKey: (publicId: string) =>
+    request<string>(`/api/auth/api-keys/${encodeURIComponent(publicId)}/revoke`, { method: "POST" }),
 
   deleteApiKey: (apiKey: string) =>
     request<string>("/api/auth/api-keys", {

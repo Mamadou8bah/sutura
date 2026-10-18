@@ -24,6 +24,7 @@ WORKDIR /app
 
 # Copy the JAR from builder stage
 COPY --from=builder /build/target/sutura-*.jar app.jar
+COPY --chmod=755 docker-entrypoint.sh /app/docker-entrypoint.sh
 
 # Create non-root user for security
 RUN addgroup -g 1000 sutura && \
@@ -39,12 +40,12 @@ USER sutura
 EXPOSE 5000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:5000/actuator/health || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:5000/actuator/health/readiness || exit 1
 
 # Set environment variables
 ENV SPRING_PROFILES_ACTIVE=prod
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
 
 # Run the application
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

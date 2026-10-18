@@ -12,6 +12,9 @@ import java.util.List;
 
 @Repository
 public interface ReconciliationMismatchRepository extends JpaRepository<ReconciliationMismatch, Long> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("select m from ReconciliationMismatch m where m.id = :id")
+    java.util.Optional<ReconciliationMismatch> findForResolution(@Param("id") Long id);
 
     @Query("SELECT m FROM ReconciliationMismatch m WHERE m.report.id = :reportId ORDER BY m.createdAt DESC")
     List<ReconciliationMismatch> findByReportId(@Param("reportId") Long reportId);

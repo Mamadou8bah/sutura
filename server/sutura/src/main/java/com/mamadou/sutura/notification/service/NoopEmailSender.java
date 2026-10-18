@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 @Slf4j
 @Service
+@org.springframework.boot.autoconfigure.condition.ConditionalOnProperty(prefix="sutura.notifications.email",name="provider",havingValue="noop",matchIfMissing=true)
 public class NoopEmailSender implements EmailSender {
 
     @Value("${sutura.notifications.email.from:no-reply@sutura.local}")
@@ -13,6 +14,6 @@ public class NoopEmailSender implements EmailSender {
 
     @Override
     public void send(String email, String subject, String body) {
-        log.info("Email sender not configured. Skipping email delivery from {} to {}", fromAddress, email);
+        log.warn("Email provider is noop; message not delivered");
     }
 }

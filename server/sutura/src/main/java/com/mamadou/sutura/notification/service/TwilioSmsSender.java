@@ -19,7 +19,7 @@ import java.util.Base64;
 @ConditionalOnProperty(prefix = "sutura.notifications.sms", name = "provider", havingValue = "twilio")
 public class TwilioSmsSender implements SmsSender {
 
-    private final HttpClient httpClient = HttpClient.newHttpClient();
+    private final HttpClient httpClient = HttpClient.newBuilder().connectTimeout(java.time.Duration.ofSeconds(5)).build();
     private final String accountSid;
     private final String authToken;
     private final String fromNumber;
@@ -42,6 +42,7 @@ public class TwilioSmsSender implements SmsSender {
 
         HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create("https://api.twilio.com/2010-04-01/Accounts/" + accountSid + "/Messages.json"))
+                .timeout(java.time.Duration.ofSeconds(10))
                 .header("Authorization", "Basic " + basicAuth())
                 .header("Content-Type", "application/x-www-form-urlencoded")
                 .POST(HttpRequest.BodyPublishers.ofString(body))
@@ -50,7 +51,7 @@ public class TwilioSmsSender implements SmsSender {
         try {
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                log.warn("Twilio SMS delivery failed with status {} and body {}", response.statusCode(), response.body());
+                log.warn("Twilio SMS delivery failed with status {}", response.statusCode());
                 throw new IllegalStateException("Unable to send verification SMS");
             }
         } catch (IOException ex) {

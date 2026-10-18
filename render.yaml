@@ -1,0 +1,80 @@
+# Import this Blueprint from the Sutura repository. Review paid resources before applying.
+services:
+  - type: web
+    name: sutura-api
+    runtime: docker
+    plan: standard
+    region: frankfurt
+    dockerfilePath: ./server/sutura/Dockerfile
+    dockerContext: ./server/sutura
+    autoDeployTrigger: checksPass
+    maxShutdownDelaySeconds: 60
+    healthCheckPath: /actuator/health/readiness
+    numInstances: 1
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod,render
+      - key: RENDER_DB_HOST
+        fromDatabase: {name: sutura-db, property: host}
+      - key: RENDER_DB_PORT
+        fromDatabase: {name: sutura-db, property: port}
+      - key: RENDER_DB_NAME
+        fromDatabase: {name: sutura-db, property: database}
+      - key: SPRING_DATASOURCE_USERNAME
+        fromDatabase: {name: sutura-db, property: user}
+      - key: SPRING_DATASOURCE_PASSWORD
+        fromDatabase: {name: sutura-db, property: password}
+      - key: REDIS_URL
+        fromService: {name: sutura-cache, type: keyvalue, property: connectionString}
+      - key: JWT_SECRET
+        generateValue: true
+      - key: SUTURA_CORS_ALLOWED_ORIGINS
+        sync: false
+      - key: SUTURA_SENTINEL_BASE_URL
+        sync: false
+      - key: SUTURA_SENTINEL_API_KEY
+        sync: false
+      - key: SUTURA_SENTINEL_TENANT_CODE
+        sync: false
+      - key: SUTURA_SENTINEL_WEBHOOK_SECRET
+        sync: false
+      - key: MODEMPAY_API_KEY
+        sync: false
+      - key: MODEMPAY_PUBLIC_KEY
+        sync: false
+      - key: MODEMPAY_WEBHOOK_SIGNING_SECRET
+        sync: false
+      - key: MODEMPAY_API_URL
+        value: https://api.modempay.com
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM_NUMBER
+        sync: false
+      - key: SUTURA_ALERT_EMAIL
+        sync: false
+      - key: SUTURA_EMAIL_FROM
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+  - type: keyvalue
+    name: sutura-cache
+    plan: starter
+    region: frankfurt
+    maxmemoryPolicy: noeviction
+    ipAllowList: []
+databases:
+  - name: sutura-db
+    plan: basic-1gb
+    region: frankfurt
+    postgresMajorVersion: "17"
+    databaseName: sutura
+    user: sutura
+    ipAllowList: []

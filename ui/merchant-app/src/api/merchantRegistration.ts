@@ -1,3 +1,4 @@
+import type { VerificationCode } from "./twoFactor";
 import { post } from "./client";
 
 export type StepResponse = {
@@ -58,6 +59,6 @@ export const merchantRegistrationApi = {
 export type AuthPayload = CompleteResponse["auth"];
 
 export const authApi = {
-  login: (username: string, password: string) =>
-    post<AuthPayload>("/api/auth/login", { username, password }),
+  login: (username: string, password: string, verification?: VerificationCode) =>
+    post<AuthPayload>("/api/auth/login", { username, password, twoFactorChallengeId: verification?.challengeId, twoFactorCode: verification?.code }),
 };

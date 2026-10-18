@@ -30,7 +30,7 @@ export default function VerificationPage() {
       router.replace("/login");
       return;
     }
-    if (auth?.accessToken && auth.role !== "customer" && auth.role !== "merchant") {
+    if (auth?.accessToken && auth.role !== "customer" && auth.role !== "merchant" && auth.role !== "developer") {
       router.replace("/dashboard");
       return;
     }
@@ -39,13 +39,21 @@ export default function VerificationPage() {
     kycApi.status()
       .then(async (local) => {
         if (active) setRecord(local);
-        return local.sessionId ? await kycApi.refresh() : local;
+        return local.sessionId ? await kycApi.refresh() : local.status === "NOT_STARTED" ? await kycApi.start() : local;
       })
       .then((value) => { if (active) setRecord(value); })
       .catch((err) => { if (active) setError(err instanceof Error ? err.message : "Could not load verification"); })
       .finally(() => { if (active) setBusy(false); });
     return () => { active = false; };
   }, [router]);
+
+  useEffect(()=>{
+    if(record?.status!=="PENDING"||busy)return;
+    let running=false;let stopped=false;
+    const refresh=async()=>{if(running||stopped||document.visibilityState!=="visible")return;running=true;try{const value=await kycApi.refresh();if(!stopped){setRecord(value);setError(null);}}catch(err){if(!stopped)setError(err instanceof Error?err.message:"Could not refresh identity");}finally{running=false;}};
+    const timer=setInterval(()=>void refresh(),30000);window.addEventListener("focus",refresh);
+    return()=>{stopped=true;clearInterval(timer);window.removeEventListener("focus",refresh);};
+  },[record?.status,busy]);
 
   async function run(action: "start" | "refresh") {
     setBusy(true);

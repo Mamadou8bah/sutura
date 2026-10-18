@@ -18,17 +18,17 @@ public class DistributedRateLimiter {
     private static final String KEY_PREFIX = "sutura:ratelimit:";
 
     private final StringRedisTemplate redisTemplate;
+    @org.springframework.beans.factory.annotation.Value("${sutura.ratelimit.fail-open:true}")
+    private boolean failOpen=true;
+    private static final org.springframework.data.redis.core.script.DefaultRedisScript<Long> INCREMENT =
+        new org.springframework.data.redis.core.script.DefaultRedisScript<>(
+            "local n=redis.call('INCR',KEYS[1]); if n==1 then redis.call('PEXPIRE',KEYS[1],ARGV[1]); end; return n",Long.class);
 
     public boolean tryConsume(String bucketKey, long limit, Duration window) {
         String redisKey = KEY_PREFIX + bucketKey;
         try {
-            Long count = redisTemplate.opsForValue().increment(redisKey);
-            if (count == null) {
-                return true;
-            }
-            if (count == 1L) {
-                redisTemplate.expire(redisKey, window);
-            }
+            Long count = redisTemplate.execute(INCREMENT,java.util.List.of(redisKey),String.valueOf(window.toMillis()));
+            if(count==null)return failOpen;
             boolean allowed = count <= limit;
             if (!allowed) {
                 log.warn("Rate limit exceeded for key={} count={} limit={}", bucketKey, count, limit);
@@ -36,8 +36,7 @@ public class DistributedRateLimiter {
             return allowed;
         } catch (Exception ex) {
             log.error("Redis rate limit check failed for key={}: {}", bucketKey, ex.getMessage());
-            // Fail open on Redis errors so auth is not fully blocked by cache outages.
-            return true;
+            return failOpen;
         }
     }
 }

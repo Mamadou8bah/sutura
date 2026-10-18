@@ -60,6 +60,7 @@ public class ReconciliationReport extends AuditableEntity {
 
     @PrePersist
     protected void onCreate() {
+        super.onCreate();
         if (this.startedAt == null) {
             this.startedAt = LocalDateTime.now();
         }

@@ -30,6 +30,9 @@ public class MerchantRegistrationSession {
 
     private String otpHash;
 
+    @Column(nullable=false)
+    private int failedVerificationAttempts;
+
     private LocalDateTime otpExpiresAt;
 
     private int stage;

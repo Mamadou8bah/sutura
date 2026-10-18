@@ -56,6 +56,9 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [challengeId,setChallengeId]=useState("");
+  const [verificationCode,setVerificationCode]=useState("");
+  const [finishingSignup,setFinishingSignup]=useState(false);
   const [loading, setLoading] = useState(false);
   const [signup, setSignup] = useState({
     firstName: "",
@@ -87,7 +90,10 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
         }
       }
 
-      const auth = await authApi.login(email.trim(), password);
+      if(challengeId&&!/^[0-9]{6}$/.test(verificationCode))throw new Error("Enter the six-digit verification code.");
+      const auth = await authApi.login(email.trim(), password,challengeId?{challengeId,code:verificationCode}:undefined);
+      if(auth.twoFactorRequired&&auth.twoFactorChallengeId){setChallengeId(auth.twoFactorChallengeId);setVerificationCode("");return;}
+      if(!auth.accessToken||!auth.refreshToken)throw new Error("Sign-in did not return a verified session.");
       const role = mapBackendRole(auth.role);
       if (role !== "admin" && role !== "developer") {
         setError("Web login is for developer and admin accounts. Use the mobile apps for customer or merchant access.");
@@ -100,7 +106,7 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
         refreshToken: auth.refreshToken,
         userStatus: auth.userStatus,
       });
-      window.location.href = getDashboardPath(role);
+      window.location.href = finishingSignup && role === "developer" ? "/app/verification" : getDashboardPath(role);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
@@ -127,6 +133,7 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
         password: signup.password,
         role: "DEVELOPER",
       });
+      if(auth.twoFactorRequired&&auth.twoFactorChallengeId){setFinishingSignup(true);setEmail(signup.email.trim());setPassword(signup.password);setChallengeId(auth.twoFactorChallengeId);setVerificationCode("");setMode("login");return;}
       saveAuthSession({
         username: signup.email.trim(),
         role: auth.role,
@@ -136,7 +143,7 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
         firstName: signup.firstName.trim(),
         lastName: signup.lastName.trim(),
       });
-      window.location.href = getDashboardPath(mapBackendRole(auth.role));
+      window.location.href = "/app/verification";
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {
@@ -151,9 +158,9 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
           <form className="space-y-3.5 sm:space-y-4" onSubmit={handleLogin}>
 
             <AuthField
-              type="email"
+              type="text"
               name="email"
-              placeholder="Enter your email address"
+              placeholder="Email or phone number"
               icon={<MailIcon />}
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -167,17 +174,10 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
               onChange={(event) => setPassword(event.target.value)}
             />
 
+            {challengeId&&<label className="block text-sm font-semibold">Verification code<input aria-label="Verification code" className={inputClass+" mt-2"} inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" required value={verificationCode} onChange={e=>setVerificationCode(e.target.value.replace(/[^0-9]/g,"").slice(0,6))}/><span className="mt-2 block text-xs text-slate-500">Check your email or SMS. The code expires in five minutes.</span><button type="button" className="mt-2 text-sm underline" onClick={()=>{setChallengeId("");setVerificationCode("");}}>Start sign-in again</button></label>}
             {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
 
-            <div className="flex items-center justify-between gap-3 text-sm font-semibold text-slate-700">
-              <label className="flex min-w-0 items-center gap-2.5">
-                <input type="checkbox" defaultChecked className="h-4 w-4 shrink-0 rounded border-slate-300 accent-[#123c91] sm:h-5 sm:w-5" />
-                <span className="truncate">Remember me</span>
-              </label>
-              <a href="#" className="shrink-0 font-black text-[#123c91]">
-                Forgot password?
-              </a>
-            </div>
+            <p className="text-xs text-slate-500">For account recovery, contact your Sutura administrator. Temporary login locks expire after 15 minutes.</p>
 
             <button
               type="submit"
@@ -187,16 +187,6 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
               {loading ? "Signing in…" : "Login"}
             </button>
 
-            <DividerText>or continue with</DividerText>
-
-            <div className="grid grid-cols-2 gap-3">
-              <SocialButton label="Google">
-                <GoogleIcon />
-              </SocialButton>
-              <SocialButton label="Facebook">
-                <FacebookIcon />
-              </SocialButton>
-            </div>
           </form>
         ) : (
           <form className="space-y-3.5 sm:space-y-4" onSubmit={handleSignup}>

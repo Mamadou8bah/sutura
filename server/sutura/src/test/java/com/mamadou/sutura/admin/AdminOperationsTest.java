@@ -33,7 +33,7 @@ class AdminOperationsTest {
   @Bean MerchantProfileRepository merchants(){return mock(MerchantProfileRepository.class);}
   @Bean KycVerificationRepository kyc(){return mock(KycVerificationRepository.class);}
   @Bean AuditLogRepository audit(){return mock(AuditLogRepository.class);}
-  @Bean AdminOperationsController controller(UserRepository users,MerchantProfileRepository merchants,KycVerificationRepository kyc,AuditLogRepository audit){return new AdminOperationsController(users,merchants,mock(DepositRepository.class),mock(WithdrawalRepository.class),mock(PaymentLinkRepository.class),mock(TransactionRepository.class),kyc,audit);}
+  @Bean AdminOperationsController controller(UserRepository users,MerchantProfileRepository merchants,KycVerificationRepository kyc,AuditLogRepository audit){return new AdminOperationsController(users,mock(com.mamadou.sutura.wallet.service.WalletService.class),merchants,mock(DepositRepository.class),mock(WithdrawalRepository.class),mock(PaymentLinkRepository.class),mock(TransactionRepository.class),kyc,audit);}
  }
  AnnotationConfigApplicationContext context;AdminOperationsController controller;UserRepository users;MerchantProfileRepository merchants;KycVerificationRepository kyc;AuditLogRepository audit;
  @BeforeEach void setup(){context=new AnnotationConfigApplicationContext(Config.class);controller=context.getBean(AdminOperationsController.class);users=context.getBean(UserRepository.class);merchants=context.getBean(MerchantProfileRepository.class);kyc=context.getBean(KycVerificationRepository.class);audit=context.getBean(AuditLogRepository.class);authenticate("ADMIN");}

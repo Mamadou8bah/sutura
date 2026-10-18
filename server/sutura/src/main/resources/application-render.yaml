@@ -1,0 +1,14 @@
+# Activate together with prod: SPRING_PROFILES_ACTIVE=prod,render
+server:
+  port: ${PORT:10000}
+spring:
+  datasource:
+    url: jdbc:postgresql://${RENDER_DB_HOST}:${RENDER_DB_PORT:5432}/${RENDER_DB_NAME}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:10}
+      minimum-idle: 2
+  data:
+    redis:
+      url: ${REDIS_URL}
+      host: localhost # URL takes precedence; avoids unresolved generic-host placeholders.
+      password: ${REDIS_PASSWORD:}

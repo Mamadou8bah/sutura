@@ -38,8 +38,10 @@ public class MerchantRegistrationService {
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final SmsSender smsSender;
+    private final com.mamadou.sutura.common.ratelimit.DistributedRateLimiter otpLimits;
     private final RefreshTokenService refreshTokenService;
     private final AuthMapper authMapper;
+    private final com.mamadou.sutura.kyc.onboarding.KycOnboardingService onboarding;
     private final SecureRandom secureRandom = new SecureRandom();
 
     @Transactional
@@ -49,6 +51,7 @@ public class MerchantRegistrationService {
             throw new ProfileAlreadyExistException("This phone number is already registered");
         }
 
+        if(!otpLimits.tryConsume("merchant-otp:"+otpPhoneHash(phone),3,java.time.Duration.ofMinutes(10)))throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.TOO_MANY_REQUESTS,"Too many verification codes requested. Please wait before retrying.");
         String code = String.format("%06d", secureRandom.nextInt(1_000_000));
         String token = UUID.randomUUID().toString();
 
@@ -65,7 +68,7 @@ public class MerchantRegistrationService {
 
         sessionRepository.save(session);
         smsSender.send(phone, "Your Sutura merchant verification code is " + code + ". Valid for 10 minutes.");
-        log.info("Merchant registration OTP sent to {}", phone);
+        log.info("Merchant registration OTP dispatched");
 
         return new MerchantRegistrationStepResponse(
                 token,
@@ -75,7 +78,7 @@ public class MerchantRegistrationService {
         );
     }
 
-    @Transactional
+    @Transactional(noRollbackFor=IllegalArgumentException.class)
     public MerchantRegistrationStepResponse verifyPhone(MerchantVerifyPhoneRequest request) {
         MerchantRegistrationSession session = requireSession(request.registrationToken());
         ensureNotExpired(session);
@@ -83,7 +86,11 @@ public class MerchantRegistrationService {
         if (session.getOtpExpiresAt() == null || session.getOtpExpiresAt().isBefore(LocalDateTime.now())) {
             throw new IllegalArgumentException("Verification code expired. Request a new code.");
         }
+        if(session.isPhoneVerified()||session.getFailedVerificationAttempts()>=5||session.getOtpHash()==null)throw new IllegalArgumentException("Verification session cannot be reused. Request a new code.");
         if (!passwordEncoder.matches(request.code(), session.getOtpHash())) {
+            session.setFailedVerificationAttempts(session.getFailedVerificationAttempts()+1);
+            if(session.getFailedVerificationAttempts()>=5){session.setOtpHash(null);session.setOtpExpiresAt(null);}
+            sessionRepository.save(session);
             throw new IllegalArgumentException("Invalid verification code");
         }
 
@@ -188,12 +195,13 @@ public class MerchantRegistrationService {
                 .submittedAt(LocalDateTime.now())
                 .build();
         merchantProfileRepository.save(profile);
+        onboarding.enqueue(user);
 
         sessionRepository.delete(session);
 
         String refreshToken = refreshTokenService.generateRefreshToken(user);
         String accessToken = refreshTokenService.generateAccessToken(user);
-        AuthResponse auth = authMapper.authenticated(user, accessToken, refreshToken, ACCESS_TOKEN_TTL_SECONDS);
+        AuthResponse auth = authMapper.authenticated(user, accessToken, refreshToken, refreshTokenService.accessTokenTtlSeconds());
 
         return new MerchantRegistrationCompleteResponse(
                 auth,
@@ -204,7 +212,7 @@ public class MerchantRegistrationService {
     }
 
     private MerchantRegistrationSession requireSession(String token) {
-        return sessionRepository.findById(token)
+        return sessionRepository.findForUpdate(token)
                 .orElseThrow(() -> new IllegalArgumentException("Registration session not found or expired"));
     }
 
@@ -240,6 +248,8 @@ public class MerchantRegistrationService {
         }
         return digits;
     }
+
+    private String otpPhoneHash(String phone){try{return java.util.HexFormat.of().formatHex(java.security.MessageDigest.getInstance("SHA-256").digest(phone.getBytes(java.nio.charset.StandardCharsets.UTF_8)));}catch(java.security.NoSuchAlgorithmException e){throw new IllegalStateException("SHA-256 unavailable",e);}}
 
     private static String blankToNull(String value) {
         if (value == null || value.isBlank()) {

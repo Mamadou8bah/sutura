@@ -1,3 +1,4 @@
+import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import { Ionicons } from "@expo/vector-icons";
 import { fonts } from "../theme";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
@@ -38,7 +39,8 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
     setError("");
     try {
       if (action === "load") {
-        const stored = await kycApi.status();
+        let stored = await kycApi.status();
+        if (stored.status === "NOT_STARTED" && !isDemoMode()) stored = await kycApi.start();
         if (active.current) setRecord(stored);
         if (stored.sessionId) {
           const fresh = await kycApi.refresh();
@@ -64,6 +66,8 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
     });
     return () => { active.current = false; subscription.remove(); };
   }, []);
+
+  useAutoRefresh(()=>run("load"),!isDemoMode()&&(record?.status==="PENDING"||!!error||!record));
 
   async function openVerification() {
     const url = record?.hostedUrl;
