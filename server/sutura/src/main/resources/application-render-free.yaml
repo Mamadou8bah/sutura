@@ -1,0 +1,26 @@
+# Use with prod,render,render-free. Free Render blocks SMTP ports.
+spring:
+  mail:
+    host: ${SMTP_HOST:}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+  datasource:
+    hikari:
+      maximum-pool-size: 4
+      minimum-idle: 0
+  task:
+    scheduling:
+      pool:
+        size: 2
+server:
+  tomcat:
+    threads:
+      max: 24
+      min-spare: 2
+    max-connections: 100
+sutura:
+  notifications:
+    email:
+      provider: resend
+      api-key: ${SUTURA_EMAIL_API_KEY}
+      from: ${SUTURA_EMAIL_FROM}

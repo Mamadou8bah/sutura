@@ -3,14 +3,16 @@ package com.mamadou.sutura.operations;
 import java.time.LocalDateTime;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 @Slf4j
-@ConditionalOnProperty(name = "sutura.notifications.email.provider", havingValue = "smtp")
+@ConditionalOnExpression(
+    "'${sutura.notifications.email.provider:noop}' == 'smtp' or"
+        + " '${sutura.notifications.email.provider:noop}' == 'resend'")
 public class OperationalAlertWorker {
   private final OperationalAlertRepository repository;
   private final OperationalAlertDelivery delivery;

@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /** Only available to the one-shot process, never through HTTP. */
 @Service
-@Profile("bootstrap-admin")
+@Profile({"bootstrap-admin", "render-free"})
 public class InitialAdminProvisioner {
   private final UserRepository users;
   private final AuditLogRepository audit;
@@ -35,6 +35,12 @@ public class InitialAdminProvisioner {
     this.passwords = passwords;
     this.jdbc = jdbc;
     this.env = env;
+  }
+
+  @Transactional
+  public void provisionIfAbsent() {
+    jdbc.execute("SELECT pg_advisory_xact_lock(752039184)");
+    if (!users.existsByRole(Role.ADMIN)) provision();
   }
 
   @Transactional

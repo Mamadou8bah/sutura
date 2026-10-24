@@ -9,3 +9,6 @@ node_modules/
 .idea/
 .vscode/
 *.iml
+
+# Expo web export artifacts are built by hosting, never committed.
+ui/*/dist/

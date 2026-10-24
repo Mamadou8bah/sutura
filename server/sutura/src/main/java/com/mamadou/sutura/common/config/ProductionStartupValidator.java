@@ -24,7 +24,14 @@ public class ProductionStartupValidator implements InitializingBean {
     require("spring.flyway.enabled", "true");
     require("spring.flyway.baseline-on-migrate", "false");
     require("sutura.notifications.sms.provider", "twilio");
-    require("sutura.notifications.email.provider", "smtp");
+    String emailProvider = required("sutura.notifications.email.provider");
+    if (!java.util.Set.of("smtp", "resend").contains(emailProvider))
+      fail("sutura.notifications.email.provider", "must be smtp or resend");
+    if ("resend".equals(emailProvider)) required("sutura.notifications.email.api-key");
+    else
+      for (String key :
+          new String[] {"spring.mail.host", "spring.mail.username", "spring.mail.password"})
+        required(key);
     for (String key :
         new String[] {
           "sutura.notifications.alert-email",
@@ -32,9 +39,6 @@ public class ProductionStartupValidator implements InitializingBean {
           "sutura.notifications.sms.twilio.account-sid",
           "sutura.notifications.sms.twilio.auth-token",
           "sutura.notifications.sms.twilio.from-number",
-          "spring.mail.host",
-          "spring.mail.username",
-          "spring.mail.password",
           "sutura.notifications.email.from",
           "sutura.webhooks.modempay.api-key",
           "sutura.sentinel-webhook.tenant-code",
@@ -92,7 +96,8 @@ public class ProductionStartupValidator implements InitializingBean {
         env.getProperty("spring.mail.properties.mail.smtp.starttls.required", Boolean.class, false);
     boolean ssl =
         env.getProperty("spring.mail.properties.mail.smtp.ssl.enable", Boolean.class, false);
-    if (!tls && !ssl) fail("spring.mail", "requires STARTTLS or TLS");
+    if ("smtp".equals(emailProvider) && !tls && !ssl)
+      fail("spring.mail", "requires STARTTLS or TLS");
   }
 
   private String required(String key) {

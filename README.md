@@ -637,3 +637,9 @@ This project is licensed under the [MIT License](LICENSE).
 Production hardening, validation evidence and external go-live gates: [production readiness](docs/production-readiness.md).
 
 Proposal requirements, verification evidence and remaining acceptance work: [Sutura proposal audit](docs/proposal-audit.md).
+
+## Presentation deployment
+
+For the free Render setup, all four clients and separate Sentinel integration,
+see [the deployment runbook](docs/deploy-free-presentation.md). Identity models
+still require labelled datasets and independent evaluation.

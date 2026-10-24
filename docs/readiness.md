@@ -1,3 +1,22 @@
+## Presentation deployment update — 24 October 2026
+
+Local validation for this pass: 186 Sutura backend tests passed against PostgreSQL with four opt-in skips; 37 CV-service and 24 transaction-service tests passed. All three Expo exports, Next.js build and Sentinel desk build passed. Sentinel fresh-schema migration, deployment guards and bootstrap checks passed. Docker image builds and actual hosted delivery are still unverified.
+
+Use [the free Render runbook](deploy-free-presentation.md) and `render-free.yaml`
+for the presentation configuration. The existing `render.yaml` retains the paid
+production-oriented API/database setup. Both repositories have separate free
+Blueprints; only Sutura creates the shared free database/cache. Sentinel uses a
+separate database schema and has secure first-tenant bootstrap, restricted CORS,
+no development accounts, and a fresh Flyway migration. Sutura now supports HTTPS
+email delivery and first-admin startup provisioning for free Render's limits.
+
+All three Expo web exports and both website builds pass locally. The prepared
+PaySim-v3 HF transaction export loads its model successfully. Identity training
+preflight reports all four datasets missing. Live hosting, provider credentials,
+actual OTP/payment callbacks and identity training remain outstanding; these
+local checks are not a completed deployment. See Sentinel's
+`docs/deploy-huggingface.md` for Space exports and dataset prerequisites.
+
 # Readiness checklist
 
 Updated 18 October 2026. Virtual cards are excluded by the user's explicit scope

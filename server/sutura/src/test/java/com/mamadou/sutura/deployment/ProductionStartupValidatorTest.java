@@ -117,4 +117,20 @@ class ProductionStartupValidatorTest {
       assertFalse(error.getMessage().contains("private-"));
     }
   }
+
+  @Test
+  void httpsEmailDoesNotRequireSmtpCredentials() {
+    var env =
+        valid()
+            .withProperty("sutura.notifications.email.provider", "resend")
+            .withProperty("sutura.notifications.email.api-key", "test-api-key")
+            .withProperty("spring.mail.host", "")
+            .withProperty("spring.mail.username", "")
+            .withProperty("spring.mail.password", "");
+    assertDoesNotThrow(() -> new ProductionStartupValidator(env).afterPropertiesSet());
+    env.withProperty("sutura.notifications.email.api-key", "");
+    assertThrows(
+        IllegalStateException.class,
+        () -> new ProductionStartupValidator(env).afterPropertiesSet());
+  }
 }

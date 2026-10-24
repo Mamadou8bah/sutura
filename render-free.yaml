@@ -1,0 +1,157 @@
+# Free presentation deployment; see docs/deploy-free-presentation.md.
+services:
+- type: web
+  name: sutura-api
+  runtime: docker
+  plan: free
+  region: frankfurt
+  dockerfilePath: ./server/sutura/Dockerfile
+  dockerContext: ./server/sutura
+  maxShutdownDelaySeconds: 60
+  healthCheckPath: /actuator/health/readiness
+  numInstances: 1
+  envVars:
+  - key: SPRING_PROFILES_ACTIVE
+    value: prod,render,render-free
+  - key: RENDER_DB_HOST
+    fromDatabase:
+      name: sutura-db
+      property: host
+  - key: RENDER_DB_PORT
+    fromDatabase:
+      name: sutura-db
+      property: port
+  - key: RENDER_DB_NAME
+    fromDatabase:
+      name: sutura-db
+      property: database
+  - key: SPRING_DATASOURCE_USERNAME
+    fromDatabase:
+      name: sutura-db
+      property: user
+  - key: SPRING_DATASOURCE_PASSWORD
+    fromDatabase:
+      name: sutura-db
+      property: password
+  - key: REDIS_URL
+    fromService:
+      name: sutura-cache
+      type: keyvalue
+      property: connectionString
+  - key: JWT_SECRET
+    generateValue: true
+  - key: SUTURA_CORS_ALLOWED_ORIGINS
+    sync: false
+  - key: SUTURA_SENTINEL_BASE_URL
+    sync: false
+  - key: SUTURA_SENTINEL_API_KEY
+    sync: false
+  - key: SUTURA_SENTINEL_TENANT_CODE
+    sync: false
+  - key: SUTURA_SENTINEL_WEBHOOK_SECRET
+    sync: false
+  - key: MODEMPAY_API_KEY
+    sync: false
+  - key: MODEMPAY_PUBLIC_KEY
+    sync: false
+  - key: MODEMPAY_WEBHOOK_SIGNING_SECRET
+    sync: false
+  - key: MODEMPAY_API_URL
+    value: https://api.modempay.com
+  - key: TWILIO_ACCOUNT_SID
+    sync: false
+  - key: TWILIO_AUTH_TOKEN
+    sync: false
+  - key: TWILIO_FROM_NUMBER
+    sync: false
+  - key: SUTURA_ALERT_EMAIL
+    sync: false
+  - key: SUTURA_EMAIL_FROM
+    sync: false
+  - key: SUTURA_EMAIL_API_KEY
+    sync: false
+  - key: JAVA_OPTS
+    value: -XX:+UseContainerSupport -XX:MaxRAMPercentage=45 -XX:MaxMetaspaceSize=160m
+      -XX:ReservedCodeCacheSize=32m -Xss512k
+  - key: SUTURA_BOOTSTRAP_ENABLED
+    value: 'true'
+  - key: SUTURA_BOOTSTRAP_FIRST_NAME
+    sync: false
+  - key: SUTURA_BOOTSTRAP_LAST_NAME
+    sync: false
+  - key: SUTURA_BOOTSTRAP_EMAIL
+    sync: false
+  - key: SUTURA_BOOTSTRAP_PHONE
+    sync: false
+  - key: SUTURA_BOOTSTRAP_PASSWORD
+    sync: false
+- type: keyvalue
+  name: sutura-cache
+  plan: free
+  region: frankfurt
+  maxmemoryPolicy: noeviction
+  ipAllowList: []
+- type: web
+  name: sutura-web
+  runtime: docker
+  plan: free
+  region: frankfurt
+  dockerfilePath: ./ui/web/Dockerfile
+  dockerContext: ./ui/web
+  healthCheckPath: /
+  envVars:
+  - key: NEXT_PUBLIC_API_BASE_URL
+    sync: false
+- type: web
+  name: sutura-customer
+  runtime: static
+  rootDir: ui/sutura-app
+  buildCommand: npm ci && npx expo export --platform web
+  staticPublishPath: dist
+  envVars:
+  - key: NODE_VERSION
+    value: '22'
+  - key: EXPO_PUBLIC_API_BASE_URL
+    sync: false
+  routes:
+  - type: rewrite
+    source: /*
+    destination: /index.html
+- type: web
+  name: sutura-agent
+  runtime: static
+  rootDir: ui/sutura-agent
+  buildCommand: npm ci && npx expo export --platform web
+  staticPublishPath: dist
+  envVars:
+  - key: NODE_VERSION
+    value: '22'
+  - key: EXPO_PUBLIC_API_BASE_URL
+    sync: false
+  routes:
+  - type: rewrite
+    source: /*
+    destination: /index.html
+- type: web
+  name: sutura-merchant
+  runtime: static
+  rootDir: ui/merchant-app
+  buildCommand: npm ci && npx expo export --platform web
+  staticPublishPath: dist
+  envVars:
+  - key: NODE_VERSION
+    value: '22'
+  - key: EXPO_PUBLIC_API_BASE_URL
+    sync: false
+  routes:
+  - type: rewrite
+    source: /*
+    destination: /index.html
+databases:
+- name: sutura-db
+  plan: free
+  region: frankfurt
+  postgresMajorVersion: '17'
+  databaseName: sutura
+  user: sutura
+  ipAllowList: []
