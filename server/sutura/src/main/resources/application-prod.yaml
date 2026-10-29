@@ -11,10 +11,10 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
   mail:
-    host: ${SMTP_HOST}
+    host: ${SMTP_HOST:}
     port: ${SMTP_PORT:587}
-    username: ${SMTP_USERNAME}
-    password: ${SMTP_PASSWORD}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
     properties:
       mail.smtp.auth: true
       mail.smtp.starttls.enable: true
@@ -160,13 +160,11 @@ sutura:
   notifications:
     alert-email: ${SUTURA_ALERT_EMAIL}
     sms:
-      provider: twilio
-      twilio:
-        account-sid: ${TWILIO_ACCOUNT_SID:}
-        auth-token: ${TWILIO_AUTH_TOKEN:}
-        from-number: ${TWILIO_FROM_NUMBER:}
+      provider: jokoor
+      jokoor:
+        api-key: ${JOKOOR_API_KEY:}
     email:
-      provider: smtp
+      provider: ${SUTURA_EMAIL_PROVIDER:resend}
       api-key: ${SUTURA_EMAIL_API_KEY:}
       from: ${SUTURA_EMAIL_FROM:no-reply@sutura.local}
 

@@ -109,10 +109,8 @@ sutura:
   notifications:
     sms:
       provider: ${SUTURA_SMS_PROVIDER:noop}
-      twilio:
-        account-sid: ${TWILIO_ACCOUNT_SID:}
-        auth-token: ${TWILIO_AUTH_TOKEN:}
-        from-number: ${TWILIO_FROM_NUMBER:}
+      jokoor:
+        api-key: ${JOKOOR_API_KEY:}
     email:
       provider: ${SUTURA_EMAIL_PROVIDER:noop}
       api-key: ${SUTURA_EMAIL_API_KEY:}

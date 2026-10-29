@@ -9,12 +9,28 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_API_BASE_URL": "https://suturagambia.onrender.com",
+        "SUTURA_REQUIRE_OTA": "1",
+        "SUTURA_UPDATE_CHANNEL": "preview"
+      }
     },
     "production": {
       "autoIncrement": true,
       "env": {
-        "EXPO_PUBLIC_API_BASE_URL": "https://api.sutura.gm"
+        "EXPO_PUBLIC_API_BASE_URL": "https://suturagambia.onrender.com",
+        "SUTURA_REQUIRE_OTA": "1",
+        "SUTURA_UPDATE_CHANNEL": "production"
+      },
+      "channel": "production"
+    },
+    "production-apk": {
+      "extends": "production",
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk"
       }
     }
   },

@@ -16,7 +16,10 @@ Sutura is a digital payments platform built around a double-entry ledger. It sup
 
 The balance a user sees in an app is not a field that gets incremented and decremented in isolation. Every wallet is linked to a ledger account. Every movement of money is recorded as balanced debit and credit postings under a unique trace. The displayed balance is computed from those postings.
 
-Backend deployment on Render is configured in [render.yaml](render.yaml). Follow the [Render deployment runbook](docs/deploy-render.md) for credentials, migrations, first-admin setup and acceptance checks.
+For the backend-only free Render deployment, use [render-backend.yaml](render-backend.yaml)
+and the [two-backend deployment guide](docs/deploy-backends.md). Private import files
+are `server/.env.render` and Sentinel's `.env.render`; never commit them. The
+alternative paid layout remains in [render.yaml](render.yaml).
 
 Identity verification (KYC) and fraud scoring are handled through the separate **Sentinel** API. Hosted onboarding, transfer review and signed callbacks are implemented. The remaining validation and model requirements are tracked in [docs/readiness.md](docs/readiness.md).
 

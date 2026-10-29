@@ -5,12 +5,16 @@
 .vscode
 *.iml
 target
-!target/sutura-*.jar
 .DS_Store
 *.log
 logs/
 .env
 .env.local
+.env.*
+*.pem
+*.key
+*.p12
+*.jks
 *.swp
 *.swo
 *~

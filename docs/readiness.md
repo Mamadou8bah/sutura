@@ -160,7 +160,7 @@ Validation for the routed admin screens: web TypeScript passed; 13 focused backe
 
 - Added a Render Blueprint for the API, PostgreSQL and private Key Value, validated against the official Render schema.
 - Added packaged Flyway migrations, tested on fresh PostgreSQL and explicit adoption of an existing schema without losing a stored receipt.
-- Production checks reject noop OTP delivery, missing/weak credentials, unsafe origins, disabled migrations and schema auto-updates. SMTP and bounded Twilio delivery are wired.
+- Production checks reject noop OTP delivery, missing/weak credentials, unsafe origins, disabled migrations and schema auto-updates. Resend HTTPS email and bounded Jokoor SMS delivery are wired.
 - Added CORS and JSON authentication failures, restricted disabled/suspended API-key owners, fingerprinted API-key rate-limit keys and made Redis counters atomic with production fail-closed behavior.
 - Added a real Redis Actuator contributor, Render readiness checks, graceful container shutdown and a one-time first-admin command with required email 2FA.
 - Fixed audit/risk/reconciliation timestamp callbacks and preservation of failed audit status after a packaged production bootstrap exposed persistence failures.

@@ -14,9 +14,6 @@ class ProductionStartupValidatorTest {
           "sutura.notifications.alert-email",
           "spring.datasource.password",
           "spring.data.redis.password",
-          "sutura.notifications.sms.twilio.account-sid",
-          "sutura.notifications.sms.twilio.auth-token",
-          "sutura.notifications.sms.twilio.from-number",
           "spring.mail.host",
           "spring.mail.username",
           "spring.mail.password",
@@ -28,7 +25,8 @@ class ProductionStartupValidatorTest {
     env.withProperty("spring.jpa.hibernate.ddl-auto", "validate")
         .withProperty("spring.flyway.enabled", "true")
         .withProperty("spring.flyway.baseline-on-migrate", "false")
-        .withProperty("sutura.notifications.sms.provider", "twilio")
+        .withProperty("sutura.notifications.sms.provider", "jokoor")
+        .withProperty("sutura.notifications.sms.jokoor.api-key", "sk_live_validation_only")
         .withProperty("sutura.notifications.email.provider", "smtp")
         .withProperty(
             "sutura.webhooks.modempay.signing-secret", "provider-signing-test-secret-long-enough")
@@ -132,5 +130,19 @@ class ProductionStartupValidatorTest {
     assertThrows(
         IllegalStateException.class,
         () -> new ProductionStartupValidator(env).afterPropertiesSet());
+  }
+
+  @Test
+  void rejectsMissingAndTestSmsKeysWithoutLeakingThem() {
+    for (String key : new String[] {"", "sk_test_private_value", "sk_live_"}) {
+      var failure =
+          assertThrows(
+              IllegalStateException.class,
+              () ->
+                  new ProductionStartupValidator(
+                          valid().withProperty("sutura.notifications.sms.jokoor.api-key", key))
+                      .afterPropertiesSet());
+      assertFalse(failure.getMessage().contains("private_value"));
+    }
   }
 }

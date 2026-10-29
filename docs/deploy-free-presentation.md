@@ -31,7 +31,7 @@ do not assume the example service names are available as subdomains.
 
 ## Secrets and integration mapping
 
-Configure ModemPay sandbox credentials/signing secret and Twilio credentials.
+Configure ModemPay sandbox credentials/signing secret and a live Jokoor API key (`JOKOOR_API_KEY`, starting with `sk_live_`).
 Render free services block SMTP ports. This profile therefore uses the Resend
 HTTPS email adapter. Set `SUTURA_EMAIL_API_KEY` and a verified `SUTURA_EMAIL_FROM`;
 `SUTURA_ALERT_EMAIL` is the monitored destination. SMTP credentials are not needed

@@ -46,23 +46,15 @@ services:
         sync: false
       - key: MODEMPAY_API_URL
         value: https://api.modempay.com
-      - key: TWILIO_ACCOUNT_SID
-        sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_FROM_NUMBER
+      - key: JOKOOR_API_KEY
         sync: false
       - key: SUTURA_ALERT_EMAIL
         sync: false
       - key: SUTURA_EMAIL_FROM
         sync: false
-      - key: SMTP_HOST
-        sync: false
-      - key: SMTP_PORT
-        value: "587"
-      - key: SMTP_USERNAME
-        sync: false
-      - key: SMTP_PASSWORD
+      - key: SUTURA_EMAIL_PROVIDER
+        value: resend
+      - key: SUTURA_EMAIL_API_KEY
         sync: false
   - type: keyvalue
     name: sutura-cache

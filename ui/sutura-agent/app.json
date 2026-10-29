@@ -5,8 +5,14 @@
     "scheme": "suturaagent",
     "version": "1.0.0",
     "orientation": "portrait",
-    "platforms": ["ios", "android", "web"],
-    "assetBundlePatterns": ["**/*"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "bundleIdentifier": "gm.sutura.agent",
       "supportsTablet": false
@@ -15,11 +21,6 @@
       "package": "gm.sutura.agent",
       "adaptiveIcon": {
         "backgroundColor": "#0a0a0a"
-      }
-    },
-    "extra": {
-      "eas": {
-        "projectId": "sutura-agent-app"
       }
     },
     "plugins": [

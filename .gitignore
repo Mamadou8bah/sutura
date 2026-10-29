@@ -5,6 +5,8 @@
 *.log
 *.tsbuildinfo
 node_modules/
+__pycache__/
+*.py[cod]
 **/.expo-web-test*/
 .idea/
 .vscode/
@@ -12,3 +14,8 @@ node_modules/
 
 # Expo web export artifacts are built by hosting, never committed.
 ui/*/dist/
+
+# Expo native projects are generated from app config; keep builds and signing keys local.
+ui/*/android/
+ui/*/ios/
+ui/*/.ota-validation/

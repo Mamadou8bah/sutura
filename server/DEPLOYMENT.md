@@ -79,7 +79,7 @@ SPRING_PROFILES_ACTIVE=prod
 ### Optional Environment Variables
 
 See `.env.example` for all available options including:
-- Twilio SMS credentials
+- Jokoor live SMS API key (`JOKOOR_API_KEY`)
 - Email provider configuration
 - Webhook signing secrets
 - Risk management thresholds

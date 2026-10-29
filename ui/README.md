@@ -7,6 +7,14 @@ This folder contains four frontend apps:
 - `sutura-agent`: Expo React Native app for agents.
 - `merchant-app`: Expo React Native app for merchants.
 
+## Mobile app updates
+
+All three APKs support EAS Update once linked to real Expo projects. Pushes to
+`main` publish compatible code and asset updates through GitHub Actions. See
+[automatic Android updates](../docs/mobile-updates.md) for the required Expo IDs,
+GitHub secret, initial APK build and device verification. Native changes still
+require a new APK.
+
 ## Logo
 
 The original artwork is `Sutura logo with vivid orange symbol.png`.

@@ -116,7 +116,7 @@ Notes:
 - Event retry mechanisms
 
 ### [NOTIFICATIONS] Notifications
-- SMS notifications (Twilio integration)
+- SMS notifications (Jokoor integration)
 - Email notifications
 - Provider abstraction for easy switching
 - Template-based message formatting
@@ -336,12 +336,11 @@ JWT_SECRET=ZGV2ZWxvcG1lbnQtc2VjcmV0LWtleS1mb3ItcGF5Zmxvdy1hcHAtMzItYnl0ZXM=
 JWT_ACCESS_TOKEN_EXPIRATION_MINUTES=15
 JWT_REFRESH_TOKEN_EXPIRATION_DAYS=7
 
-# Twilio (SMS Notifications)
-TWILIO_ACCOUNT_SID=your_twilio_account_sid
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_FROM_NUMBER=+1234567890
+# Jokoor (SMS Notifications; live keys required)
+JOKOOR_API_KEY=sk_live_your_key_here
 
-# Email Configuration
+# Email Configuration (Resend)
+SUTURA_EMAIL_PROVIDER=resend
 SUTURA_EMAIL_API_KEY=your_email_api_key
 SUTURA_EMAIL_FROM=no-reply@sutura.local
 
@@ -355,7 +354,7 @@ SUTURA_RISK_HIGH_THRESHOLD=7.0
 SUTURA_RISK_MEDIUM_THRESHOLD=5.0
 
 # SMS Provider
-SUTURA_SMS_PROVIDER=noop  # or 'twilio' for production
+SUTURA_SMS_PROVIDER=noop  # or 'jokoor' for production
 ```
 
 ### Step 4: Build the Project
@@ -390,7 +389,7 @@ Key configuration sections:
 - **Refresh Token Expiration**: 7 days
 
 #### Notifications
-- **SMS Provider**: Configurable (noop, twilio)
+- **SMS Provider**: Configurable (noop, jokoor)
 - **Email Provider**: Configurable
 
 #### Risk Management
@@ -734,7 +733,7 @@ Sutura implements a comprehensive, multi-layered architecture optimized for high
                          │
 ┌────────────────────────▼────────────────────────────────────────┐
 │              DATA & INTEGRATION LAYER                            │
-│  PostgreSQL │ Redis │ Twilio │ Email │ ModemPay │ External APIs│
+│  PostgreSQL │ Redis │ Jokoor │ Email │ ModemPay │ External APIs│
 └─────────────────────────────────────────────────────────────────┘
 ```
 

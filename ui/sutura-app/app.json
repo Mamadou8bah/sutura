@@ -23,11 +23,6 @@
         "backgroundColor": "#0a0a0a"
       }
     },
-    "extra": {
-      "eas": {
-        "projectId": "sutura-customer-app"
-      }
-    },
     "plugins": [
       "expo-asset",
       "expo-font",

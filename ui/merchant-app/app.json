@@ -5,8 +5,14 @@
     "scheme": "suturamerchant",
     "version": "1.0.0",
     "orientation": "portrait",
-    "platforms": ["ios", "android", "web"],
-    "assetBundlePatterns": ["**/*"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
+    "assetBundlePatterns": [
+      "**/*"
+    ],
     "ios": {
       "bundleIdentifier": "gm.sutura.merchant",
       "supportsTablet": false
@@ -17,11 +23,10 @@
         "backgroundColor": "#0a0a0a"
       }
     },
-    "extra": {
-      "eas": {
-        "projectId": "sutura-merchant-app"
-      }
-    },
-    "plugins": ["expo-asset", "expo-font", "expo-secure-store"]
+    "plugins": [
+      "expo-asset",
+      "expo-font",
+      "expo-secure-store"
+    ]
   }
 }

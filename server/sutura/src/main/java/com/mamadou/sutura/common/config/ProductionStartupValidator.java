@@ -23,7 +23,10 @@ public class ProductionStartupValidator implements InitializingBean {
     require("spring.jpa.hibernate.ddl-auto", "validate");
     require("spring.flyway.enabled", "true");
     require("spring.flyway.baseline-on-migrate", "false");
-    require("sutura.notifications.sms.provider", "twilio");
+    require("sutura.notifications.sms.provider", "jokoor");
+    String smsKey = required("sutura.notifications.sms.jokoor.api-key");
+    if (!smsKey.startsWith("sk_live_") || smsKey.length() <= 8)
+      fail("sutura.notifications.sms.jokoor.api-key", "must be a live Jokoor API key");
     String emailProvider = required("sutura.notifications.email.provider");
     if (!java.util.Set.of("smtp", "resend").contains(emailProvider))
       fail("sutura.notifications.email.provider", "must be smtp or resend");
@@ -36,9 +39,6 @@ public class ProductionStartupValidator implements InitializingBean {
         new String[] {
           "sutura.notifications.alert-email",
           "spring.datasource.password",
-          "sutura.notifications.sms.twilio.account-sid",
-          "sutura.notifications.sms.twilio.auth-token",
-          "sutura.notifications.sms.twilio.from-number",
           "sutura.notifications.email.from",
           "sutura.webhooks.modempay.api-key",
           "sutura.sentinel-webhook.tenant-code",

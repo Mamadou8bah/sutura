@@ -1,0 +1,10 @@
+# Fingerprint inputs must have identical bytes in Windows builds and Linux updates.
+*.sh text eol=lf
+ui/shared/* text eol=lf
+ui/*/app.json text eol=lf
+ui/*/app.config.js text eol=lf
+ui/*/eas.json text eol=lf
+ui/*/.gitignore text eol=lf
+ui/*/.fingerprintignore text eol=lf
+ui/*/package.json text eol=lf
+ui/*/package-lock.json text eol=lf
