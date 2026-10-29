@@ -35,6 +35,22 @@ class ModemPayClientTest {
         assertThat(result.getPaymentUrl()).contains("intent-1");
         server.verify();
     }
+    @Test void disabledProviderCannotInitiateChargesPayoutsOrAcceptCallbacks() {
+        var config = new ModemPayConfig();
+        config.setEnabled(false);
+        var disabled = new ModemPayClient(config);
+        for (Runnable call : java.util.List.<Runnable>of(
+                () -> disabled.createCharge(null), () -> disabled.createPayout(null))) {
+            assertThatThrownBy(call::run)
+                    .isInstanceOfSatisfying(org.springframework.web.server.ResponseStatusException.class,
+                            error -> assertThat(error.getStatusCode().value()).isEqualTo(503));
+        }
+        var validator = new com.mamadou.sutura.webhook.validator.WebhookSignatureValidator("private-fixture-secret");
+        ReflectionTestUtils.setField(validator, "enabled", false);
+        assertThat(validator.isValid("payload", "signature")).isFalse();
+        server.verify();
+    }
+
     @Test void sendsDocumentedTransferFieldsAndStableKey() {
         server.expect(requestTo("https://provider.example/v1/transfers"))
                 .andExpect(header("Idempotency-Key", "payout-key"))

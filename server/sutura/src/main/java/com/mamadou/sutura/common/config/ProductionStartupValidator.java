@@ -40,7 +40,6 @@ public class ProductionStartupValidator implements InitializingBean {
           "sutura.notifications.alert-email",
           "spring.datasource.password",
           "sutura.notifications.email.from",
-          "sutura.webhooks.modempay.api-key",
           "sutura.sentinel-webhook.tenant-code",
           "sutura.fraud-detection.api-key"
         }) required(key);
@@ -68,10 +67,7 @@ public class ProductionStartupValidator implements InitializingBean {
             "spring.data.redis.url",
             "requires authentication outside Render's private Key Value network");
     }
-    for (String key :
-        new String[] {
-          "sutura.webhooks.modempay.signing-secret", "sutura.sentinel-webhook.signing-secret"
-        }) {
+    for (String key : new String[] {"sutura.sentinel-webhook.signing-secret"}) {
       if (required(key).length() < 32) fail(key, "must contain at least 32 characters");
     }
     String jwt = required("jwt.secret");
@@ -88,7 +84,12 @@ public class ProductionStartupValidator implements InitializingBean {
       if (uri.getRawPath() != null && !uri.getRawPath().isEmpty())
         fail("sutura.cors.allowed-origins", "must contain exact origins without paths");
     }
-    url("sutura.webhooks.modempay.api-url", required("sutura.webhooks.modempay.api-url"), true);
+    if (env.getProperty("sutura.webhooks.modempay.enabled", Boolean.class, true)) {
+      required("sutura.webhooks.modempay.api-key");
+      String key = "sutura.webhooks.modempay.signing-secret";
+      if (required(key).length() < 32) fail(key, "must contain at least 32 characters");
+      url("sutura.webhooks.modempay.api-url", required("sutura.webhooks.modempay.api-url"), true);
+    }
     url("sutura.fraud-detection.base-url", required("sutura.fraud-detection.base-url"), false);
     require("sutura.fraud-detection.enabled", "true");
     require("sutura.ratelimit.fail-open", "false");

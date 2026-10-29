@@ -20,6 +20,8 @@ import org.springframework.context.annotation.Configuration;
 @ConfigurationProperties(prefix = "sutura.webhooks.modempay")
 @Data
 public class ModemPayConfig {
+    /** Disable external payment operations while the provider is not configured. */
+    private boolean enabled = true;
 
     /**
      * Webhook signing secret for signature verification

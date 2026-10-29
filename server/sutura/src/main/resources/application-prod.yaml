@@ -170,9 +170,10 @@ sutura:
 
   webhooks:
     modempay:
-      signing-secret: ${MODEMPAY_WEBHOOK_SIGNING_SECRET}
+      enabled: ${MODEMPAY_ENABLED:true}
+      signing-secret: ${MODEMPAY_WEBHOOK_SIGNING_SECRET:}
       signature-header: ${MODEMPAY_WEBHOOK_SIGNATURE_HEADER:x-modem-signature}
-      api-key: ${MODEMPAY_API_KEY}
+      api-key: ${MODEMPAY_API_KEY:}
       public-key: ${MODEMPAY_PUBLIC_KEY:}
       api-url: ${MODEMPAY_API_URL:https://api.modempay.com}
 

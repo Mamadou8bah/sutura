@@ -81,6 +81,7 @@ public class DepositService {
         }
 
         boolean internalMerchantFlow = isInternalMerchantFlow(actor, request);
+        if (!internalMerchantFlow) modemPayClient.requireEnabled();
 
         String reference = generateReference();
 

@@ -3,8 +3,11 @@ server:
   port: ${PORT:10000}
 spring:
   datasource:
-    url: jdbc:postgresql://${RENDER_DB_HOST}:${RENDER_DB_PORT:5432}/${RENDER_DB_NAME}
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     hikari:
+      schema: public
       maximum-pool-size: ${DB_POOL_MAX:10}
       minimum-idle: 2
   data:

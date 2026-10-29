@@ -33,7 +33,8 @@ class RenderPreparationTest(unittest.TestCase):
         self.assertEqual(a["SUTURA_SENTINEL_WEBHOOK_SECRET"], b["SENTINEL_BOOTSTRAP_WEBHOOK_SECRET"])
         self.assertNotEqual(a["JWT_SECRET"], b["JWT_SECRET"])
         self.assertNotEqual(b["JWT_SECRET"], "local-demo-key")
-        self.assertEqual(b["POSTGRES_PASSWORD"], "")
+        self.assertEqual(b["SPRING_DATASOURCE_PASSWORD"], "")
+        self.assertNotIn("POSTGRES_PASSWORD", b)
         self.assertNotIn("VITE_API_BASE_URL", b)
         self.assertEqual(b["SENTINEL_ML_ENABLED"], "false")
         self.assertEqual(a["JOKOOR_API_KEY"], "sk_live_private_fixture")
@@ -67,6 +68,46 @@ class RenderPreparationTest(unittest.TestCase):
         self.assertEqual(a["SUTURA_SENTINEL_BASE_URL"], "https://sentinel-live.onrender.com")
         self.assertEqual(b["SENTINEL_BOOTSTRAP_WEBHOOK_URL"],
                          "https://suturagambia.onrender.com/api/v1/webhooks/sentinel")
+
+    def test_migrates_legacy_database_without_losing_credentials(self):
+        values = {"RENDER_DB_HOST": "db.internal", "RENDER_DB_NAME": "sutura",
+                  "POSTGRES_USER": "owner", "POSTGRES_PASSWORD": "private-fixture"}
+        module.migrate_database(values)
+        self.assertEqual(values["SPRING_DATASOURCE_URL"], "jdbc:postgresql://db.internal:5432/sutura")
+        self.assertEqual(values["SPRING_DATASOURCE_USERNAME"], "owner")
+        self.assertEqual(values["SPRING_DATASOURCE_PASSWORD"], "private-fixture")
+        self.assertNotIn("POSTGRES_PASSWORD", values)
+        a, b = module.prepare(self.sutura, self.sentinel)
+        a["SPRING_DATASOURCE_URL"] = "postgresql://user:private-fixture@db.internal/sutura"
+        report = "\n".join(module.check(a, b))
+        self.assertIn("must use jdbc:postgresql://", report)
+        self.assertNotIn("private-fixture", report)
+
+    def test_extracts_jdbc_credentials_and_preserves_tls_options(self):
+        values = {"SPRING_DATASOURCE_URL":
+            "jdbc:postgresql://db.internal/sutura?user=owner&password=private%2Bfixture&sslmode=require&channelBinding=require"}
+        module.normalize_datasource(values)
+        self.assertEqual(values["SPRING_DATASOURCE_USERNAME"], "owner")
+        self.assertEqual(values["SPRING_DATASOURCE_PASSWORD"], "private+fixture")
+        self.assertEqual(values["SPRING_DATASOURCE_URL"],
+            "jdbc:postgresql://db.internal/sutura?sslmode=require&channelBinding=require")
+        module.normalize_datasource(values)
+        self.assertEqual(values["SPRING_DATASOURCE_PASSWORD"], "private+fixture")
+
+    def test_deferred_payments_do_not_require_a_provider_key(self):
+        a, b = module.prepare(self.sutura, self.sentinel)
+        a["MODEMPAY_ENABLED"] = "false"
+        a["MODEMPAY_API_KEY"] = ""
+        self.assertNotIn("fill MODEMPAY_API_KEY", "\n".join(module.check(a, b)))
+        a["MODEMPAY_ENABLED"] = "true"
+        self.assertIn("fill MODEMPAY_API_KEY", "\n".join(module.check(a, b)))
+
+    def test_never_overwrites_conflicting_datasource_credentials(self):
+        values = {"SPRING_DATASOURCE_URL": "postgresql://owner:private@db.internal/sutura",
+                  "SPRING_DATASOURCE_PASSWORD": "existing-private"}
+        with self.assertRaises(ValueError):
+            module.normalize_datasource(values)
+        self.assertEqual(values["SPRING_DATASOURCE_PASSWORD"], "existing-private")
 
 
 if __name__ == "__main__":

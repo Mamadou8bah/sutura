@@ -14,12 +14,6 @@ services:
     envVars:
       - key: SPRING_PROFILES_ACTIVE
         value: prod,render
-      - key: RENDER_DB_HOST
-        fromDatabase: {name: sutura-db, property: host}
-      - key: RENDER_DB_PORT
-        fromDatabase: {name: sutura-db, property: port}
-      - key: RENDER_DB_NAME
-        fromDatabase: {name: sutura-db, property: database}
       - key: SPRING_DATASOURCE_USERNAME
         fromDatabase: {name: sutura-db, property: user}
       - key: SPRING_DATASOURCE_PASSWORD
@@ -38,12 +32,6 @@ services:
         sync: false
       - key: SUTURA_SENTINEL_WEBHOOK_SECRET
         sync: false
-      - key: MODEMPAY_API_KEY
-        sync: false
-      - key: MODEMPAY_PUBLIC_KEY
-        sync: false
-      - key: MODEMPAY_WEBHOOK_SIGNING_SECRET
-        sync: false
       - key: MODEMPAY_API_URL
         value: https://api.modempay.com
       - key: JOKOOR_API_KEY
@@ -56,6 +44,10 @@ services:
         value: resend
       - key: SUTURA_EMAIL_API_KEY
         sync: false
+      - key: SPRING_DATASOURCE_URL
+        sync: false
+      - key: MODEMPAY_ENABLED
+        value: "false"
   - type: keyvalue
     name: sutura-cache
     plan: starter

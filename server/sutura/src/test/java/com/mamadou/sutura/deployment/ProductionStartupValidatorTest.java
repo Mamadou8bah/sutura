@@ -145,4 +145,16 @@ class ProductionStartupValidatorTest {
       assertFalse(failure.getMessage().contains("private_value"));
     }
   }
+
+  @Test
+  void deferredPaymentsDoNotRequireCredentialsButEnablingThemDoes() {
+    var env = valid()
+        .withProperty("sutura.webhooks.modempay.enabled", "false")
+        .withProperty("sutura.webhooks.modempay.api-key", "")
+        .withProperty("sutura.webhooks.modempay.signing-secret", "");
+    assertDoesNotThrow(() -> new ProductionStartupValidator(env).afterPropertiesSet());
+    env.withProperty("sutura.webhooks.modempay.enabled", "true");
+    assertThrows(IllegalStateException.class,
+        () -> new ProductionStartupValidator(env).afterPropertiesSet());
+  }
 }

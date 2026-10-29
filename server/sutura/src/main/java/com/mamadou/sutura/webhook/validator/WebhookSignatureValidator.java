@@ -13,12 +13,15 @@ import java.util.HexFormat;
 public class WebhookSignatureValidator {
 
     private final String signingSecret;
+    @Value("${sutura.webhooks.modempay.enabled:true}")
+    private boolean enabled = true;
 
     public WebhookSignatureValidator(@Value("${sutura.webhooks.modempay.signing-secret:}") String signingSecret) {
         this.signingSecret = signingSecret;
     }
 
     public boolean isValid(String rawPayload, String signature) {
+        if (!enabled) return false;
         if (signingSecret == null || signingSecret.isBlank()) {
             return false;
         }

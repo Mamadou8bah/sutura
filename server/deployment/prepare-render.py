@@ -10,11 +10,15 @@ from pathlib import Path
 import re
 import secrets
 import sys
-from urllib.parse import urlsplit
+from urllib.parse import parse_qsl, unquote, urlencode, urlsplit, urlunsplit
 
 
 SUTURA_RENDER_KEYS = (
     'SPRING_PROFILES_ACTIVE',
+    'SPRING_DATASOURCE_URL',
+    'SPRING_DATASOURCE_USERNAME',
+    'SPRING_DATASOURCE_PASSWORD',
+    'REDIS_URL',
     'JWT_SECRET',
     'SUTURA_CORS_ALLOWED_ORIGINS',
     'SUTURA_SENTINEL_BASE_URL',
@@ -22,6 +26,7 @@ SUTURA_RENDER_KEYS = (
     'SUTURA_SENTINEL_TENANT_CODE',
     'SUTURA_SENTINEL_WEBHOOK_SECRET',
     'MODEMPAY_API_KEY',
+    'MODEMPAY_ENABLED',
     'MODEMPAY_PUBLIC_KEY',
     'MODEMPAY_WEBHOOK_SIGNING_SECRET',
     'MODEMPAY_API_URL',
@@ -40,11 +45,9 @@ SUTURA_RENDER_KEYS = (
 )
 SENTINEL_RENDER_KEYS = (
     'SPRING_PROFILES_ACTIVE',
-    'RENDER_DB_HOST',
-    'RENDER_DB_PORT',
-    'RENDER_DB_NAME',
-    'POSTGRES_USER',
-    'POSTGRES_PASSWORD',
+    'SPRING_DATASOURCE_URL',
+    'SPRING_DATASOURCE_USERNAME',
+    'SPRING_DATASOURCE_PASSWORD',
     'JWT_SECRET',
     'FIELD_ENCRYPTION_KEY',
     'SENTINEL_CORS_ALLOWED_ORIGINS',
@@ -84,8 +87,18 @@ def write_env(path, values):
     # Exclusive creation protects a new credential file before any bytes are written.
     if not path.exists():
         path.touch(mode=0o600, exist_ok=False)
-    content = "# PRIVATE: import into the matching Render API service; never commit.\n"
-    content += "\n".join(f"{key}={json.dumps(value)}" for key, value in values.items()) + "\n"
+    content = "# PRIVATE: fill required settings before importing into Render. Never commit.\n"
+    database_keys = ("SPRING_DATASOURCE_URL", "SPRING_DATASOURCE_USERNAME", "SPRING_DATASOURCE_PASSWORD", "REDIS_URL")
+    if any(key in values for key in database_keys):
+        content += "\n# DATABASE: JDBC URL (jdbc:postgresql://HOST:5432/DATABASE), username and password.\n"
+        content += "# Do not paste Render's postgresql://user:password@host/database URL directly.\n"
+        for key in database_keys:
+            if key in values:
+                if key == "REDIS_URL":
+                    content += "\n# CACHE: Render Key Value internal connection URL (redis://...).\n"
+                content += f"{key}={json.dumps(values[key])}\n"
+    content += "\n# APPLICATION AND INTEGRATIONS\n"
+    content += "\n".join(f"{key}={json.dumps(value)}" for key, value in values.items() if key not in database_keys) + "\n"
     path.write_text(content, encoding="utf-8")
 
 
@@ -98,16 +111,22 @@ def prepare(sutura, sentinel, sutura_url=None, sentinel_url=None):
     a.update({"SPRING_PROFILES_ACTIVE": "prod,render,render-free",
               "SUTURA_BOOTSTRAP_ENABLED": "true", "SUTURA_SENTINEL_TENANT_CODE": "sutura"})
     # Never carry local demo keys, localhost inference URLs or development DB credentials to Render.
-    b.update({key: "" for key in ("POSTGRES_USER", "POSTGRES_PASSWORD", "JWT_SECRET",
+    b.update({key: "" for key in ("JWT_SECRET",
               "FIELD_ENCRYPTION_KEY", "SENTINEL_PUBLIC_BASE_URL", "CV_ML_BASE_URL",
               "TRANSACTION_ML_BASE_URL", "ML_SERVICE_API_KEY")})
     b.update({"SPRING_PROFILES_ACTIVE": "render", "SENTINEL_ML_ENABLED": "false",
               "SENTINEL_BOOTSTRAP_ENABLED": "true"})
     a.update(read_env(a_path))
     b.update(read_env(b_path))
+    migrate_database(b)
     for key, value in read_env(sutura / "server/.env").items():
         if key in a and value and not a[key]:
             a[key] = value
+    normalize_datasource(a)
+    for key in ("SPRING_DATASOURCE_URL", "SPRING_DATASOURCE_USERNAME", "SPRING_DATASOURCE_PASSWORD"):
+        if not b.get(key) and a.get(key):
+            b[key] = a[key]
+    normalize_datasource(b)
     for values, key in [(a, "JWT_SECRET"), (b, "JWT_SECRET"), (b, "FIELD_ENCRYPTION_KEY")]:
         if not values.get(key):
             values[key] = base64.b64encode(secrets.token_bytes(48)).decode()
@@ -147,14 +166,59 @@ def origin(value):
     return value.rstrip("/")
 
 
+def migrate_database(values):
+    """Preserve credentials in older private files while using standard Spring names."""
+    if not values.get("SPRING_DATASOURCE_URL") and values.get("RENDER_DB_HOST") and values.get("RENDER_DB_NAME"):
+        values["SPRING_DATASOURCE_URL"] = (
+            f"jdbc:postgresql://{values['RENDER_DB_HOST']}:{values.get('RENDER_DB_PORT') or '5432'}/{values['RENDER_DB_NAME']}")
+    for standard, old in [("SPRING_DATASOURCE_USERNAME", "POSTGRES_USER"),
+                          ("SPRING_DATASOURCE_PASSWORD", "POSTGRES_PASSWORD")]:
+        if not values.get(standard) and values.get(old):
+            values[standard] = values[old]
+    for key in ("RENDER_DB_HOST", "RENDER_DB_PORT", "RENDER_DB_NAME", "POSTGRES_USER", "POSTGRES_PASSWORD"):
+        values.pop(key, None)
+
+
+def normalize_datasource(values):
+    """Separate credentials embedded in PostgreSQL/JDBC URLs without discarding TLS settings."""
+    value = values.get("SPRING_DATASOURCE_URL", "")
+    if not value:
+        return
+    uri = urlsplit(value[5:] if value.startswith("jdbc:") else value)
+    if uri.scheme not in ("postgres", "postgresql") or not uri.hostname or not uri.path.strip("/"):
+        raise ValueError("Invalid PostgreSQL datasource URL")
+    credentials = {}
+    if uri.username:
+        credentials["SPRING_DATASOURCE_USERNAME"] = unquote(uri.username)
+    if uri.password:
+        credentials["SPRING_DATASOURCE_PASSWORD"] = unquote(uri.password)
+    options = []
+    for key, item in parse_qsl(uri.query, keep_blank_values=True):
+        if key.lower() in ("user", "username", "password"):
+            target = "SPRING_DATASOURCE_PASSWORD" if key.lower() == "password" else "SPRING_DATASOURCE_USERNAME"
+            if target in credentials and credentials[target] != item:
+                raise ValueError("Conflicting embedded datasource credentials")
+            credentials[target] = item
+        else:
+            options.append((key, item))
+    for key, item in credentials.items():
+        if values.get(key) and values[key] != item:
+            raise ValueError("Conflicting datasource credential settings")
+        values[key] = item
+    values["SPRING_DATASOURCE_URL"] = "jdbc:" + urlunsplit(
+        ("postgresql", uri.netloc.rsplit("@", 1)[-1], uri.path, urlencode(options), ""))
+
+
 def check(a, b):
     issues = []
-    required_a = ["JWT_SECRET", "SUTURA_CORS_ALLOWED_ORIGINS", "SUTURA_SENTINEL_BASE_URL",
+    required_a = ["SPRING_DATASOURCE_URL", "SPRING_DATASOURCE_USERNAME", "SPRING_DATASOURCE_PASSWORD", "REDIS_URL",
+                  "JWT_SECRET", "SUTURA_CORS_ALLOWED_ORIGINS", "SUTURA_SENTINEL_BASE_URL",
                   "SUTURA_SENTINEL_API_KEY", "SUTURA_SENTINEL_TENANT_CODE",
-                  "SUTURA_SENTINEL_WEBHOOK_SECRET", "MODEMPAY_API_KEY",
-                  "MODEMPAY_WEBHOOK_SIGNING_SECRET", "JOKOOR_API_KEY", "SUTURA_EMAIL_API_KEY",
+                  "SUTURA_SENTINEL_WEBHOOK_SECRET", "JOKOOR_API_KEY", "SUTURA_EMAIL_API_KEY",
                   "SUTURA_EMAIL_FROM", "SUTURA_ALERT_EMAIL"]
-    required_b = ["RENDER_DB_HOST", "RENDER_DB_NAME", "POSTGRES_USER", "POSTGRES_PASSWORD",
+    if a.get("MODEMPAY_ENABLED", "true").lower() == "true":
+        required_a += ["MODEMPAY_API_KEY", "MODEMPAY_WEBHOOK_SIGNING_SECRET"]
+    required_b = ["SPRING_DATASOURCE_URL", "SPRING_DATASOURCE_USERNAME", "SPRING_DATASOURCE_PASSWORD",
                   "JWT_SECRET", "FIELD_ENCRYPTION_KEY", "SENTINEL_CORS_ALLOWED_ORIGINS",
                   "SENTINEL_PUBLIC_BASE_URL"]
     if a.get("SUTURA_BOOTSTRAP_ENABLED", "false").lower() == "true":
@@ -170,6 +234,16 @@ def check(a, b):
         for key in required:
             if not values.get(key):
                 issues.append(f"{label}: fill {key}")
+        jdbc = values.get("SPRING_DATASOURCE_URL", "")
+        if jdbc:
+            try:
+                if not jdbc.startswith("jdbc:postgresql://"):
+                    raise ValueError()
+                database = urlsplit(jdbc[5:])
+                if not database.hostname or not database.path.strip("/") or database.username or database.password:
+                    raise ValueError()
+            except ValueError:
+                issues.append(f"{label}: SPRING_DATASOURCE_URL must use jdbc:postgresql://HOST:5432/DATABASE; supply credentials separately")
     for values, keys in [(a, ["SUTURA_SENTINEL_BASE_URL"]),
                           (b, ["SENTINEL_PUBLIC_BASE_URL"] +
                            (["CV_ML_BASE_URL", "TRANSACTION_ML_BASE_URL"]
@@ -219,7 +293,7 @@ def main():
     issues = check(a, b)
     for issue in issues:
         print(issue)
-    print("Database/cache connection values for Sutura are supplied by the Render Blueprint.")
+    print("Fill the datasource and cache fields from Render before importing these env files.")
     print("No provider credentials or live delivery were verified.")
     return 1 if issues else 0
 

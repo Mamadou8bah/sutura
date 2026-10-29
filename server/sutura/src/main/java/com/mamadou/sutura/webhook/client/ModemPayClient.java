@@ -23,6 +23,7 @@ public class ModemPayClient {
     }
 
     public CreateChargeResponse createCharge(CreateChargeRequest req) {
+        requireEnabled();
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("amount", req.getAmount());
         data.put("currency", req.getCurrency());
@@ -43,6 +44,7 @@ public class ModemPayClient {
     }
 
     public CreatePayoutResponse createPayout(CreatePayoutRequest req) {
+        requireEnabled();
         if (!Set.of("wave", "afrimoney").contains(req.getWithdrawalMethod()))
             throw new IllegalArgumentException("Unsupported payout network");
         Map<String, Object> data = new LinkedHashMap<>();
@@ -63,7 +65,14 @@ public class ModemPayClient {
         return result;
     }
 
+    public void requireEnabled() {
+        if (!config.isEnabled())
+            throw new org.springframework.web.server.ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE, "External payments are not enabled yet");
+    }
+
     private JsonNode post(String path, Object body, String key) {
+        requireEnabled();
         if (config.getApiKey() == null || config.getApiKey().isBlank())
             throw new IllegalStateException("ModemPay API key is not configured");
         var headers = new HttpHeaders();
