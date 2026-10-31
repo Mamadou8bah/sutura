@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 public class FraudDetectionProperties {
 
     private boolean enabled = true;
+    /** Whether the separately deployed Sentinel service is configured and ready. */
+    private boolean connected = true;
     private String baseUrl = "http://localhost:8080";
     private int timeoutMs = 2000;
     private String defaultCountry = "GM";

@@ -53,6 +53,21 @@ class ProductionStartupValidatorTest {
   }
 
   @Test
+  void backendCanStartBeforeSentinelAndFrontendWithoutDisablingFraudProtection() {
+    var env = valid().withProperty("sutura.fraud-detection.connected", "false")
+        .withProperty("sutura.fraud-detection.base-url", "")
+        .withProperty("sutura.cors.allowed-origins", "");
+    assertDoesNotThrow(() -> new ProductionStartupValidator(env).afterPropertiesSet());
+    env.withProperty("sutura.fraud-detection.connected", "true");
+    assertThrows(IllegalStateException.class,
+        () -> new ProductionStartupValidator(env).afterPropertiesSet());
+    env.withProperty("sutura.fraud-detection.connected", "false")
+        .withProperty("sutura.fraud-detection.enabled", "false");
+    assertThrows(IllegalStateException.class,
+        () -> new ProductionStartupValidator(env).afterPropertiesSet());
+  }
+
+  @Test
   void acceptsOnlyAuthenticatedOrRenderPrivateRedisUrls() {
     assertDoesNotThrow(
         () ->

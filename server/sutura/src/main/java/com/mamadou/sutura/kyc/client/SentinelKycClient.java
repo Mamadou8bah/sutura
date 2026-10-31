@@ -18,6 +18,7 @@ public class SentinelKycClient {
     private final RestTemplate fraudDetectionRestTemplate;
 
     public SentinelKycResponse start(String customerId) {
+        requireConnected();
         var response = fraudDetectionRestTemplate.postForObject(url(""),
                 new HttpEntity<>(Map.of("externalCustomerId", customerId), headers()), SentinelKycResponse.class);
         validate(response, customerId, null);
@@ -25,10 +26,15 @@ public class SentinelKycClient {
     }
 
     public SentinelKycResponse get(Long sessionId, String customerId) {
+        requireConnected();
         var response = fraudDetectionRestTemplate.exchange(url("/" + sessionId), HttpMethod.GET,
                 new HttpEntity<>(headers()), SentinelKycResponse.class).getBody();
         validate(response, customerId, sessionId);
         return response;
+    }
+
+    private void requireConnected() {
+        if (!properties.isConnected()) throw new RestClientException("Sentinel is not connected yet");
     }
 
     private String url(String suffix) {

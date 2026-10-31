@@ -14,8 +14,11 @@ import org.springframework.web.server.ResponseStatusException;
 @Component @RequiredArgsConstructor
 public class SentinelWebhookVerifier {
     private final SentinelWebhookProperties properties;
+    @org.springframework.beans.factory.annotation.Value("${sutura.fraud-detection.connected:true}")
+    private boolean connected = true;
 
     public void verify(String timestamp,String signature,byte[] payload) {
+        if (!connected) throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"Sentinel is not connected yet");
         if (properties.getSigningSecret().length()<32 || properties.getTenantCode().isBlank()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,"Sentinel callback is not configured");
         }

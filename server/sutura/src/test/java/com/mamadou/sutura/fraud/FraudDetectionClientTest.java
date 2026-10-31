@@ -39,6 +39,14 @@ class FraudDetectionClientTest {
     }
 
     @Test
+    void disconnectedSentinelNeverMakesARequest() {
+        properties.setConnected(false);
+        assertThatThrownBy(() -> client.score(event)).isInstanceOf(RestClientException.class)
+                .hasMessageContaining("not connected");
+        server.verify();
+    }
+
+    @Test
     void sendsTenantContractAndPreservesReviewCaseAndExplanation() {
         server.expect(requestTo("http://sentinel:8080/api/integration/transactions/score"))
                 .andExpect(method(HttpMethod.POST))

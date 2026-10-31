@@ -30,6 +30,14 @@ class SentinelKycClientTest {
     }
 
     @Test
+    void disconnectedSentinelCannotStartOrCompleteIdentityVerification() {
+        properties.setConnected(false);
+        assertThatThrownBy(() -> client.start("7")).isInstanceOf(RestClientException.class);
+        assertThatThrownBy(() -> client.get(1L, "7")).isInstanceOf(RestClientException.class);
+        server.verify();
+    }
+
+    @Test
     void startsHostedSessionWithTenantKeyAndStableCustomerId() {
         server.expect(requestTo("http://sentinel:8080/api/integration/kyc/sessions"))
                 .andExpect(method(HttpMethod.POST))

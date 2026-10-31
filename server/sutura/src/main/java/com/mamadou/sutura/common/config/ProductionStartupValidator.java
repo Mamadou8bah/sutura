@@ -79,7 +79,8 @@ public class ProductionStartupValidator implements InitializingBean {
     }
     if (jwt.equals("ZGV2ZWxvcG1lbnQtc2VjcmV0LWtleS1mb3ItcGF5Zmxvdy1hcHAtMzItYnl0ZXM="))
       fail("jwt.secret", "must not use the development key");
-    for (String origin : required("sutura.cors.allowed-origins").split(",")) {
+    for (String origin : env.getProperty("sutura.cors.allowed-origins", "").split(",")) {
+      if (origin.isBlank()) continue; // No frontend yet: allow no cross-origin browser clients.
       URI uri = url("sutura.cors.allowed-origins", origin.trim(), true);
       if (uri.getRawPath() != null && !uri.getRawPath().isEmpty())
         fail("sutura.cors.allowed-origins", "must contain exact origins without paths");
@@ -90,7 +91,8 @@ public class ProductionStartupValidator implements InitializingBean {
       if (required(key).length() < 32) fail(key, "must contain at least 32 characters");
       url("sutura.webhooks.modempay.api-url", required("sutura.webhooks.modempay.api-url"), true);
     }
-    url("sutura.fraud-detection.base-url", required("sutura.fraud-detection.base-url"), false);
+    if (env.getProperty("sutura.fraud-detection.connected", Boolean.class, true))
+      url("sutura.fraud-detection.base-url", required("sutura.fraud-detection.base-url"), false);
     require("sutura.fraud-detection.enabled", "true");
     require("sutura.ratelimit.fail-open", "false");
     boolean tls =

@@ -42,6 +42,15 @@ class FraudDetectionServiceTest {
     assertThatCode(() -> service.enforceDecision(decision("allow"))).doesNotThrowAnyException();
   }
 
+  @Test
+  void disconnectedSentinelStopsPaymentsBeforeAnyExternalOrLedgerRead() {
+    properties.setConnected(false);
+    assertThatThrownBy(() -> service.evaluateTransaction("pending", null, null, BigDecimal.ONE, "transfer", null))
+        .isInstanceOf(FraudBlockedException.class);
+    assertThatThrownBy(() -> service.enforceDecision(null)).isInstanceOf(FraudBlockedException.class);
+    verifyNoInteractions(client, balances, transactions);
+  }
+
   @ParameterizedTest
   @ValueSource(strings = {"review", "block", "unknown", ""})
   void preventsNonAllowDecisionsFromReachingExecution(String recommendation) {

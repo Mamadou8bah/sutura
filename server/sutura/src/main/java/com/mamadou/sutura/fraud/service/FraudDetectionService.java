@@ -45,6 +45,9 @@ public class FraudDetectionService {
     if (!properties.isEnabled()) {
       return null;
     }
+    if (!properties.isConnected()) {
+      throw new FraudBlockedException("Transaction stopped: Sentinel is not connected yet", 1.0, "block");
+    }
 
     TransactionEventRequest event = buildEvent(transactionId, user, wallet, amount, operationType);
     if (persistedTransactionId != null && "transfer".equalsIgnoreCase(operationType)) {

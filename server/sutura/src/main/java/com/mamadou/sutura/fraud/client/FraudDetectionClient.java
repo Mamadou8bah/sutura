@@ -30,6 +30,8 @@ public class FraudDetectionClient {
     private final RestTemplate fraudDetectionRestTemplate;
 
     public FraudDecisionResponse score(TransactionEventRequest event) {
+        if (!properties.isConnected())
+            throw new RestClientException("Sentinel is not connected yet");
         if (properties.getApiKey() == null || properties.getApiKey().isBlank()) {
             throw new RestClientException("Sentinel tenant API key is required");
         }

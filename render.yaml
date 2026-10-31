@@ -12,6 +12,8 @@ services:
     healthCheckPath: /actuator/health/readiness
     numInstances: 1
     envVars:
+      - key: SUTURA_SENTINEL_CONNECTED
+        value: "false"
       - key: SPRING_PROFILES_ACTIVE
         value: prod,render
       - key: SPRING_DATASOURCE_USERNAME

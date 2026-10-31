@@ -22,6 +22,7 @@ SUTURA_RENDER_KEYS = (
     'JWT_SECRET',
     'SUTURA_CORS_ALLOWED_ORIGINS',
     'SUTURA_SENTINEL_BASE_URL',
+    'SUTURA_SENTINEL_CONNECTED',
     'SUTURA_SENTINEL_API_KEY',
     'SUTURA_SENTINEL_TENANT_CODE',
     'SUTURA_SENTINEL_WEBHOOK_SECRET',
@@ -212,10 +213,12 @@ def normalize_datasource(values):
 def check(a, b):
     issues = []
     required_a = ["SPRING_DATASOURCE_URL", "SPRING_DATASOURCE_USERNAME", "SPRING_DATASOURCE_PASSWORD", "REDIS_URL",
-                  "JWT_SECRET", "SUTURA_CORS_ALLOWED_ORIGINS", "SUTURA_SENTINEL_BASE_URL",
+                  "JWT_SECRET",
                   "SUTURA_SENTINEL_API_KEY", "SUTURA_SENTINEL_TENANT_CODE",
                   "SUTURA_SENTINEL_WEBHOOK_SECRET", "JOKOOR_API_KEY", "SUTURA_EMAIL_API_KEY",
                   "SUTURA_EMAIL_FROM", "SUTURA_ALERT_EMAIL"]
+    if a.get("SUTURA_SENTINEL_CONNECTED", "true").lower() == "true":
+        required_a += ["SUTURA_SENTINEL_BASE_URL"]
     if a.get("MODEMPAY_ENABLED", "true").lower() == "true":
         required_a += ["MODEMPAY_API_KEY", "MODEMPAY_WEBHOOK_SIGNING_SECRET"]
     required_b = ["SPRING_DATASOURCE_URL", "SPRING_DATASOURCE_USERNAME", "SPRING_DATASOURCE_PASSWORD",
@@ -244,7 +247,7 @@ def check(a, b):
                     raise ValueError()
             except ValueError:
                 issues.append(f"{label}: SPRING_DATASOURCE_URL must use jdbc:postgresql://HOST:5432/DATABASE; supply credentials separately")
-    for values, keys in [(a, ["SUTURA_SENTINEL_BASE_URL"]),
+    for values, keys in [(a, ["SUTURA_SENTINEL_BASE_URL"] if a.get("SUTURA_SENTINEL_CONNECTED", "true").lower() == "true" else []),
                           (b, ["SENTINEL_PUBLIC_BASE_URL"] +
                            (["CV_ML_BASE_URL", "TRANSACTION_ML_BASE_URL"]
                             if b.get("SENTINEL_ML_ENABLED", "true").lower() == "true" else []))]:

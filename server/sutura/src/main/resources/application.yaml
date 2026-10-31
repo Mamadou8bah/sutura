@@ -153,6 +153,7 @@ sutura:
     new-wallet-high-value-threshold: ${SUTURA_RISK_NEW_WALLET_HIGH_VALUE_THRESHOLD:10000}
 
   fraud-detection:
+    connected: ${SUTURA_SENTINEL_CONNECTED:true}
     enabled: ${SUTURA_FRAUD_ENABLED:true}
     base-url: ${SUTURA_SENTINEL_BASE_URL:http://localhost:8080}
     timeout-ms: ${SUTURA_FRAUD_TIMEOUT_MS:2000}

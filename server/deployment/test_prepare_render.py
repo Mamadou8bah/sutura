@@ -94,6 +94,15 @@ class RenderPreparationTest(unittest.TestCase):
         module.normalize_datasource(values)
         self.assertEqual(values["SPRING_DATASOURCE_PASSWORD"], "private+fixture")
 
+    def test_disconnected_sentinel_and_empty_browser_origins_do_not_block_deployment(self):
+        a, b = module.prepare(self.sutura, self.sentinel)
+        a.update(SUTURA_SENTINEL_CONNECTED="false", SUTURA_SENTINEL_BASE_URL="", SUTURA_CORS_ALLOWED_ORIGINS="")
+        report = "\n".join(module.check(a, b))
+        self.assertNotIn("fill SUTURA_SENTINEL_BASE_URL", report)
+        self.assertNotIn("SUTURA_CORS_ALLOWED_ORIGINS", report)
+        a["SUTURA_SENTINEL_CONNECTED"] = "true"
+        self.assertIn("fill SUTURA_SENTINEL_BASE_URL", "\n".join(module.check(a, b)))
+
     def test_deferred_payments_do_not_require_a_provider_key(self):
         a, b = module.prepare(self.sutura, self.sentinel)
         a["MODEMPAY_ENABLED"] = "false"

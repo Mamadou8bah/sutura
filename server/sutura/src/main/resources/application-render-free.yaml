@@ -19,6 +19,8 @@ server:
       min-spare: 2
     max-connections: 100
 sutura:
+  fraud-detection:
+    connected: ${SUTURA_SENTINEL_CONNECTED:false}
   notifications:
     email:
       provider: resend
