@@ -3,11 +3,11 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const vm = require('node:vm');
 const ts = require('typescript');
-function load(fetch) {
+function load(fetch, timers = {}) {
   const source = fs.readFileSync(require('node:path').join(__dirname, '../src/api/demo.ts'), 'utf8');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const exports = {};
-  vm.runInNewContext(code, { exports, require: () => ({ API_BASE: 'http://test.invalid' }), fetch, Response, AbortController, setTimeout, clearTimeout });
+  vm.runInNewContext(code, { exports, require: () => ({ API_BASE: 'http://test.invalid' }), fetch, Response, AbortController, setTimeout, clearTimeout, ...timers });
   return exports;
 }
 test('wrong credentials do not enable demo', async () => {
@@ -23,10 +23,10 @@ test('network failure enables demo but never reports a live write as completed',
   assert.equal(calls, 1);
   assert.equal((await demo.demoResponse('/api/v1/transactions').json()).length, 0);
 });
-test('server failure activates fallback and does not fabricate login success', async () => {
+test('server error stays live and does not fabricate login success', async () => {
   const demo = load(async () => new Response('', { status: 503 }));
   await assert.rejects(demo.availabilityFetch('http://test.invalid/api/auth/login', { method: 'POST' }), /unavailable/);
-  assert.equal(demo.isDemoMode(), true);
+  assert.equal(demo.isDemoMode(), false);
 });
 test('startup probe treats protected but reachable server as available', async () => {
   const demo = load(async () => new Response('', { status: 401 }));
@@ -113,4 +113,22 @@ test('agent history records a settled operation once with completion time',async
  assert.equal((await demo.demoResponse('/api/v1/agent/operations').json()).length,1);
  for(let i=0;i<2;i++)await demo.demoResponse(`/api/v1/agent/operations/${operation.reference}/complete`,{method:'POST'}).json();
  const rows=await demo.demoResponse('/api/v1/agent/operations').json();assert.equal(rows.length,1);assert.equal(rows[0].status,'COMPLETED');assert.ok(rows[0].completedAt);
+});
+
+
+test('demo recovers to live sign-in when the server returns', async () => {
+  const demo = load(async () => new Response('{"status":"UP"}'));
+  demo.setDemoMode(true);
+  await demo.recoverLiveConnection();
+  assert.equal(demo.isDemoMode(), false);
+});
+
+test('request deadline completes even when native fetch ignores abort', async () => {
+  let expire;
+  const demo = load(() => new Promise(() => {}), {
+    setTimeout(fn) { expire = fn; return 1; }, clearTimeout() {},
+  });
+  const pending = demo.availabilityFetch('http://test.invalid/api/auth/login', { method: 'POST' });
+  expire();
+  await assert.rejects(pending, /unconfirmed/);
 });

@@ -1,7 +1,7 @@
 import { applicationApi, type MerchantApplication } from "../api/application";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import {assertVerifiedSession, type VerificationCode} from "../api/twoFactor";
-import { demoSession, isDemoMode, serverAvailable, setDemoMode, subscribeDemo } from "../api/demo";
+import { demoSession, isDemoMode, recoverLiveConnection, setDemoMode, subscribeDemo } from "../api/demo";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { authApi } from "../api/merchantRegistration";
 import { bindTokenSession } from "../api/sessionAuth";
@@ -101,6 +101,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let busy = false;
+    const timer = setInterval(() => {
+      if (!isDemoMode() || busy) return;
+      busy = true;
+      void recoverLiveConnection().finally(() => { busy = false; });
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => subscribeDemo(() => {
     setSession(isDemoMode() ? demoSession("MERCHANT") : null);
     setScreen(isDemoMode() ? "home" : "login");
@@ -143,7 +153,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [session, persistSession, signOut]);
 
   useEffect(() => {
-    refreshSession().finally(async () => { if (!(await serverAvailable())) setDemoMode(true); setLoading(false); });
+    refreshSession().catch(() => setSession(null)).finally(() => setLoading(false));
   }, [refreshSession]);
 
   const refreshApplication=useCallback(async()=>{

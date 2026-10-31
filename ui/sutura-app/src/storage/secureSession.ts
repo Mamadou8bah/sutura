@@ -24,11 +24,16 @@ export async function saveSession(key: string, value: string): Promise<void> {
 }
 
 export async function loadSession(key: string): Promise<string | null> {
-  const secureStore = await getSecureStore();
-  if (secureStore) {
-    return secureStore.getItemAsync(key);
-  }
-  return AsyncStorage.getItem(key);
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const read = async () => {
+    const secureStore = await getSecureStore();
+    return secureStore ? secureStore.getItemAsync(key) : AsyncStorage.getItem(key);
+  };
+  try {
+    return await Promise.race([read(), new Promise<null>(resolve => {
+      timer = setTimeout(() => resolve(null), 3000);
+    })]);
+  } finally { if (timer) clearTimeout(timer); }
 }
 
 export async function clearSession(key: string): Promise<void> {

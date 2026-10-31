@@ -14,7 +14,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const colors = mode === "dark" ? darkColors : lightColors;
   useEffect(() => { if (Platform.OS === "web" && typeof document !== "undefined") { document.body.style.backgroundColor = colors.background; document.documentElement.style.colorScheme = mode; } }, [colors, mode]);
   const value = useMemo(() => ({colors, mode, preference, setPreference: (next: ThemePreference) => { updatePreference(next); void AsyncStorage.setItem(KEY, next).catch(() => {}); }}), [colors, mode, preference]);
-  return <ThemeContext.Provider value={value}>{ready ? children : null}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 export const useTheme = () => useContext(ThemeContext);
 export function useThemedStyles<T>(factory: (colors: ThemeColors) => T): T {

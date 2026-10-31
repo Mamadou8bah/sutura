@@ -8,9 +8,9 @@ import {
   Inter_700Bold,
   useFonts,
 } from "@expo-google-fonts/inter";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { StatusBar } from "expo-status-bar";
-import { ActivityIndicator, SafeAreaView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, SafeAreaView, StyleSheet, View, Platform, StatusBar as NativeStatusBar } from "react-native";
 import { BottomNav } from "./src/components/BottomNav";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { AgentProvider, navTabFor, useAgent } from "./src/context/AgentContext";
@@ -86,13 +86,15 @@ function ThemedApp() {
  const {colors,mode}=useTheme();
  const styles=useThemedStyles(createStyles);
 
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
     Inter_700Bold,
   });
   const fontsApplied = useRef(false);
+  const [fontTimedOut, setFontTimedOut] = useState(false);
+  useEffect(() => { const timer = setTimeout(() => setFontTimedOut(true), 8000); return () => clearTimeout(timer); }, []);
 
   useEffect(() => {
     if (fontsLoaded && !fontsApplied.current) {
@@ -101,7 +103,7 @@ function ThemedApp() {
     }
   }, [fontsLoaded]);
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && !fontError && !fontTimedOut) {
     return (
       <View style={styles.loading}>
         <ActivityIndicator size="large" color={colors.primary} />
@@ -123,4 +125,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
 });
 
-export default function App(){return <ThemeProvider><ThemedApp/></ThemeProvider>;}
+export default function App(){return <ThemeProvider><AppFrame /></ThemeProvider>;}
+
+function AppFrame() {
+  const { colors } = useTheme();
+  return <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: Platform.OS === "android" ? (NativeStatusBar.currentHeight ?? 0) : 0 }}><ThemedApp /></View>;
+}

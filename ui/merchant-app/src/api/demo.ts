@@ -116,15 +116,22 @@ export function demoResponse(path: string, init?: RequestInit): Response {
   }
   return json({ message: "This feature needs the live server and is unavailable in demo mode." }, 503);
 }
-async function boundedFetch(url: string, init?: RequestInit): Promise<Response> {
+async function boundedFetch(url: string, init?: RequestInit, timeoutMs = 60000): Promise<Response> {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 5000);
-  try { return await fetch(url, { ...init, signal: controller.signal }); }
-  finally { clearTimeout(timer); }
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const deadline = new Promise<Response>((_, reject) => {
+    timer = setTimeout(() => { controller.abort(); reject(new Error("Request timed out")); }, timeoutMs);
+  });
+  try { return await Promise.race([fetch(url, { ...init, signal: controller.signal }), deadline]); }
+  finally { if (timer) clearTimeout(timer); }
 }
 export async function serverAvailable(): Promise<boolean> {
-  try { return (await boundedFetch(API_BASE)).status < 500; }
+  try { return (await boundedFetch(`${API_BASE}/actuator/health/liveness`, undefined, 10000)).status < 500; }
   catch { return false; }
+}
+export async function recoverLiveConnection(): Promise<void> {
+  const current = generation;
+  if (active && await serverAvailable() && generation === current) setDemoMode(false);
 }
 export async function availabilityFetch(url: string, init?: RequestInit): Promise<Response> {
   const path = url.startsWith(API_BASE) ? url.slice(API_BASE.length) : url;
@@ -140,8 +147,7 @@ export async function availabilityFetch(url: string, init?: RequestInit): Promis
   }
   if (generation !== requestGeneration) throw new Error("Connection mode changed. Check the status of any live operation after signing in again.");
   if (response.status >= 500) {
-    setDemoMode(true);
-    throw new Error("Server unavailable. Demo mode opened. A live request may be unconfirmed; check its status when the server returns.");
+    throw new Error("Service temporarily unavailable. Your request may be unconfirmed; check its status before trying again.");
   }
   return response;
 }

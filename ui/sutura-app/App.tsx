@@ -15,11 +15,11 @@ import {
 
 } from "@expo-google-fonts/inter";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { StatusBar } from "expo-status-bar";
 
-import { ActivityIndicator, SafeAreaView, StyleSheet, View } from "react-native";
+import { ActivityIndicator, SafeAreaView, StyleSheet, View, Platform, StatusBar as NativeStatusBar } from "react-native";
 
 import { BottomNav } from "./src/components/BottomNav";
 
@@ -169,7 +169,7 @@ function ThemedApp() {
   const styles = useThemedStyles(createStyles);
 
 
-  const [fontsLoaded] = useFonts({
+  const [fontsLoaded, fontError] = useFonts({
 
     Inter_400Regular,
 
@@ -182,6 +182,8 @@ function ThemedApp() {
   });
 
   const fontsApplied = useRef(false);
+  const [fontTimedOut, setFontTimedOut] = useState(false);
+  useEffect(() => { const timer = setTimeout(() => setFontTimedOut(true), 8000); return () => clearTimeout(timer); }, []);
 
 
 
@@ -199,7 +201,7 @@ function ThemedApp() {
 
 
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded && !fontError && !fontTimedOut) {
 
     return (
 
@@ -240,4 +242,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
 
 });
 
-export default function App() { return <ThemeProvider><ThemedApp /></ThemeProvider>; }
+export default function App() { return <ThemeProvider><AppFrame /></ThemeProvider>; }
+
+function AppFrame() {
+  const { colors } = useTheme();
+  return <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: Platform.OS === "android" ? (NativeStatusBar.currentHeight ?? 0) : 0 }}><ThemedApp /></View>;
+}

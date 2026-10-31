@@ -10,8 +10,8 @@ import { SettingsScreen } from "./src/screens/SettingsScreen";
 import { useTheme, useThemedStyles, ThemeProvider } from "./src/context/ThemeContext";
 import type { ThemeColors } from "./src/theme";
 import { Inter_400Regular, Inter_500Medium, Inter_700Bold, Inter_600SemiBold, useFonts, } from "@expo-google-fonts/inter";
-import { useEffect, useRef } from "react";
-import { ActivityIndicator, SafeAreaView, StyleSheet, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { ActivityIndicator, SafeAreaView, StyleSheet, View, Platform, StatusBar as NativeStatusBar } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { AppProvider, useApp } from "./src/context/AppContext";
 import { applyFontDefaults } from "./src/setupFonts";
@@ -80,20 +80,22 @@ function MainApp() {
 function ThemedApp() {
     const { colors, mode } = useTheme();
     const styles = useThemedStyles(createStyles);
-    const [fontsLoaded] = useFonts({
+    const [fontsLoaded, fontError] = useFonts({
         Inter_400Regular,
         Inter_500Medium,
         Inter_700Bold,
         Inter_600SemiBold,
     });
     const fontsApplied = useRef(false);
+  const [fontTimedOut, setFontTimedOut] = useState(false);
+  useEffect(() => { const timer = setTimeout(() => setFontTimedOut(true), 8000); return () => clearTimeout(timer); }, []);
     useEffect(() => {
         if (fontsLoaded && !fontsApplied.current) {
             applyFontDefaults();
             fontsApplied.current = true;
         }
     }, [fontsLoaded]);
-    if (!fontsLoaded) {
+    if (!fontsLoaded && !fontError && !fontTimedOut) {
         return (<View style={styles.loading}>
         <ActivityIndicator size="large" color={colors.primary}/>
       </View>);
@@ -106,4 +108,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     safeArea: { flex: 1, minHeight: 0, height: "100%", width: "100%", maxWidth: 640, alignSelf: "center", backgroundColor: colors.background },
     loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
 });
-export default function App() { return <ThemeProvider><ThemedApp /></ThemeProvider>; }
+export default function App() { return <ThemeProvider><AppFrame /></ThemeProvider>; }
+
+function AppFrame() {
+  const { colors } = useTheme();
+  return <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: Platform.OS === "android" ? (NativeStatusBar.currentHeight ?? 0) : 0 }}><ThemedApp /></View>;
+}

@@ -1,5 +1,5 @@
 import {assertVerifiedSession, type VerificationCode} from "../api/twoFactor";
-import { demoSession, isDemoMode, serverAvailable, setDemoMode, subscribeDemo } from "../api/demo";
+import { demoSession, isDemoMode, recoverLiveConnection, setDemoMode, subscribeDemo } from "../api/demo";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, type AuthSession, type CustomerRegistration } from "../api/client";
 import { bindTokenSession } from "../api/sessionAuth";
@@ -25,6 +25,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    let busy = false;
+    const timer = setInterval(() => {
+      if (!isDemoMode() || busy) return;
+      busy = true;
+      void recoverLiveConnection().finally(() => { busy = false; });
+    }, 15000);
+    return () => clearInterval(timer);
+  }, []);
+
   useEffect(() => subscribeDemo(() => setSession(isDemoMode() ? demoSession("USER") : null)), []);
 
   const persistSession = useCallback(async (stored: AuthSession) => {
@@ -50,12 +60,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     loadSession(SESSION_KEY)
       .then((raw) => {
-        if (raw) setSession(JSON.parse(raw) as AuthSession);
+        if (raw) { const stored = JSON.parse(raw) as AuthSession; if (!stored.accessToken?.startsWith("demo.")) setSession(stored); }
       })
       .catch(() => {
         // Corrupted session — force re-login
       })
-      .finally(async () => { if (!(await serverAvailable())) setDemoMode(true); setLoading(false); });
+      .finally(() => setLoading(false));
   }, []);
 
   const signIn = useCallback(async (email: string, password: string, verification?: VerificationCode) => {

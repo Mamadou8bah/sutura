@@ -28,7 +28,8 @@ export async function getSession(): Promise<MerchantSession | null> {
   const raw = await loadSession(SESSION_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as MerchantSession;
+    const session = JSON.parse(raw) as MerchantSession;
+    return session.accessToken?.startsWith("demo.") ? null : session;
   } catch {
     return null;
   }
