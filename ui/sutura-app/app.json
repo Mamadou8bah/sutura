@@ -34,6 +34,13 @@
           "recordAudioAndroid": false
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "a4fc56f4-d8d4-4f9f-b353-a37b1482d8a7"
+      }
+    },
+    "owner": "mamadou8bah",
+    "icon": "./assets/sutura-logo.png"
   }
 }

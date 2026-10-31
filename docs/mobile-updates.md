@@ -13,6 +13,8 @@ GitHub Actions.
    projects: `sutura-app`, `sutura-agent`, and `sutura-merchant`.
 2. Copy each project's **Project ID** (a UUID) from its Expo project settings.
    The old strings such as `sutura-customer-app` were placeholders, not valid IDs.
+   The three apps are now linked in their `app.json` files. The GitHub project-ID
+   variables below are optional overrides when using those committed settings.
 3. In the Sutura GitHub repository, open **Settings → Secrets and variables →
    Actions**. Add the following repository **variables**:
 
@@ -26,15 +28,16 @@ GitHub Actions.
 4. Create an Expo access token at <https://expo.dev/settings/access-tokens>.
    Store it as the repository **secret** `EXPO_TOKEN`. Do not put it in source
    files or share it in chat. The token must have access to all three projects.
-5. In each app's local `.env`, set `SUTURA_EAS_PROJECT_ID` to that app's UUID and
-   `EXPO_PUBLIC_API_BASE_URL` to the same API URL used by GitHub Actions.
-   For EAS cloud builds, define the same values in that project's production
-   environment on Expo. These two values are public configuration, not secrets.
+5. In each app's local `.env`, set `EXPO_PUBLIC_API_BASE_URL` to the same API URL
+   used by GitHub Actions. `SUTURA_EAS_PROJECT_ID` is only needed to override
+   the project already linked in `app.json`. Keep any EAS production environment
+   overrides consistent with the build profile and workflow. These values are
+   public configuration, not secrets.
 6. From each app directory, while signed in with `eas login`, create its update
    channel once (skip this if it already exists):
 
    ```sh
-   npx eas-cli@20.5.1 channel:create production --branch production
+   npx eas-cli@20.5.1 channel:create production --non-interactive
    ```
 
    This also supports APKs built locally rather than by EAS Build.

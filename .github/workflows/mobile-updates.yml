@@ -78,7 +78,7 @@ jobs:
         run: |
           node <<'NODE'
           if (!process.env.EXPO_TOKEN) throw new Error('Add EXPO_TOKEN to GitHub Actions repository secrets.');
-          require('../shared/mobile-update-config.cjs')({}, process.env);
+          require('../shared/mobile-update-config.cjs')(require('./app.json').expo, process.env);
           if (new URL(process.env.EXPO_PUBLIC_API_BASE_URL).protocol !== 'https:') {
             throw new Error('SUTURA_API_BASE_URL must use HTTPS.');
           }

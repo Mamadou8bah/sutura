@@ -33,6 +33,13 @@
           "cameraPermission": "Allow Sutura Agent to scan customer QR codes."
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "92599363-6b26-41a2-91ce-0cb40d99a399"
+      }
+    },
+    "owner": "mamadou8bah",
+    "icon": "./assets/sutura-logo.png"
   }
 }
