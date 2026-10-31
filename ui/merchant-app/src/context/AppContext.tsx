@@ -1,3 +1,4 @@
+import { useBackNavigation } from "../hooks/useBackNavigation";
 import { applicationApi, type MerchantApplication } from "../api/application";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import {assertVerifiedSession, type VerificationCode} from "../api/twoFactor";
@@ -95,9 +96,10 @@ const emptyReg = (): RegistrationDraft => ({
 const AppContext = createContext<AppContextValue | null>(null);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [screen, setScreen] = useState<Screen>("welcome");
   const [application,setApplication]=useState<MerchantApplication|null>(null);
   const [session, setSession] = useState<MerchantSession | null>(null);
+  const [screen, setScreen, resetHistory] = useBackNavigation<Screen>("welcome", session ? session.userStatus === "PENDING_REVIEW" ? "pending" : "home" : "welcome");
+  useEffect(() => resetHistory(), [session?.email, resetHistory]);
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const [loading, setLoading] = useState(true);

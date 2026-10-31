@@ -1,3 +1,4 @@
+import { useHardwareBack } from "../hooks/useBackNavigation";
 import { PrimaryButton } from "../components/ui";
 import { formatMoney } from "../utils/format";
 import { isValidAmount, isPhoneDraft, normalizePhone } from "../utils/inputValidation";
@@ -36,6 +37,11 @@ export function SendScreen() {
   const [reviewing, setReviewing] = useState(false);
   const [busy, setBusy] = useState(false);
   const submitting = useRef(false);
+  useHardwareBack(() => {
+    if (busy) return true;
+    if (reviewing) { setReviewing(false); return true; }
+    return false;
+  });
   const submit = async () => {
     if (submitting.current) return;
     if (!isValidAmount(amount.trim())) {

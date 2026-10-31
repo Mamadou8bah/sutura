@@ -1,3 +1,4 @@
+import { useBackNavigation } from "../hooks/useBackNavigation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {useAutoRefresh} from "../hooks/useAutoRefresh";
 import {normalizePhone} from "../utils/inputValidation";
@@ -51,7 +52,7 @@ const AgentContext = createContext<AgentContextValue | null>(null);
 
 export function AgentProvider({ children }: { children: ReactNode }) {
   const { session: authSession } = useAuth();
-  const [tab, setTab] = useState<TabId>("home");
+  const [tab, setTab] = useBackNavigation<TabId>("home");
   const [pending, setPending] = useState<AgentOperation[]>([]);
   const pendingRef=useRef<AgentOperation[]>([]);pendingRef.current=pending;
   const [completed, setCompleted] = useState<AgentOperation[]>([]);

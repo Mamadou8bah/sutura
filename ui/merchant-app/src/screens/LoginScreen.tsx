@@ -1,3 +1,4 @@
+import { useHardwareBack } from "../hooks/useBackNavigation";
 import { PasswordRecoveryScreen } from "./PasswordRecoveryScreen";
 import {TwoFactorRequiredError} from "../api/twoFactor";
 import {isPhoneDraft,normalizePhone,isValidEmail} from "../utils/inputValidation";
@@ -25,6 +26,12 @@ export function LoginScreen() {
   const [challengeId,setChallengeId]=useState("");
   const [verificationCode,setVerificationCode]=useState("");
 
+  useHardwareBack(() => {
+    if (loading) return true;
+    if (recovering) { setRecovering(false); setError(""); return true; }
+    if (challengeId) { setChallengeId(""); setVerificationCode(""); setError(""); return true; }
+    return false;
+  });
   async function handleSubmit() {
     if(submitting.current)return;
     const username=method==="email"?email.trim():normalizePhone(phone);

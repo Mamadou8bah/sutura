@@ -1,3 +1,4 @@
+import { useBackNavigation } from "../hooks/useBackNavigation";
 import {useAutoRefresh} from "../hooks/useAutoRefresh";
 import { normalizePhone } from "../utils/inputValidation";
 import { Linking } from "react-native";
@@ -68,7 +69,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { session, newlyRegistered } = useAuth();
   const [data, setData] = useState(EMPTY_DASHBOARD);
   const [loading, setLoading] = useState(false);
-  const [tab, setTab] = useState<TabId>("home");
+  const [tab, setTab] = useBackNavigation<TabId>("home");
   useEffect(() => { if (newlyRegistered) setTab("verification"); }, [newlyRegistered]);
   const [profileSection, setProfileSection] = useState<ProfileSection>("profile");
   const [selectedWalletId, setSelectedWalletId] = useState(0);

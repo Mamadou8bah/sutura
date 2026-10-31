@@ -1,3 +1,4 @@
+import { useHardwareBack } from "../hooks/useBackNavigation";
 import { PasswordRecoveryScreen } from "./PasswordRecoveryScreen";
 import {TwoFactorRequiredError} from "../api/twoFactor";
 import { Ionicons } from "@expo/vector-icons";
@@ -29,6 +30,14 @@ export function LoginScreen() {
   const [verificationCode,setVerificationCode]=useState("");
     const [loading, setLoading] = useState(false);
     const submitting = useRef(false);
+    useHardwareBack(() => {
+      if (loading) return true;
+      if (recovering) { setRecovering(false); setError(""); return true; }
+      if (challengeId) { setChallengeId(""); setVerificationCode(""); setError(""); return true; }
+      if (registering && step > 0) { setStep(step - 1); setError(""); return true; }
+      if (registering) { setRegistering(false); setError(""); return true; }
+      return false;
+    });
     function nextStep() {
         setError("");
         if (step === 0 && (!isValidName(firstName.trim()) || !isValidName(lastName.trim()))) {
