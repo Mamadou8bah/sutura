@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { AppInput, Field, PrimaryButton, Screen } from "../components/ui";
 import { useTheme } from "../context/ThemeContext";
 import { fonts } from "../theme";

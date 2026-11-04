@@ -1,25 +1,16 @@
+import { useAppFonts } from "./src/hooks/useAppFonts";
+import { SafeAreaProvider, SafeAreaView as PlatformSafeAreaView } from "react-native-safe-area-context";
+import { NativeNavigator } from "./src/components/NativeNavigator";
 import { ScanScreen } from "./src/screens/ScanScreen";
 import { useTheme, useThemedStyles, ThemeProvider } from "./src/context/ThemeContext";
 import type { ThemeColors } from "./src/theme";
-import {
 
-  Inter_400Regular,
 
-  Inter_500Medium,
 
-  Inter_600SemiBold,
-
-  Inter_700Bold,
-
-  useFonts,
-
-} from "@expo-google-fonts/inter";
-
-import { useEffect, useRef, useState } from "react";
 
 import { StatusBar } from "expo-status-bar";
 
-import { ActivityIndicator, SafeAreaView, StyleSheet, View, Platform, StatusBar as NativeStatusBar } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 
 import { BottomNav } from "./src/components/BottomNav";
 
@@ -31,7 +22,7 @@ import { AuthProvider, useAuth } from "./src/context/AuthContext";
 
 import { WalletProvider, navTabFor, useWallet } from "./src/context/WalletContext";
 
-import { applyFontDefaults } from "./src/setupFonts";
+
 
 import { ActivityScreen } from "./src/screens/ActivityScreen";
 
@@ -78,33 +69,28 @@ function MainApp() {
 
   return (
 
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
 
       <StatusBar style={mode === "dark" ? "light" : "dark"} />
 
       <View style={styles.body}>
-
-        {tab === "home" && <HomeScreen />}
-
-        {tab === "wallets" && <WalletsScreen />}
-
-        {tab === "scan" && <ScanScreen />}
-        {tab === "send" && <SendScreen />}
-
-        {tab === "activity" && <ActivityScreen />}
-
-        {tab === "more" && <MoreScreen />}
-
-        {tab === "topup" && <TopUpScreen />}
-
-        {tab === "withdraw" && <WithdrawScreen />}
-
-        {tab === "support" && <SupportScreen />}
-
-        {tab === "profile" && <ProfileScreen />}
-
-        {tab === "verification" && <VerificationScreen onBack={() => setTab("profile")} />}
-
+        <NativeNavigator screen={tab} onChange={value => setTab(value as TabId)}
+          screens={["home", "wallets", "scan", "send", "activity", "more", "topup", "withdraw", "support", "profile", "verification"]} renderScreen={name => {
+          switch (name) {
+            case "home": return <HomeScreen />;
+            case "wallets": return <WalletsScreen />;
+            case "scan": return <ScanScreen />;
+            case "send": return <SendScreen />;
+            case "activity": return <ActivityScreen />;
+            case "more": return <MoreScreen />;
+            case "topup": return <TopUpScreen />;
+            case "withdraw": return <WithdrawScreen />;
+            case "support": return <SupportScreen />;
+            case "profile": return <ProfileScreen />;
+            case "verification": return <VerificationScreen onBack={() => setTab("profile")} />;
+            default: return <HomeScreen />;
+          }
+        }} />
       </View>
 
 
@@ -115,7 +101,7 @@ function MainApp() {
 
       <TransactionDetailSheet />
 
-    </SafeAreaView>
+    </View>
 
   );
 
@@ -146,13 +132,13 @@ function Root() {
 
   if (!session) {
 
-    return <LoginScreen />;
+    return <PlatformSafeAreaView edges={["top"]} style={{flex:1}}><LoginScreen /></PlatformSafeAreaView>;
 
   }
 
   return (
 
-    <WalletProvider>
+    <WalletProvider key={session.username}>
 
       <MainApp />
 
@@ -167,70 +153,10 @@ function Root() {
 function ThemedApp() {
   const { colors, mode } = useTheme();
   const styles = useThemedStyles(createStyles);
-
-
-  const [fontsLoaded, fontError] = useFonts({
-
-    Inter_400Regular,
-
-    Inter_500Medium,
-
-    Inter_600SemiBold,
-
-    Inter_700Bold,
-
-  });
-
-  const fontsApplied = useRef(false);
-  const [fontTimedOut, setFontTimedOut] = useState(false);
-  useEffect(() => { const timer = setTimeout(() => setFontTimedOut(true), 8000); return () => clearTimeout(timer); }, []);
-
-
-
-  useEffect(() => {
-
-    if (fontsLoaded && !fontsApplied.current) {
-
-      applyFontDefaults();
-
-      fontsApplied.current = true;
-
-    }
-
-  }, [fontsLoaded]);
-
-
-
-  if (!fontsLoaded && !fontError && !fontTimedOut) {
-
-    return (
-
-      <View style={styles.loading}>
-
-        <ActivityIndicator size="large" color={colors.primary} />
-
-      </View>
-
-    );
-
-  }
-
-
-
-  return (
-
-    <AuthProvider>
-
-      <StatusBar style={mode === "dark" ? "light" : "dark"} />
-      <Root />
-
-    </AuthProvider>
-
-  );
-
+  const fontsLoaded = useAppFonts();
+  if (!fontsLoaded) return <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary}/></View>;
+  return <AuthProvider><StatusBar style={mode === "dark" ? "light" : "dark"}/><Root /></AuthProvider>;
 }
-
-
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
 
@@ -242,9 +168,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
 
 });
 
-export default function App() { return <ThemeProvider><AppFrame /></ThemeProvider>; }
+export default function App() { return <SafeAreaProvider><ThemeProvider><AppFrame /></ThemeProvider></SafeAreaProvider>; }
 
 function AppFrame() {
   const { colors } = useTheme();
-  return <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: Platform.OS === "android" ? (NativeStatusBar.currentHeight ?? 0) : 0 }}><ThemedApp /></View>;
+  return <PlatformSafeAreaView edges={["bottom", "left", "right"]} style={{ flex: 1, backgroundColor: colors.background }}><ThemedApp /></PlatformSafeAreaView>;
 }

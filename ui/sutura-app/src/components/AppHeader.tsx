@@ -1,7 +1,10 @@
+import { useNativeHeader } from "./NativeControls";
+import { Platform } from "react-native";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { SuturaLogo } from "./SuturaLogo";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { useWallet } from "../context/WalletContext";
 import { colors, radii } from "../theme";
@@ -52,10 +55,11 @@ export function BackHeader({ title, onBack }: { title: string; onBack: () => voi
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
 
+  const nativeHeader = useNativeHeader(title); if (nativeHeader) return null;
   return (
     <View style={styles.backRow}>
       <Pressable accessibilityRole="button" accessibilityLabel="Go back" hitSlop={8} onPress={onBack} style={styles.backBtn}>
-        <Ionicons name="chevron-back" size={22} color={colors.primary} />
+        <Ionicons name={Platform.OS === "ios" ? "chevron-back" : "arrow-back"} size={22} color={colors.primary} />
       </Pressable>
       <Text style={styles.backTitle}>{title}</Text>
       <View style={styles.backSpacer} />

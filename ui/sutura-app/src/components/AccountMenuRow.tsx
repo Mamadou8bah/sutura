@@ -1,7 +1,8 @@
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import type { ReactNode } from "react";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { colors, fonts } from "../theme";
 export function AccountMenuRow({ label, icon, value, hint, onPress, trailing }: {

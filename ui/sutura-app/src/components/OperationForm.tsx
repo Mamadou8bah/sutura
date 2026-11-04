@@ -1,10 +1,13 @@
+import { Platform } from "react-native";
+import { NativeSelect, NativeButton } from "./NativeControls";
 import { useState } from "react";
 import { SelectionSheet } from "./SelectionSheet";
 import { AppInput } from "./ui";
 import { isAmountDraft } from "../utils/inputValidation";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text, NativeInput as TextInput } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { brand } from "../constants/brand";
 import { colors, fonts, radii, shadow, spacing } from "../theme";
@@ -35,6 +38,10 @@ export function WalletPicker({ wallets, selectedId, onSelect, hidden, compact = 
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
     const selected = wallets.find(w => w.id === selectedId) ?? wallets[0];
+    if (Platform.OS !== "web") return <NativeSelect title="Wallet" value={String(selected?.id ?? "")}
+      options={wallets.map(wallet => ({ value: String(wallet.id), enabled: wallet.status === "ACTIVE",
+        label: `${wallet.name} · ${wallet.currency} · ${formatBalance(wallet.balance, wallet.currency, hidden)}${wallet.status === "ACTIVE" ? "" : ` · ${wallet.status}`}` }))}
+      onChange={value => onSelect(Number(value))} disabled={wallets.length === 0} />;
     return <><Pressable accessibilityRole="button" accessibilityLabel="Select wallet" disabled={!wallets.length} onPress={() => { setSearch(""); setOpen(true); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}><View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceMuted, alignItems: "center", justifyContent: "center" }}><Text style={{ fontWeight: "700", color: colors.primary, fontSize: 12 }}>{selected?.currency ?? "—"}</Text></View><View style={{ flex: 1, gap: 4 }}><Text style={{ color: colors.primary, fontWeight: "600" }}>{selected?.name ?? "Choose wallet"}</Text>{!compact && <Text style={{ color: colors.slate500, fontSize: 12 }}>Available: {selected ? formatBalance(selected.balance, selected.currency, hidden) : "—"}</Text>}</View><Ionicons name="chevron-down" size={18} color={colors.primary}/></Pressable><SelectionSheet visible={open} title="Select wallet" onClose={() => setOpen(false)}><AppInput accessibilityLabel="Search wallets" placeholder="Search name or currency" value={search} onChangeText={setSearch}/>{wallets.filter(w => `${w.name} ${w.currency}`.toLowerCase().includes(search.toLowerCase())).map(w => <Pressable key={w.id} accessibilityRole="radio" accessibilityLabel={`${w.name}, ${w.currency}`} accessibilityState={{ checked: w.id === selectedId, disabled: w.status !== "ACTIVE" }} disabled={w.status !== "ACTIVE"} onPress={() => { onSelect(w.id); setOpen(false); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: colors.border, opacity: w.status === "ACTIVE" ? 1 : 0.5 }}><View style={{ flex: 1, gap: 5 }}><Text style={{ color: colors.primary, fontSize: 16, fontWeight: "600" }}>{w.name}</Text><Text style={{ color: colors.slate500, fontSize: 12 }}>{w.currency} · {w.status === "ACTIVE" ? "Available balance" : w.status}</Text></View><Text style={{ color: colors.primary }}>{formatBalance(w.balance, w.currency, hidden)}</Text>{w.id === selectedId && <Ionicons name="checkmark" color={colors.orange} size={20}/>}</Pressable>)}{!wallets.some(w => `${w.name} ${w.currency}`.toLowerCase().includes(search.toLowerCase())) && <Text style={{ paddingVertical: 24, color: colors.slate500 }}>No matching wallets</Text>}</SelectionSheet></>;
 }
 export function AmountHero({ amount, onChange, currency, }: {
@@ -124,11 +131,7 @@ export function SubmitButton({ label, onPress, color = brand.orange, disabled = 
     disabled?: boolean;
     loading?: boolean;
 }) {
-    const { colors } = useTheme();
-    const styles = useThemedStyles(createStyles);
-    return (<Pressable accessibilityRole="button" accessibilityState={{ disabled: disabled || loading, busy: loading }} disabled={disabled || loading} onPress={onPress} style={({ pressed }) => [styles.submit, { backgroundColor: color, opacity: disabled || loading ? 0.5 : pressed ? 0.92 : 1 }]}>
-      <Text style={styles.submitText}>{loading ? "Processing..." : label}</Text>
-    </Pressable>);
+    return <NativeButton label={loading ? "Processing…" : label} onPress={onPress} disabled={disabled || loading} color={color} />;
 }
 export function OptionList({ items, }: {
     items: {

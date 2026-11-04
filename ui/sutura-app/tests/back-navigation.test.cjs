@@ -5,11 +5,12 @@ const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
 
-function harness(platform = 'android') {
+function harness(platform = 'android', navigation = null) {
   const effects = [], subscriptions = [], cleanup = [];
   let state;
   const react = {
     useState(initial) { state = initial; return [initial, value => { state = value; }]; },
+    useContext() { return navigation; },
     useRef(value) { return { current: value }; },
     useCallback(fn) { return fn; },
     useEffect(fn) { effects.push(fn); },
@@ -82,4 +83,13 @@ test('all three applications share the same navigation behavior', () => {
   const read = app => fs.readFileSync(path.join(__dirname, '../../', app, 'src/hooks/useBackNavigation.ts'), 'utf8');
   assert.equal(read('sutura-app'), read('sutura-agent'));
   assert.equal(read('sutura-app'), read('merchant-app'));
+});
+
+
+test('an unfocused native-stack screen cannot consume Android Back', () => {
+  const app = harness('android', { isFocused: () => false }); let hiddenCalls = 0;
+  app.api.useHardwareBack(() => { hiddenCalls++; return true; });
+  const [, navigate] = app.api.useBackNavigation('home'); app.mount();
+  navigate('wallets'); assert.equal(app.press(), true);
+  assert.equal(app.state, 'home'); assert.equal(hiddenCalls, 0);
 });

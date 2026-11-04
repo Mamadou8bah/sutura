@@ -1,5 +1,6 @@
 import {fonts as appFonts} from "../theme";
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { NativeText as Text } from "./NativeControls";
 import { useTheme } from "../context/ThemeContext";
 import type { AgentStats } from "../types";
 export function StatsCarousel({stats}:{stats:AgentStats}) {

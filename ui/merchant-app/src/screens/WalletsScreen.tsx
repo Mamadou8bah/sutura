@@ -1,7 +1,8 @@
 import { BackHeader } from "../components/AppHeader";
 import { useApp } from "../context/AppContext";
 import { useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
+import { View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { Screen, Field, AppInput, PrimaryButton } from "../components/ui";
 import { Heading, DataNotice, Empty, money } from "../components/MerchantUI";
 import { SelectionSheet } from "../components/SelectionSheet";

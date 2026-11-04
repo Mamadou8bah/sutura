@@ -1,7 +1,8 @@
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { Linking, Pressable, StyleSheet, Text, View } from "react-native";
+import { Linking, StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import { PrimaryButton } from "./ui";
 import { colors } from "../theme";
 export default function NativeCamera({ onCode, onManual }: { onCode: (code: string) => void; onManual: () => void }) {

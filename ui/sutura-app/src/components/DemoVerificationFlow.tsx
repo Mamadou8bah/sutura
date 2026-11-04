@@ -1,7 +1,8 @@
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { BackHeader } from "./AppHeader";
 import { PrimaryButton } from "./ui";

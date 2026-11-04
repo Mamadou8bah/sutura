@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { Platform, useColorScheme } from "react-native";
+import { Appearance, Platform, useColorScheme } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { colors as lightColors, darkColors, type ThemeColors } from "../theme";
 export type ThemePreference = "light" | "dark" | "system";
@@ -12,6 +12,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   useEffect(() => { let active = true; AsyncStorage.getItem(KEY).then(value => { if (active && ["light", "dark", "system"].includes(value ?? "")) updatePreference(value as ThemePreference); }).catch(() => {}).finally(() => {if(active) setReady(true);}); return () => { active = false; }; }, []);
   const mode = preference === "system" ? system === "dark" ? "dark" : "light" : preference;
   const colors = mode === "dark" ? darkColors : lightColors;
+  useEffect(() => { if (Platform.OS !== "web") Appearance.setColorScheme(preference === "system" ? null : preference); }, [preference]);
   useEffect(() => { if (Platform.OS === "web" && typeof document !== "undefined") { document.body.style.backgroundColor = colors.background; document.documentElement.style.colorScheme = mode; } }, [colors, mode]);
   const value = useMemo(() => ({colors, mode, preference, setPreference: (next: ThemePreference) => { updatePreference(next); void AsyncStorage.setItem(KEY, next).catch(() => {}); }}), [colors, mode, preference]);
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

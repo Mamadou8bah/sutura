@@ -1,7 +1,8 @@
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
 import { useEffect, useState } from "react";
-import { Share, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Share, ScrollView, StyleSheet, View } from "react-native";
+import { NativeText as Text } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { BackHeader } from "../components/AppHeader";
 import { Card, FormError, PrimaryButton } from "../components/ui";

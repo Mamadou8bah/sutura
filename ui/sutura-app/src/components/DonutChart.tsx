@@ -1,7 +1,8 @@
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import Svg, { Circle, G } from "react-native-svg";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { NativeText as Text } from "./NativeControls";
 import { colors, radii, shadow } from "../theme";
 import type { StatCategory } from "../types";
 import { formatMoney } from "../utils/format";

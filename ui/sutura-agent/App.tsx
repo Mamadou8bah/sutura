@@ -1,20 +1,17 @@
+import { useAppFonts } from "./src/hooks/useAppFonts";
+import { SafeAreaProvider, SafeAreaView as PlatformSafeAreaView } from "react-native-safe-area-context";
+import { NativeNavigator } from "./src/components/NativeNavigator";
 import { SettingsScreen } from "./src/screens/SettingsScreen";
 import {useTheme,useThemedStyles,ThemeProvider} from "./src/context/ThemeContext";
 import type {ThemeColors} from "./src/theme";
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  useFonts,
-} from "@expo-google-fonts/inter";
-import { useEffect, useRef, useState } from "react";
+
+
 import { StatusBar } from "expo-status-bar";
-import { ActivityIndicator, SafeAreaView, StyleSheet, View, Platform, StatusBar as NativeStatusBar } from "react-native";
+import { ActivityIndicator, StyleSheet, View } from "react-native";
 import { BottomNav } from "./src/components/BottomNav";
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 import { AgentProvider, navTabFor, useAgent } from "./src/context/AgentContext";
-import { applyFontDefaults } from "./src/setupFonts";
+
 import { ActivityScreen } from "./src/screens/ActivityScreen";
 import { ConfirmScreen } from "./src/screens/ConfirmScreen";
 import { HomeScreen } from "./src/screens/HomeScreen";
@@ -39,24 +36,30 @@ function MainApp() {
   const showNav = mainTabs.has(tab);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <View style={styles.safeArea}>
       <StatusBar style={mode === "dark" ? "light" : "dark"} />
       <View style={styles.body}>
-        {tab === "home" && <HomeScreen />}
-        {tab === "scan" && <ScanScreen />}
-        {tab === "queue" && <QueueScreen />}
-        {tab === "activity" && <ActivityScreen />}
-        {tab === "more" && <MoreScreen />}
-        {tab === "confirm" && <ConfirmScreen />}
-        {tab === "new-deposit" && <NewDepositScreen />}
-        {tab === "new-withdrawal" && <NewWithdrawalScreen />}
-        {tab === "profile" && <ProfileScreen />}
-        {tab === "settings" && <SettingsScreen />}
-        {tab === "support" && <SupportScreen />}
+        <NativeNavigator screen={tab} onChange={value => setTab(value as TabId)}
+          screens={["home", "scan", "queue", "activity", "more", "confirm", "new-deposit", "new-withdrawal", "profile", "settings", "support"]} renderScreen={name => {
+          switch (name) {
+            case "home": return <HomeScreen />;
+            case "scan": return <ScanScreen />;
+            case "queue": return <QueueScreen />;
+            case "activity": return <ActivityScreen />;
+            case "more": return <MoreScreen />;
+            case "confirm": return <ConfirmScreen />;
+            case "new-deposit": return <NewDepositScreen />;
+            case "new-withdrawal": return <NewWithdrawalScreen />;
+            case "profile": return <ProfileScreen />;
+            case "settings": return <SettingsScreen />;
+            case "support": return <SupportScreen />;
+            default: return <HomeScreen />;
+          }
+        }} />
       </View>
 
       {showNav ? <BottomNav active={navTabFor(tab)} onChange={setTab} /> : null}
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -73,50 +76,21 @@ function Root() {
     );
   }
   if (!session) {
-    return <LoginScreen />;
+    return <PlatformSafeAreaView edges={["top"]} style={{flex:1}}><LoginScreen /></PlatformSafeAreaView>;
   }
   return (
-    <AgentProvider>
+    <AgentProvider key={session.username}>
       <MainApp />
     </AgentProvider>
   );
 }
 
 function ThemedApp() {
- const {colors,mode}=useTheme();
- const styles=useThemedStyles(createStyles);
-
-  const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-  });
-  const fontsApplied = useRef(false);
-  const [fontTimedOut, setFontTimedOut] = useState(false);
-  useEffect(() => { const timer = setTimeout(() => setFontTimedOut(true), 8000); return () => clearTimeout(timer); }, []);
-
-  useEffect(() => {
-    if (fontsLoaded && !fontsApplied.current) {
-      applyFontDefaults();
-      fontsApplied.current = true;
-    }
-  }, [fontsLoaded]);
-
-  if (!fontsLoaded && !fontError && !fontTimedOut) {
-    return (
-      <View style={styles.loading}>
-        <ActivityIndicator size="large" color={colors.primary} />
-      </View>
-    );
-  }
-
-  return (
-    <AuthProvider>
-      <StatusBar style={mode === "dark" ? "light" : "dark"}/>
-      <Root />
-    </AuthProvider>
-  );
+  const { colors, mode } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const fontsLoaded = useAppFonts();
+  if (!fontsLoaded) return <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary}/></View>;
+  return <AuthProvider><StatusBar style={mode === "dark" ? "light" : "dark"}/><Root /></AuthProvider>;
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
@@ -125,9 +99,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   loading: { flex: 1, alignItems: "center", justifyContent: "center", backgroundColor: colors.background },
 });
 
-export default function App(){return <ThemeProvider><AppFrame /></ThemeProvider>;}
+export default function App(){return <SafeAreaProvider><ThemeProvider><AppFrame /></ThemeProvider></SafeAreaProvider>;}
 
 function AppFrame() {
   const { colors } = useTheme();
-  return <View style={{ flex: 1, backgroundColor: colors.background, paddingTop: Platform.OS === "android" ? (NativeStatusBar.currentHeight ?? 0) : 0 }}><ThemedApp /></View>;
+  return <PlatformSafeAreaView edges={["bottom", "left", "right"]} style={{ flex: 1, backgroundColor: colors.background }}><ThemedApp /></PlatformSafeAreaView>;
 }

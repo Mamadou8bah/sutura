@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Keyboard, Text, View } from "react-native";
+import { ActivityIndicator, Keyboard, View } from "react-native";
+import { NativeText as Text } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import MerchantScanner from "../components/MerchantScanner";
 import { OperationScreen, WalletPicker, FormError, SubmitButton } from "../components/OperationForm";

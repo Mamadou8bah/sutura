@@ -1,7 +1,8 @@
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import QRCode from "react-native-qrcode-svg";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { NativeText as Text } from "./NativeControls";
 import { colors, radii } from "../theme";
 import type { AgentQrPayload } from "../types";
 import { encodeAgentQrPayload } from "../utils/agentQr";

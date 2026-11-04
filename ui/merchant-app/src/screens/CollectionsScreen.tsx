@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { Pressable, Share, Text, View } from "react-native";
+import { Share, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import QRCode from "react-native-qrcode-svg";
 import { Ionicons } from "@expo/vector-icons";
 import { Screen, AppInput, Field, PrimaryButton } from "../components/ui";

@@ -7,7 +7,8 @@ import {fonts as appFonts} from "../theme";
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, AppState, Linking, ScrollView, StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { kycApi, type KycStatus } from "../api/kyc";
 
 const descriptions: Record<KycStatus["status"], string> = {

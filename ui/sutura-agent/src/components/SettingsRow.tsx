@@ -1,5 +1,6 @@
 import type {ReactNode} from "react";
-import {Pressable,Text,View} from "react-native";
+import { View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import {Ionicons} from "@expo/vector-icons";
 import {useTheme} from "../context/ThemeContext";
 import {fonts} from "../theme";

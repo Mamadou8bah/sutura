@@ -1,6 +1,8 @@
+import { SelectionSheet } from "./SelectionSheet";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
-import { Modal, ScrollView, Pressable, StyleSheet, Text, View } from "react-native";
+import { Modal, ScrollView, StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { useWallet } from "../context/WalletContext";
 import { brand } from "../constants/brand";
@@ -43,13 +45,7 @@ export function WalletActionsSheet() {
     setTab(tab);
   }
 
-  return (
-    <Modal visible={walletActionsTarget !== null} transparent animationType="slide" onRequestClose={closeWalletActions}>
-      <Pressable style={styles.backdrop} onPress={closeWalletActions}>
-        <Pressable style={[styles.sheet, { maxHeight: "90%" }]} onPress={() => undefined}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-          <View style={styles.handle} />
-
+  return <SelectionSheet visible={walletActionsTarget !== null} title="Wallet actions" onClose={closeWalletActions}>
           {wallet ? (
             <>
               <Text style={styles.title}>{wallet.name}</Text>
@@ -80,11 +76,7 @@ export function WalletActionsSheet() {
           <Pressable style={styles.cancelBtn} onPress={closeWalletActions}>
             <Text style={styles.cancelText}>Cancel</Text>
           </Pressable>
-          </ScrollView>
-        </Pressable>
-      </Pressable>
-    </Modal>
-  );
+  </SelectionSheet>;
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({

@@ -1,7 +1,8 @@
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text, NativeInput as TextInput } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { kycApi, type KycStatus } from "../api/kyc";
 import { useWallet } from "../context/WalletContext";

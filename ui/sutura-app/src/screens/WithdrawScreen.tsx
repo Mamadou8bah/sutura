@@ -2,7 +2,8 @@ import { isValidAmount, isPhoneDraft, normalizePhone } from "../utils/inputValid
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { useRef, useState } from "react";
-import { KeyboardAvoidingView, Keyboard, Platform, ScrollView, StyleSheet, Text } from "react-native";
+import { KeyboardAvoidingView, Keyboard, Platform, ScrollView, StyleSheet } from "react-native";
+import { NativeText as Text } from "../components/NativeControls";
 import { BackHeader } from "../components/AppHeader";
 import { AgentQrCard } from "../components/AgentQrCard";
 import {

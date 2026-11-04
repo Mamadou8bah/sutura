@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import { NavigationContext } from "@react-navigation/native";
+import { useCallback, useContext, useEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
 import { BackHandler, Platform } from "react-native";
 
 // Screen-local steps take precedence regardless of parent/child effect order.
@@ -11,15 +12,16 @@ export function nextHistory<T>(history: T[], next: T): T[] {
   return index >= 0 ? history.slice(0, index + 1) : [...history, next].slice(-50);
 }
 export function useHardwareBack(handler: () => boolean) {
+  const navigation = useContext(NavigationContext);
   const latest = useRef(handler);
   latest.current = handler;
   useEffect(() => {
     if (Platform.OS !== "android") return;
-    const callback = () => latest.current();
+    const callback = () => navigation?.isFocused() === false ? false : latest.current();
     localHandlers.add(callback);
     const subscription = BackHandler.addEventListener("hardwareBackPress", handleLocalBack);
     return () => { localHandlers.delete(callback); subscription.remove(); };
-  }, []);
+  }, [navigation]);
 }
 export function useBackNavigation<T>(initial: T, root: T = initial) {
   const [screen, updateScreen] = useState<T>(initial);

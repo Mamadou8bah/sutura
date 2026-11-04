@@ -1,4 +1,5 @@
-import { Text, View } from "react-native";
+import { View } from "react-native";
+import { NativeText as Text } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme } from "../context/ThemeContext";
 export default function MerchantScanner({onCode}:{onCode:(value:string)=>void}) {

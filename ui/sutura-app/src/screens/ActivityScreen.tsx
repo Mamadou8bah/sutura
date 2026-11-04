@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { FlatList, Pressable, StyleSheet, Text, View } from "react-native";
+import { FlatList, StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { TransactionRow } from "../components/TransactionRow";
 import { SelectionSheet } from "../components/SelectionSheet";

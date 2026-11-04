@@ -1,7 +1,8 @@
 import {fonts as appFonts} from "../theme";
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { NativeText as Text } from "../components/NativeControls";
 import { LinkButton, SuturaLogo, PrimaryButton, Screen } from "../components/ui";
 import { useApp } from "../context/AppContext";
 import { colors } from "../theme";

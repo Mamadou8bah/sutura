@@ -1,4 +1,5 @@
-import { Pressable, Text, View } from "react-native";
+import { View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { Screen, SuturaLogo } from "../components/ui";
 import { DataNotice, Empty, money } from "../components/MerchantUI";

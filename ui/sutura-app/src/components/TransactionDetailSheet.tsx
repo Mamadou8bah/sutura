@@ -1,7 +1,9 @@
+import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { useState } from "react";
-import { ActivityIndicator, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { useWallet } from "../context/WalletContext";
 import { brand } from "../constants/brand";
@@ -75,7 +77,7 @@ export function TransactionDetailSheet() {
 
   return (
     <Modal visible animationType="slide" onRequestClose={closeTransaction}>
-      <View style={styles.screen}>
+      <SafeAreaProvider><SafeAreaView style={styles.screen}>
         <View style={styles.topBar}>
           <Pressable onPress={closeTransaction} style={styles.iconBtn} hitSlop={8}>
             <Ionicons name="close" size={22} color={colors.slate700} />
@@ -127,7 +129,7 @@ export function TransactionDetailSheet() {
           </Pressable>
           {shareError ? <Text style={styles.shareError}>{shareError}</Text> : null}
         </ScrollView>
-      </View>
+      </SafeAreaView></SafeAreaProvider>
     </Modal>
   );
 }

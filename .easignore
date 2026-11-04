@@ -1,0 +1,40 @@
+# Local configuration and generated outputs
+.env
+.env.*
+!.env.example
+*.log
+*.tsbuildinfo
+node_modules/
+__pycache__/
+*.py[cod]
+**/.expo-web-test*/
+.idea/
+.vscode/
+*.iml
+
+# Expo web export artifacts are built by hosting, never committed.
+ui/*/dist/
+
+# Expo native projects are generated from app config; keep builds and signing keys local.
+ui/*/android/
+ui/*/ios/
+ui/*/.ota-validation/
+
+# Mobile builds need the UI applications and shared configuration only.
+/server/
+/docs/
+/ui/web/
+.git/
+.expo/
+.expo-shared/
+coverage/
+web-build/
+*.apk
+*.aab
+*.jks
+*.keystore
+*.p12
+# Never include private training toolkits if copied into this repository.
+kaggle_kyc*
+KAGGLE_KYC_GUIDE.md
+build_kaggle_kyc_kit.py

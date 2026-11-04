@@ -1,6 +1,7 @@
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from "react-native";
+import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { ScreenTitle } from "../components/AppHeader";
 import { OperationRow } from "../components/OperationRow";
 import { useAgent } from "../context/AgentContext";

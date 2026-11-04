@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { CameraView, useCameraPermissions } from "expo-camera";
-import { Linking, Text, View } from "react-native";
+import { Linking, View } from "react-native";
+import { NativeText as Text } from "./NativeControls";
 import { useTheme } from "../context/ThemeContext";
 import { PrimaryButton } from "./ui";
 export default function MerchantScanner({onCode}:{onCode:(value:string)=>void}) {

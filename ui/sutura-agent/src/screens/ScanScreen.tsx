@@ -1,7 +1,8 @@
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
 import { lazy, Suspense, useCallback, useRef, useState } from "react";
-import { Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Platform, ScrollView, StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 const NativeCamera = lazy(() => import("../components/NativeCamera"));
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenTitle } from "../components/AppHeader";

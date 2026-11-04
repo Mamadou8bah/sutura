@@ -1,7 +1,8 @@
 import {Ionicons} from "@expo/vector-icons";
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { AppHeader } from "../components/AppHeader";
 import { OperationRow } from "../components/OperationRow";
 import { QuickActionGrid } from "../components/QuickActionGrid";

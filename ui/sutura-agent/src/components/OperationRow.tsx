@@ -1,6 +1,7 @@
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import { colors, fonts, radii } from "../theme";
 import type { AgentOperation } from "../types";
 import { formatMoney, formatTimestamp, operationLabel, statusLabel } from "../utils/format";

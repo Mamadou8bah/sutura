@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Pressable, Share, Text, View } from "react-native";
+import { Share, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { Screen, AppInput } from "../components/ui";
 import { Heading, DataNotice, Empty, money } from "../components/MerchantUI";
 import { SelectionSheet } from "../components/SelectionSheet";

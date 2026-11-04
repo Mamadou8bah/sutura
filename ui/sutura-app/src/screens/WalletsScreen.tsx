@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Pressable } from "react-native";
+import { NativePressable as Pressable } from "../components/NativeControls";
 import { WalletOverview } from "../components/WalletOverview";
 import { SelectionSheet } from "../components/SelectionSheet";
 import { formatBalance } from "../utils/format";
@@ -8,7 +8,8 @@ import { isCurrencyDraft } from "../utils/inputValidation";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { useRef, useState } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { NativeText as Text } from "../components/NativeControls";
 import { ScreenTitle } from "../components/AppHeader";
 import { AppInput, Field, PrimaryButton } from "../components/ui";
 import { api } from "../api/client";

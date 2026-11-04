@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, ScrollView, StyleSheet, View } from "react-native";
+import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import { AppHeader } from "../components/AppHeader";
 import { TransactionRow } from "../components/TransactionRow";

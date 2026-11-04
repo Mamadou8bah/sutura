@@ -1,4 +1,5 @@
-import {Text,View} from "react-native";
+import { View } from "react-native";
+import { NativeText as Text } from "./NativeControls";
 import {useTheme} from "../context/ThemeContext";
 import {fonts} from "../theme";
 import {REGISTRATION_STEPS} from "../constants/registration";

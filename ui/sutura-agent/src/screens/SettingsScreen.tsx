@@ -1,5 +1,6 @@
 import {useState} from "react";
-import {ScrollView,Text,Switch,View} from "react-native";
+import { ScrollView, Switch, View } from "react-native";
+import { NativeText as Text } from "../components/NativeControls";
 import {BackHeader} from "../components/AppHeader";
 import {ThemePicker} from "../components/ThemePicker";
 import {SelectionSheet} from "../components/SelectionSheet";

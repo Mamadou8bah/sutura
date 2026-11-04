@@ -1,5 +1,6 @@
 import {useState} from "react";
-import {Text,View} from "react-native";
+import { View } from "react-native";
+import { NativeText as Text } from "../components/NativeControls";
 import {useTheme} from "../context/ThemeContext";
 import {useApp} from "../context/AppContext";
 import {Card,Field,AppInput,PrimaryButton,Screen,SuturaLogo,LinkButton} from "../components/ui";

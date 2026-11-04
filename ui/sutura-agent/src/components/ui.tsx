@@ -1,8 +1,10 @@
+import { NativeButton } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
-import { KeyboardAvoidingView, Platform, ScrollView, Pressable, StyleSheet, Text, TextInput, View, type TextInputProps, type ViewStyle } from "react-native";
+import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type TextInputProps, type ViewStyle } from "react-native";
+import { NativePressable as Pressable, NativeText as Text, NativeInput as TextInput } from "./NativeControls";
 import { colors, fonts, radii, shadow } from "../theme";
 
 export function Field({ label, children, hint }: { label: string; children: React.ReactNode; hint?: string }) {
@@ -26,37 +28,10 @@ export function AppInput(props: TextInputProps) {
   return <TextInput {...props} selectionColor={colors.orange} onFocus={event=>{setFocused(true);props.onFocus?.(event);}} onBlur={event=>{setFocused(false);props.onBlur?.(event);}} placeholderTextColor={props.placeholderTextColor ?? colors.slate500} style={[styles.input, focused && {borderColor:colors.orange}, props.style]} />;
 }
 
-export function PrimaryButton({
-  label,
-  onPress,
-  color = colors.orange,
-  disabled,
-  style,
-}: {
-  label: string;
-  onPress: () => void;
-  color?: string;
-  disabled?: boolean;
-  style?: ViewStyle;
+export function PrimaryButton({ label, onPress, disabled = false, color, style }: {
+  label: string; onPress: () => void; disabled?: boolean; color?: string; textColor?: string; style?: ViewStyle;
 }) {
- const {colors}=useTheme();
- const styles=useThemedStyles(createStyles);
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityState={{ disabled: !!disabled }}
-      onPress={onPress}
-      disabled={disabled}
-      style={({ pressed }) => [
-        styles.primaryButton,
-        { backgroundColor: color, opacity: disabled ? 0.5 : pressed ? 0.92 : 1 },
-        style,
-      ]}
-    >
-      <Text style={[styles.primaryButtonText, { color: color === colors.orange ? "#181a20" : color === colors.primary ? colors.background : color === colors.surfaceMuted || color === colors.background ? colors.primary : colors.white }]}>{label}</Text>
-    </Pressable>
-  );
+  return <NativeButton label={label} onPress={onPress} disabled={disabled} color={color} style={style} />;
 }
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {

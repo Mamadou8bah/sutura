@@ -1,6 +1,7 @@
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, View } from "react-native";
+import { NativeText as Text } from "../components/NativeControls";
 import { BackHeader } from "../components/AppHeader";
 import { Card, PrimaryButton } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
