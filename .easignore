@@ -18,6 +18,10 @@ ui/*/dist/
 # Expo native projects are generated from app config; keep builds and signing keys local.
 ui/*/android/
 ui/*/ios/
+ui/shared/modules/**/android/build/
+ui/shared/modules/**/android/.gradle/
+ui/shared/modules/**/ios/Pods/
+ui/shared/modules/**/ios/build/
 ui/*/.ota-validation/
 
 # Mobile builds need the UI applications and shared configuration only.

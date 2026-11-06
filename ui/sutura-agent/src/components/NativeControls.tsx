@@ -1,7 +1,8 @@
 import { NavigationContext } from "@react-navigation/native";
 import { createContext, useContext, useEffect, forwardRef } from "react";
-import { ActionSheetIOS, Button, Platform, Pressable, StyleSheet, Text, TextInput, View,
-  type PressableProps, type TextProps, type TextInputProps, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { ActionSheetIOS, Button, PixelRatio, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View,
+  type PressableProps, type SwitchProps, type TextProps, type TextInputProps, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
+import { DeviceControl } from "./DeviceControl";
 import { Picker } from "@react-native-picker/picker";
 import { useTheme } from "../context/ThemeContext";
 
@@ -42,7 +43,12 @@ export const NativePressable = forwardRef<View, PressableProps>((props, ref) => 
 export function NativeButton({ label, onPress, disabled = false, color, style }: {
   label: string; onPress: () => void; disabled?: boolean; color?: string; style?: StyleProp<ViewStyle>;
 }) {
-  const { colors } = useTheme();
+  const { colors, mode } = useTheme();
+  if (DeviceControl) return <View style={[{ minWidth: 112, minHeight: 52 }, style]}>
+    <DeviceControl controlKind="button" label={label} dark={mode === "dark"} disabled={disabled}
+      onAction={() => { if (!disabled) onPress(); }}
+      style={{ alignSelf: "stretch", height: Math.max(52, Math.round(24 * PixelRatio.getFontScale() + 24)) }} />
+  </View>;
   if (Platform.OS === "web") return <NativePressable disabled={disabled} accessibilityRole="button"
     accessibilityState={{ disabled }} onPress={onPress} style={[{ minHeight: 52, padding: 12, borderRadius: 8,
       backgroundColor: color ?? colors.orange, justifyContent: "center", alignItems: "center", opacity: disabled ? .5 : 1 }, style]}>
@@ -55,11 +61,33 @@ export function NativeButton({ label, onPress, disabled = false, color, style }:
 }
 
 export type NativeOption = { value: string; label: string; enabled?: boolean };
+export function NativeSwitch(props: SwitchProps) {
+  const { mode } = useTheme();
+  if (!DeviceControl) return <Switch {...props} />;
+  return <DeviceControl controlKind="switch" label={props.accessibilityLabel ?? "Toggle"}
+    dark={mode === "dark"} checked={Boolean(props.value)} disabled={props.disabled}
+    testID={props.testID} style={[{ width: 72, height: 48 }, props.style]}
+    onValueChange={event => {
+      const checked = event.nativeEvent.checked;
+      if (!props.disabled && typeof checked === "boolean") props.onValueChange?.(checked);
+    }} />;
+}
+
 export function NativeSelect({ title, value, options, onChange, disabled = false }: {
   title: string; value: string; options: readonly NativeOption[]; onChange: (value: string) => void; disabled?: boolean;
 }) {
   const { colors, mode } = useTheme();
   const selected = options.find(option => option.value === value);
+  if (Platform.OS === "android" && DeviceControl) return <View>
+    <NativeText style={{ color: colors.slate500, fontSize: 12, paddingTop: 8 }}>{title}</NativeText>
+    <DeviceControl controlKind="select" label={title} value={value} options={options}
+      dark={mode === "dark"} disabled={disabled || !options.some(option => option.enabled !== false)}
+      style={{ alignSelf: "stretch", height: Math.max(52, Math.round(24 * PixelRatio.getFontScale() + 24)) }}
+      onValueChange={event => {
+        const next = event.nativeEvent.value;
+        if (!disabled && typeof next === "string" && options.some(option => option.value === next && option.enabled !== false)) onChange(next);
+      }} />
+  </View>;
   if (Platform.OS === "android") return <View style={{ borderBottomWidth: 1, borderColor: colors.border }}>
     <NativeText style={{ color: colors.slate500, fontSize: 12, paddingTop: 8 }}>{title}</NativeText>
     <Picker accessibilityLabel={title} prompt={title} mode="dialog" selectedValue={value} enabled={!disabled}

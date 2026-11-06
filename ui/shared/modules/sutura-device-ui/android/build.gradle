@@ -1,0 +1,10 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+group = 'gm.sutura.deviceui'
+version = '1.0.0'
+android {
+  namespace 'gm.sutura.deviceui'
+  defaultConfig { versionCode 1; versionName '1.0.0' }
+}
