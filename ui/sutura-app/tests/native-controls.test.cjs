@@ -75,7 +75,7 @@ test('iOS action-sheet cancellation and disabled choices never change a wallet',
 });
 
 test('customer, agent and merchant use identical platform controls and stack adapters', () => {
-  for (const filename of ['DeviceControl.tsx', 'NativeControls.tsx', 'NativeNavigator.tsx', 'SelectionSheet.tsx']) {
+  for (const filename of ['NativeTabBar.tsx', 'DeviceControl.tsx', 'NativeControls.tsx', 'NativeNavigator.tsx', 'SelectionSheet.tsx']) {
     const read = app => fs.readFileSync(path.join(__dirname, '../../', app, 'src/components', filename), 'utf8');
     assert.equal(read('sutura-app'), read('sutura-agent'));
     assert.equal(read('sutura-app'), read('merchant-app'));
@@ -135,7 +135,37 @@ test('native view registration is skipped on web and on APKs without the bridge'
     } });
     const available = platform !== 'web' && installed;
     assert.equal(exports.DeviceControl, available ? 'FrameworkControl' : null);
+    assert.equal(exports.supportsNativeTabs, false); // Earlier bridges do not implement tabs.
     assert.equal(registrations, available ? 1 : 0);
     assert.equal(lookups, platform === 'web' ? 0 : 1);
+  }
+});
+
+
+test('native tabs reject unknown, disabled and repeated navigation events', () => {
+  const source = fs.readFileSync(path.join(__dirname, '../src/components/NativeTabBar.tsx'), 'utf8');
+  const code = ts.transpileModule(source, { compilerOptions: {
+    module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022,
+  } }).outputText;
+  for (const available of [false, true]) {
+    const exports = {};
+    vm.runInNewContext(code, { exports, require(name) {
+      if (name === 'react/jsx-runtime') return { jsx: (type, props) => ({ type, props }) };
+      if (name === 'react-native') return { Platform: { OS: 'android' }, useWindowDimensions: () => ({ fontScale: 1 }) };
+      if (name === '../context/ThemeContext') return { useTheme: () => ({ mode: 'dark' }) };
+      if (name === './DeviceControl') return { supportsNativeTabs: available, DeviceControl: 'NativeTabs' };
+      throw new Error(name);
+    } });
+    const changes = [];
+    const bar = exports.NativeTabBar({ active: 'home', tabs: [
+      { value: 'home', label: 'Home', icon: 'home-outline' },
+      { value: 'activity', label: 'Activity', icon: 'receipt-outline' },
+      { value: 'disabled', label: 'Unavailable', icon: '', enabled: false },
+    ], onChange: value => changes.push(value) });
+    if (!available) { assert.equal(bar, null); continue; }
+    for (const value of ['home', 'disabled', 'unknown', undefined]) bar.props.onValueChange({ nativeEvent: { value } });
+    assert.equal(changes.length, 0);
+    bar.props.onValueChange({ nativeEvent: { value: 'activity' } });
+    assert.deepEqual(changes, ['activity']);
   }
 });

@@ -1,5 +1,8 @@
 package gm.sutura.deviceui
 
+import com.google.android.material.bottomnavigation.BottomNavigationView
+import com.google.android.material.navigation.NavigationBarView
+import com.google.android.material.color.DynamicColors
 import android.app.AlertDialog
 import android.content.Context
 import android.content.res.Configuration
@@ -21,6 +24,7 @@ import expo.modules.kotlin.viewevent.EventDispatcher
 class SuturaDeviceUIModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("SuturaDeviceUI")
+    Constants("supportsNativeTabs" to true)
     View(DeviceControlView::class) {
       Events("onAction", "onValueChange")
       Prop("controlKind") { view: DeviceControlView, value: String -> view.kind = value }
@@ -52,6 +56,7 @@ class DeviceControlView(context: Context, appContext: AppContext) : ExpoView(con
   private var widgetKey = ""
   private var dialog: AlertDialog? = null
   private var synchronizing = false
+  private var tabOptions: List<Map<String, Any?>> = emptyList()
 
   init {
     gravity = Gravity.CENTER_VERTICAL
@@ -86,8 +91,9 @@ class DeviceControlView(context: Context, appContext: AppContext) : ExpoView(con
     if (key != widgetKey) {
       closeDialog()
       removeAllViews()
+      tabOptions = emptyList()
       val themed = deviceContext()
-      widget = if (kind == "switch") Switch(themed).apply {
+      widget = if (kind == "tabs") createTabs() else if (kind == "switch") Switch(themed).apply {
         setOnCheckedChangeListener { _, next ->
           if (!synchronizing && !disabled) onValueChange(mapOf("checked" to next))
         }
@@ -104,6 +110,7 @@ class DeviceControlView(context: Context, appContext: AppContext) : ExpoView(con
       widgetKey = key
     }
     synchronizing = true
+    if (widget is BottomNavigationView) updateTabs(widget as BottomNavigationView)
     widget?.isEnabled = !disabled && (kind != "select" || options.any { it["enabled"] != false })
     widget?.contentDescription = label
     if (widget is Switch) (widget as Switch).isChecked = checked
@@ -111,6 +118,58 @@ class DeviceControlView(context: Context, appContext: AppContext) : ExpoView(con
       options.firstOrNull { it["value"] == value }?.get("label") as? String ?: "Choose an option" else label
     synchronizing = false
     if (disabled) closeDialog()
+  }
+
+  private fun createTabs(): BottomNavigationView {
+    val config = Configuration(context.resources.configuration)
+    config.uiMode = (config.uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+      if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
+    val themed = ContextThemeWrapper(context.createConfigurationContext(config),
+      if (dark) com.google.android.material.R.style.Theme_Material3_Dark_NoActionBar
+      else com.google.android.material.R.style.Theme_Material3_Light_NoActionBar)
+    return BottomNavigationView(DynamicColors.wrapContextIfAvailable(themed)).apply {
+      labelVisibilityMode = NavigationBarView.LABEL_VISIBILITY_LABELED
+      isItemHorizontalTranslationEnabled = false
+      // The React root already applies the system navigation inset.
+      androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(this) { _, insets -> insets }
+      setOnItemSelectedListener { item ->
+        val option = options.getOrNull(item.itemId - 1)
+        if (!synchronizing && !disabled && option != null && option["enabled"] != false) {
+          val next = option["value"] as? String
+          if (next != null && next != value) onValueChange(mapOf("value" to next))
+        }
+        true
+      }
+    }
+  }
+
+  private fun updateTabs(tabs: BottomNavigationView) {
+    if (options != tabOptions) {
+      tabs.menu.clear()
+      options.take(5).forEachIndexed { index, option ->
+        val name = when (option["icon"]) {
+          "home-outline" -> "home"; "wallet-outline" -> "wallet"
+          "scan-outline", "qr-code-outline" -> "scan"
+          "receipt-outline" -> "activity"; "time-outline" -> "queue"
+          else -> "more"
+        }
+        val icon = resources.getIdentifier("sutura_tab_$name", "drawable", context.packageName)
+        tabs.menu.add(0, index + 1, index, option["label"] as? String ?: "").apply {
+          setIcon(icon)
+          isCheckable = true
+          isEnabled = !disabled && option["enabled"] != false
+        }
+      }
+      tabOptions = options.map { it.toMap() }
+    }
+    options.take(5).forEachIndexed { index, option ->
+      tabs.menu.findItem(index + 1)?.isEnabled = !disabled && option["enabled"] != false
+      val badge = (option["badge"] as? Number)?.toInt()
+      if (badge != null && badge > 0) tabs.getOrCreateBadge(index + 1).number = badge
+      else tabs.removeBadge(index + 1)
+    }
+    val selected = options.indexOfFirst { it["value"] == value }
+    if (selected in 0..4) tabs.selectedItemId = selected + 1
   }
 
   private fun openSelection() {

@@ -82,3 +82,28 @@ No Android device/emulator or iOS simulator was connected during this change.
 Exports and tests do not establish physical-device acceptance: verify screen
 transitions, interactive back gestures, keyboards, native selection dialogs,
 light/dark appearance, receipt windows and text scaling on actual devices.
+
+
+## Native bottom navigation
+
+Customer, agent and merchant use the same native tab bridge. Android uses
+Material 3 `BottomNavigationView` (Material Components 1.12.0) with
+`DynamicColors.wrapContextIfAvailable`; supported Android devices adopt system
+colors. This is a public Android component, not Samsung's private One UI bar.
+iOS uses UIKit `UITabBar` and SF Symbols. App light/dark preferences apply to both.
+
+Routes still go through the existing context and native stack, preserving Back
+history. Native events are checked against current enabled routes; programmatic
+selection changes do not trigger navigation. Labels, accessibility selection and
+optional badges belong to the native controls. The app root owns bottom safe-area
+padding, so Android's bar does not apply that inset a second time.
+
+A native capability flag keeps the existing bar on web, Expo Go and earlier APKs.
+Install a new build to see native tabs; an OTA cannot install the native module.
+The three TypeScript checks, all nine platform exports and 51 customer tests pass.
+The extended Kotlin bridge also compiles against real Material 1.12.0 and cached
+AndroidX/Expo/React Native classes; this does not replace the complete APK build.
+UIKit requires an Xcode build and physical-device visual checks remain pending.
+
+References: [Android bottom navigation](https://developer.android.com/reference/com/google/android/material/bottomnavigation/BottomNavigationView),
+[dynamic colors](https://developer.android.com/reference/com/google/android/material/color/DynamicColors).

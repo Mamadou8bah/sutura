@@ -1,3 +1,4 @@
+import { NativeTabBar, supportsNativeTabs } from "./src/components/NativeTabBar";
 import { useAppFonts } from "./src/hooks/useAppFonts";
 import { SafeAreaProvider, SafeAreaView as PlatformSafeAreaView } from "react-native-safe-area-context";
 import { NativeNavigator } from "./src/components/NativeNavigator";
@@ -70,8 +71,28 @@ function Router({ route }: { route?: string }) {
             return <WelcomeScreen />;
     }
 }
-function MerchantNav() { const { screen, setScreen, session } = useApp(); const { colors } = useTheme(); if (session?.userStatus !== "ACTIVE" || !["home", "collections", "activity", "more"].includes(screen))
-    return null; return <View style={{ flexDirection: "row", paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border }}>{([['home', 'home-outline', 'Home'], ['collections', 'qr-code-outline', 'Collections'], ['activity', 'receipt-outline', 'Activity'], ['more', 'grid-outline', 'More']] as const).map(([route, icon, label]) => <Pressable accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{ selected: screen === route }} key={route} onPress={() => setScreen(route)} style={{ flex: 1, alignItems: "center", paddingVertical: 8, gap: 5 }}><Ionicons name={icon} size={23} color={screen === route ? colors.orange : colors.slate500}/><Text style={{ fontSize: 11, color: screen === route ? colors.primary : colors.slate500 }}>{label}</Text></Pressable>)}</View>; }
+const merchantTabs = [
+  { value: "home", label: "Home", icon: "home-outline" },
+  { value: "collections", label: "Collections", icon: "qr-code-outline" },
+  { value: "activity", label: "Activity", icon: "receipt-outline" },
+  { value: "more", label: "More", icon: "grid-outline" },
+] as const;
+
+function MerchantNav() {
+  const { screen, setScreen, session } = useApp();
+  const { colors } = useTheme();
+  if (session?.userStatus !== "ACTIVE" || !merchantTabs.some(tab => tab.value === screen)) return null;
+  const navigate = (value: string) => setScreen(value as import("./src/context/AppContext").Screen);
+  if (supportsNativeTabs) return <NativeTabBar active={screen} tabs={merchantTabs} onChange={navigate} />;
+  return <View style={{ flexDirection: "row", paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border }}>
+    {merchantTabs.map(({ value, icon, label }) => <Pressable key={value} accessibilityRole="tab"
+      accessibilityLabel={label} accessibilityState={{ selected: screen === value }} onPress={() => navigate(value)}
+      style={{ flex: 1, alignItems: "center", paddingVertical: 8, gap: 5 }}>
+      <Ionicons name={icon} size={23} color={screen === value ? colors.orange : colors.slate500} />
+      <Text style={{ fontSize: 11, color: screen === value ? colors.primary : colors.slate500 }}>{label}</Text>
+    </Pressable>)}
+  </View>;
+}
 function MerchantScreens() {
   const { screen, setScreen, session, loading } = useApp();
   if (loading) return <Router />;

@@ -1,3 +1,4 @@
+import { NativeTabBar, supportsNativeTabs } from "./NativeTabBar";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { StyleSheet, View } from "react-native";
@@ -20,6 +21,8 @@ const tabs: NavItem[] = [
 export function BottomNav({ active, onChange }: { active: TabId; onChange: (tab: TabId) => void }) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
+
+  if (supportsNativeTabs) return <NativeTabBar active={active} tabs={tabs.map(tab => ({ ...tab, value: tab.id }))} onChange={value => onChange(value as TabId)} />;
 
   return (
     <View style={styles.wrapper}>
