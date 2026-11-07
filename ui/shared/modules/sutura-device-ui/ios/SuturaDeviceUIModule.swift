@@ -4,10 +4,12 @@ import UIKit
 public final class SuturaDeviceUIModule: Module {
   public func definition() -> ModuleDefinition {
     Name("SuturaDeviceUI")
-    Constants(["supportsNativeTabs": true])
+    Constants(["supportsNativeTabs": true, "supportsButtonTint": true])
     View(DeviceControlView.self) {
       Events("onAction", "onValueChange")
       Prop("controlKind") { (view: DeviceControlView, value: String) in view.kind = value }
+      Prop("buttonColor") { (view: DeviceControlView, value: String) in view.buttonColor = value }
+      Prop("textColor") { (view: DeviceControlView, value: String) in view.textColor = value }
       Prop("label") { (view: DeviceControlView, value: String) in view.label = value }
       Prop("value") { (view: DeviceControlView, value: String) in view.value = value }
       Prop("checked") { (view: DeviceControlView, value: Bool) in view.checked = value }
@@ -24,6 +26,8 @@ final class DeviceControlView: ExpoView, UITabBarDelegate {
   let onValueChange = EventDispatcher()
   var kind = "button"
   var label = ""
+  var buttonColor = "#f97316"
+  var textColor = "#181a20"
   var value = ""
   var options: [[String: Any]] = []
   private var tabValues: [String] = []
@@ -54,6 +58,12 @@ final class DeviceControlView: ExpoView, UITabBarDelegate {
     toggle.isHidden = kind != "switch"
     button.isEnabled = !disabled
     toggle.isEnabled = !disabled
+    var configuration = button.configuration ?? .filled()
+    configuration.baseBackgroundColor = UIColor(suturaHex: buttonColor)
+    configuration.baseForegroundColor = UIColor(suturaHex: textColor)
+    configuration.cornerStyle = .medium
+    configuration.contentInsets = NSDirectionalEdgeInsets(top: 10, leading: 16, bottom: 10, trailing: 16)
+    button.configuration = configuration
     button.setTitle(label, for: .normal)
     button.accessibilityLabel = label
     toggle.accessibilityLabel = label
@@ -96,4 +106,14 @@ final class DeviceControlView: ExpoView, UITabBarDelegate {
 
   @objc private func pressed() { if !disabled { onAction([:]) } }
   @objc private func changed() { if !disabled { onValueChange(["checked": toggle.isOn]) } }
+}
+
+private extension UIColor {
+  convenience init(suturaHex value: String) {
+    let hex = value.replacingOccurrences(of: "#", with: "")
+    let number = UInt32(hex, radix: 16) ?? 0xf97316
+    self.init(red: CGFloat((number >> 16) & 255) / 255,
+              green: CGFloat((number >> 8) & 255) / 255,
+              blue: CGFloat(number & 255) / 255, alpha: 1)
+  }
 }

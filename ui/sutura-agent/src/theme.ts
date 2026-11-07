@@ -49,8 +49,8 @@ export const radii = {
 };
 
 export const spacing = {
-  screen: 20,
-  gap: 16,
+  screen: 16,
+  gap: 12,
 };
 
 export const fonts = {

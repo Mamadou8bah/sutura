@@ -107,3 +107,22 @@ UIKit requires an Xcode build and physical-device visual checks remain pending.
 
 References: [Android bottom navigation](https://developer.android.com/reference/com/google/android/material/bottomnavigation/BottomNavigationView),
 [dynamic colors](https://developer.android.com/reference/com/google/android/material/color/DynamicColors).
+
+
+## Compact spacing and orange actions
+
+Screen gutters use 16 points and standard section gaps use 12. Shared inputs and
+primary buttons retain a minimum 48-point touch target, with button height
+increasing for text scaling. Primary actions and dashboard shortcuts use orange
+with dark labels; secondary cancel/edit buttons retain their quieter surfaces.
+
+The bridge advertises `supportsButtonTint` and accepts button/text colors.
+Android tints the framework button; UIKit configures the filled system button.
+Older bridges use the accessible React Native button wrapper until rebuilt.
+Native tint support changes the runtime fingerprint and requires a new APK.
+
+All nine JS exports, website build, TypeScript checks and 40 customer regression
+tests passed. The Android bridge compiles against real native dependencies.
+A Chromium check at 390x844 confirmed an orange 48-point login button and no
+horizontal overflow. UIKit compilation and physical-device appearance still need
+on-device validation.

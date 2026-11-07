@@ -33,7 +33,7 @@ function IntegrationSteps() {
     <div className="grid gap-4 lg:grid-cols-3">
       {steps.map((step) => (
         <div key={step.n} className="rounded-2xl border border-slate-200 bg-white p-5">
-          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#123c91] text-sm font-black text-white">{step.n}</span>
+          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-orange-500 text-sm font-black text-slate-950">{step.n}</span>
           <h3 className="mt-3 font-bold text-slate-950">{step.title}</h3>
           <p className="mt-2 text-sm leading-relaxed text-slate-600">{step.body}</p>
         </div>
@@ -127,7 +127,7 @@ export function DeveloperDashboardView() {
             </p>
             <IntegrationSteps />
             <div className="mt-6 flex flex-wrap gap-3">
-              <button type="button" onClick={() => setTab("keys")} className="rounded-full bg-[#123c91] px-5 py-2.5 text-sm font-bold text-white">
+              <button type="button" onClick={() => setTab("keys")} className="rounded-full bg-orange-500 px-5 py-2.5 text-sm font-bold text-slate-950">
                 Create API key
               </button>
               <Link href="/docs" className="rounded-full bg-slate-200 px-5 py-2.5 text-sm font-bold text-slate-800">

@@ -67,7 +67,7 @@ export function DashboardToolbar({
           </button>
         ) : null}
         {onDownload ? (
-          <button type="button" onClick={onDownload} className="inline-flex h-11 min-w-[7rem] flex-1 items-center justify-center gap-2 rounded-full bg-[#123c91] px-4 text-xs font-bold text-white hover:bg-[#0d2f76] sm:flex-none">
+          <button type="button" onClick={onDownload} className="inline-flex h-11 min-w-[7rem] flex-1 items-center justify-center gap-2 rounded-full bg-orange-500 px-4 text-xs font-bold text-slate-950 hover:bg-orange-600 sm:flex-none">
             <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3v12M7 13l5 5 5-5" /><path d="M5 21h14" /></svg>
             <span className="sm:hidden">CSV</span>
             <span className="hidden sm:inline">Download CSV</span>

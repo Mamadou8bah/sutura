@@ -114,7 +114,7 @@ export function DashboardShell({
                   onClick={() => selectTab(item.id)}
                   className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors ${
                     active
-                      ? "border-[#123c91] bg-[#123c91] text-white"
+                      ? "border-orange-500 bg-orange-500 text-slate-950"
                       : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
                   }`}
                 >
@@ -154,7 +154,7 @@ export function DashboardShell({
                   aria-label={item.label}
                   onClick={() => onTabChange(item.id)}
                   className={`flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold transition-colors ${
-                    active ? "bg-[#123c91] text-white" : "text-slate-600 hover:bg-white hover:text-slate-900"
+                    active ? "bg-orange-500 text-slate-950" : "text-slate-600 hover:bg-white hover:text-slate-900"
                   }`}
                 >
                   {item.icon}
@@ -178,7 +178,7 @@ export function DashboardShell({
               {isLive ? "Live" : "Demo"}
             </span>
             <div
-              className="grid h-9 w-9 place-items-center rounded-full bg-[#123c91] text-[11px] font-black text-white"
+              className="grid h-9 w-9 place-items-center rounded-full bg-orange-500 text-[11px] font-black text-slate-950"
               title={session?.name}
             >
               {initials ?? "PF"}
@@ -288,7 +288,7 @@ export function PrimaryButton({ children, ...props }: React.ButtonHTMLAttributes
   return (
     <button
       {...props}
-      className={`h-12 w-full rounded-full bg-[#123c91] text-sm font-black text-white transition-colors hover:bg-[#0d2f76] disabled:cursor-not-allowed disabled:bg-slate-400 ${props.className ?? ""}`}
+      className={`h-12 w-full rounded-full bg-orange-500 text-sm font-black text-slate-950 transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-400 ${props.className ?? ""}`}
     >
       {children}
     </button>

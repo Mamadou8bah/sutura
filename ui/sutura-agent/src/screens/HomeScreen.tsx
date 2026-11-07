@@ -57,7 +57,7 @@ export function HomeScreen() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { padding: spacing.screen, paddingBottom: 32, gap: 22 },
+  content: { padding: spacing.screen, paddingBottom: 24, gap: 16 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4 },
   sectionTitle: { fontSize: 18, fontFamily: fonts.bold, color: colors.slate900 },
   seeAll: { fontSize: 14, fontFamily: fonts.medium, color: colors.primary },

@@ -48,7 +48,7 @@ function FacebookIcon() {
 }
 
 const inputClass =
-  "h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-500 focus:border-[#123c91] focus:ring-4 focus:ring-blue-100";
+  "h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-500 focus:border-orange-500 focus:ring-4 focus:ring-orange-100";
 
 export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "login" | "signup" }) {
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
@@ -167,7 +167,7 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
             <button
               type="submit"
               disabled={loading}
-              className="h-12 w-full rounded-2xl bg-[#123c91] text-base font-black text-white transition-colors hover:bg-[#0d2f76] disabled:opacity-60 sm:h-14 sm:rounded-full"
+              className="h-12 w-full rounded-2xl bg-orange-500 text-base font-bold text-slate-950 transition-colors hover:bg-orange-600 disabled:opacity-60 sm:h-12 sm:rounded-2xl"
             >
               {loading ? "Signing in…" : "Login"}
             </button>
@@ -226,7 +226,7 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
             <button
               type="submit"
               disabled={loading}
-              className="h-12 w-full rounded-2xl bg-[#123c91] text-base font-black text-white transition-colors hover:bg-[#0d2f76] disabled:opacity-60 sm:h-14 sm:rounded-full"
+              className="h-12 w-full rounded-2xl bg-orange-500 text-base font-bold text-slate-950 transition-colors hover:bg-orange-600 disabled:opacity-60 sm:h-12 sm:rounded-2xl"
             >
               {loading ? "Creating account…" : "Create developer account"}
             </button>

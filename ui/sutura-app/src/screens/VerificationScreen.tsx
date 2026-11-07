@@ -101,20 +101,20 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
   );
 }
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { flexGrow:1, padding:20, paddingBottom:36, gap:24, width:"100%", maxWidth:560, alignSelf:"center" },
+  content: { flexGrow:1, padding:16, paddingBottom:36, gap:24, width:"100%", maxWidth:560, alignSelf:"center" },
   header:{flexDirection:"row",alignItems:"center",gap:12},
   back:{padding:10,marginLeft:-10},
   headerTitle:{fontFamily:fonts.medium,fontSize:16,color:colors.primary},
   intro:{gap:14,paddingTop:16},
   heroIcon:{width:72,height:72,borderRadius:20,backgroundColor:colors.surfaceMuted,alignItems:"center",justifyContent:"center",marginBottom:6},
   title: {fontFamily:fonts.bold,fontSize:30,lineHeight:37,color:colors.primary},
-  card: {gap:22},
+  card: {gap:16},
   statusRow:{flexDirection:"row",alignItems:"center",gap:8,backgroundColor:colors.surfaceMuted,padding:14,borderRadius:10},
   dot:{width:7,height:7,borderRadius:4},
   status: {fontFamily:fonts.medium,color:colors.primary,fontSize:13},
   body: {fontFamily:fonts.regular,color:colors.slate500,lineHeight:22,fontSize:14},
   steps:{gap:0},
-  step:{flexDirection:"row",alignItems:"center",gap:14,paddingVertical:20,borderBottomWidth:1,borderBottomColor:colors.border},
+  step:{flexDirection:"row",alignItems:"center",gap:14,paddingVertical:14,borderBottomWidth:1,borderBottomColor:colors.border},
   stepIcon:{width:44,height:44,borderRadius:12,backgroundColor:colors.surfaceMuted,alignItems:"center",justifyContent:"center"},
   stepCopy:{flex:1,gap:6},
   stepTitle:{fontFamily:fonts.medium,color:colors.primary,fontSize:15},

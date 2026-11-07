@@ -113,7 +113,7 @@ export function ConfirmScreen() {
           </View>
           <PrimaryButton label="Share receipt" onPress={()=>{Share.share({message:`Sutura ${operationLabel(op.operation)}\n${op.reference}\n${formatMoney(op.amount,op.currency)}\nCompleted: ${formatTimestamp(op.completedAt??op.createdAt)}`}).catch(()=>setError("Could not share receipt."));}} color={colors.surfaceMuted}/>
           <FormError message={error}/>
-          <PrimaryButton label="Back to home" onPress={handleClose} color={colors.primary} />
+          <PrimaryButton label="Back to home" onPress={handleClose} color={colors.orange} />
         </>
       )}
     </ScrollView>

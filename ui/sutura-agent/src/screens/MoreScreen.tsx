@@ -63,7 +63,7 @@ export function MoreScreen() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { padding: spacing.screen, paddingBottom: 32 },
+  content: { padding: spacing.screen, paddingBottom: 24 },
   profileCard: {
     flexDirection: "row",
     alignItems: "center",

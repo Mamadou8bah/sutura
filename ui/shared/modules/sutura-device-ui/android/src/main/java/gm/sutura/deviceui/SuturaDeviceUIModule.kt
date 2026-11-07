@@ -3,6 +3,8 @@ package gm.sutura.deviceui
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import com.google.android.material.navigation.NavigationBarView
 import com.google.android.material.color.DynamicColors
+import android.graphics.Color
+import android.content.res.ColorStateList
 import android.app.AlertDialog
 import android.content.Context
 import android.content.res.Configuration
@@ -24,10 +26,12 @@ import expo.modules.kotlin.viewevent.EventDispatcher
 class SuturaDeviceUIModule : Module() {
   override fun definition() = ModuleDefinition {
     Name("SuturaDeviceUI")
-    Constants("supportsNativeTabs" to true)
+    Constants("supportsNativeTabs" to true, "supportsButtonTint" to true)
     View(DeviceControlView::class) {
       Events("onAction", "onValueChange")
       Prop("controlKind") { view: DeviceControlView, value: String -> view.kind = value }
+      Prop("buttonColor") { view: DeviceControlView, value: String -> view.buttonColor = value }
+      Prop("textColor") { view: DeviceControlView, value: String -> view.textColor = value }
       Prop("label") { view: DeviceControlView, value: String -> view.label = value }
       Prop("value") { view: DeviceControlView, value: String -> view.value = value }
       Prop("checked") { view: DeviceControlView, value: Boolean -> view.checked = value }
@@ -47,6 +51,8 @@ class DeviceControlView(context: Context, appContext: AppContext) : ExpoView(con
   val onValueChange by EventDispatcher()
   var kind = "button"
   var label = ""
+  var buttonColor = "#f97316"
+  var textColor = "#181a20"
   var value = ""
   var checked = false
   var disabled = false
@@ -116,6 +122,16 @@ class DeviceControlView(context: Context, appContext: AppContext) : ExpoView(con
     if (widget is Switch) (widget as Switch).isChecked = checked
     else (widget as? Button)?.text = if (kind == "select")
       options.firstOrNull { it["value"] == value }?.get("label") as? String ?: "Choose an option" else label
+    if (kind == "button") (widget as? Button)?.apply {
+      val fill = runCatching { Color.parseColor(buttonColor) }.getOrDefault(Color.rgb(249, 115, 22))
+      val ink = runCatching { Color.parseColor(textColor) }.getOrDefault(Color.rgb(24, 26, 32))
+      backgroundTintList = ColorStateList.valueOf(fill)
+      setTextColor(ink)
+      alpha = if (disabled) .45f else 1f
+      minimumHeight = (48 * resources.displayMetrics.density).toInt()
+      minHeight = minimumHeight
+      setPadding(paddingLeft, 0, paddingRight, 0)
+    }
     synchronizing = false
     if (disabled) closeDialog()
   }

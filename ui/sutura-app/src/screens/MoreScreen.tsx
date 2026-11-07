@@ -40,7 +40,7 @@ export function MoreScreen() {
   </ScrollView>;
 }
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { padding: spacing.screen, paddingBottom: 32, gap: 22 }, header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  content: { padding: spacing.screen, paddingBottom: 24, gap: 16 }, header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { fontSize: 26, fontFamily: fonts.bold, color: colors.primary }, settings: { width: 44, height: 44, alignItems: "center", justifyContent: "center" },
   profile: { flexDirection: "row", gap: 14, alignItems: "center", paddingVertical: 4 }, avatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: colors.surfaceMuted, alignItems: "center", justifyContent: "center" },
   initial: { fontFamily: fonts.bold, fontSize: 24, color: colors.primary }, profileBody: { flex: 1, minWidth: 0 }, name: { fontFamily: fonts.bold, fontSize: 21, color: colors.primary },

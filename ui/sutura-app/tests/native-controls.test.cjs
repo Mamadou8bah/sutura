@@ -24,7 +24,7 @@ function load(platform, device = false) {
     if (name === 'react') return react;
     if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
     if (name === 'react-native') return native;
-    if (name === './DeviceControl') return { DeviceControl: device ? 'DeviceControl' : null };
+    if (name === './DeviceControl') return { DeviceControl: device ? 'DeviceControl' : null, supportsButtonTint: device };
     if (name === '@react-native-picker/picker') return { Picker };
     if (name.includes('ThemeContext')) return { useTheme: () => ({ colors, mode: 'dark' }) };
     if (name === '@react-navigation/native') return { NavigationContext: { value: null } };
@@ -46,9 +46,11 @@ test('mobile typography uses system families and preserves weights, sizes and ic
 test('older mobile runtimes retain the fallback button and its disabled state', () => {
   const { api } = load('android'); let calls = 0;
   const tree = api.NativeButton({ label: 'Pay GMD 100', disabled: true, onPress: () => calls++ });
-  const button = tree.props.children;
-  assert.equal(button.type, 'Button'); assert.equal(button.props.disabled, true);
-  assert.equal(button.props.title, 'Pay GMD 100'); assert.equal(calls, 0);
+  assert.equal(tree.props.disabled, true);
+  tree.props.onPress();
+  assert.equal(calls, 0);
+  assert.equal(tree.props.style({ pressed: false })[0].backgroundColor, '#f0a000');
+
 });
 
 test('Android selection validates values and cannot select an inactive wallet', () => {
@@ -87,6 +89,8 @@ test('device buttons forward native theme and cannot invoke disabled payment act
     const { api } = load(platform, true); let calls = 0;
     const control = api.NativeButton({ label: 'Pay GMD 100', disabled: true, onPress: () => calls++ }).props.children;
     assert.equal(control.type, 'DeviceControl'); assert.equal(control.props.dark, true);
+    assert.equal(control.props.buttonColor, '#f0a000');
+    assert.equal(control.props.textColor, '#181a20');
     assert.equal(control.props.controlKind, 'button'); assert.equal(control.props.disabled, true);
     control.props.onAction(); assert.equal(calls, 0);
   }

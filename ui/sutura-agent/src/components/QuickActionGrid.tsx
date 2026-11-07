@@ -23,7 +23,7 @@ export function QuickActionGrid({ actions }: { actions: Action[] }) {
       {actions.map((action) => (
         <Pressable accessibilityRole="button" accessibilityLabel={action.label} key={action.label} onPress={action.onPress} style={styles.item}>
           <View style={styles.circle}>
-            <Ionicons name={action.icon} size={22} color={colors.orange} />
+            <Ionicons name={action.icon} size={22} color="#181a20" />
           </View>
           <Text style={styles.label}>{action.label}</Text>
           {!!action.hint&&<Text style={styles.hint}>{action.hint}</Text>}
@@ -35,7 +35,7 @@ export function QuickActionGrid({ actions }: { actions: Action[] }) {
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   grid: { flexDirection: "row", gap:12 },
-  item: { flex:1, minWidth:0, padding:14, borderWidth:1, borderColor:colors.border, borderRadius:12, gap:8 },
+  item: { flex:1, minWidth:0, padding:14, borderWidth:1, borderColor:colors.orange, backgroundColor:colors.orange, borderRadius:12, gap:8 },
   circle: {
     width: 36,
     height: 36,
@@ -45,6 +45,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: "center",
 
   },
-  label: { fontSize:16, fontFamily:fonts.bold, color:colors.primary },
-  hint:{fontFamily: appFonts.regular,fontSize:11,lineHeight:16,color:colors.slate500},
+  label: { fontSize:16, fontFamily:fonts.bold, color:"#181a20" },
+  hint:{fontFamily: appFonts.regular,fontSize:11,lineHeight:16,color:"#38291d"},
 });

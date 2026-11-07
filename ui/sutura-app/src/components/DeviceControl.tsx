@@ -4,6 +4,8 @@ import { Platform, type NativeSyntheticEvent, type ViewProps } from "react-nativ
 export type DeviceControlProps = ViewProps & {
   controlKind: "button" | "select" | "switch" | "tabs";
   label: string;
+  buttonColor?: string;
+  textColor?: string;
   disabled?: boolean;
   dark: boolean;
   value?: string;
@@ -15,8 +17,10 @@ export type DeviceControlProps = ViewProps & {
 
 // Old APKs and Expo Go retain the existing fallback until rebuilt. Never require
 // a native view manager on web or on a runtime that does not contain the module.
-const nativeModule = Platform.OS !== "web" ? requireOptionalNativeModule<{ supportsNativeTabs?: boolean }>("SuturaDeviceUI") : null;
+const nativeModule = Platform.OS !== "web" ? requireOptionalNativeModule<{ supportsNativeTabs?: boolean; supportsButtonTint?: boolean }>("SuturaDeviceUI") : null;
 export const DeviceControl = nativeModule
   ? requireNativeViewManager<DeviceControlProps>("SuturaDeviceUI") : null;
 
 export const supportsNativeTabs = nativeModule?.supportsNativeTabs === true;
+
+export const supportsButtonTint = nativeModule?.supportsButtonTint === true;

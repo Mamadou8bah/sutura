@@ -1,8 +1,8 @@
 import { NavigationContext } from "@react-navigation/native";
 import { createContext, useContext, useEffect, forwardRef } from "react";
-import { ActionSheetIOS, Button, PixelRatio, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View,
+import { ActionSheetIOS, PixelRatio, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View,
   type PressableProps, type SwitchProps, type TextProps, type TextInputProps, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
-import { DeviceControl } from "./DeviceControl";
+import { DeviceControl, supportsButtonTint } from "./DeviceControl";
 import { Picker } from "@react-native-picker/picker";
 import { useTheme } from "../context/ThemeContext";
 
@@ -40,24 +40,24 @@ export const NativePressable = forwardRef<View, PressableProps>((props, ref) => 
     hitSlop={props.hitSlop ?? 4} />;
 });
 
-export function NativeButton({ label, onPress, disabled = false, color, style }: {
-  label: string; onPress: () => void; disabled?: boolean; color?: string; style?: StyleProp<ViewStyle>;
+export function NativeButton({ label, onPress, disabled = false, color, textColor, style }: {
+  label: string; onPress: () => void; disabled?: boolean; color?: string; textColor?: string; style?: StyleProp<ViewStyle>;
 }) {
   const { colors, mode } = useTheme();
-  if (DeviceControl) return <View style={[{ minWidth: 112, minHeight: 52 }, style]}>
+  const background = color ?? colors.orange;
+  const foreground = textColor ?? (background === colors.surface || background === colors.surfaceMuted ? colors.primary : "#181a20");
+  const height = Math.max(48, Math.round(24 * PixelRatio.getFontScale() + 20));
+  if (DeviceControl && supportsButtonTint) return <View style={[{ minWidth: 112, minHeight: height }, style]}>
     <DeviceControl controlKind="button" label={label} dark={mode === "dark"} disabled={disabled}
-      onAction={() => { if (!disabled) onPress(); }}
-      style={{ alignSelf: "stretch", height: Math.max(52, Math.round(24 * PixelRatio.getFontScale() + 24)) }} />
+      buttonColor={background} textColor={foreground} onAction={() => { if (!disabled) onPress(); }}
+      style={{ alignSelf: "stretch", height }} />
   </View>;
-  if (Platform.OS === "web") return <NativePressable disabled={disabled} accessibilityRole="button"
-    accessibilityState={{ disabled }} onPress={onPress} style={[{ minHeight: 52, padding: 12, borderRadius: 8,
-      backgroundColor: color ?? colors.orange, justifyContent: "center", alignItems: "center", opacity: disabled ? .5 : 1 }, style]}>
-    <NativeText style={{ fontWeight: "700", color: "#181a20", fontSize: 16 }}>{label}</NativeText>
+  return <NativePressable disabled={disabled} accessibilityRole="button"
+    accessibilityState={{ disabled }} onPress={() => { if (!disabled) onPress(); }}
+    style={({ pressed }) => [{ minHeight: height, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12,
+      backgroundColor: background, justifyContent: "center", alignItems: "center", opacity: disabled ? .45 : pressed ? .8 : 1 }, style]}>
+    <NativeText style={{ fontWeight: "700", color: foreground, fontSize: 16, textAlign: "center" }}>{label}</NativeText>
   </NativePressable>;
-  return <View style={[{ minHeight: Platform.OS === "android" ? 48 : 44, justifyContent: "center" }, style]}>
-    <Button title={label} onPress={onPress} disabled={disabled} accessibilityLabel={label}
-      color={color ?? (Platform.OS === "ios" ? colors.orangeDark : colors.orange)} />
-  </View>;
 }
 
 export type NativeOption = { value: string; label: string; enabled?: boolean };
