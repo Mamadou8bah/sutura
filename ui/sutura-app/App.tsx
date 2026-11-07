@@ -1,3 +1,4 @@
+import { CreateWalletScreen } from "./src/screens/CreateWalletScreen";
 import { useAppFonts } from "./src/hooks/useAppFonts";
 import { SafeAreaProvider, SafeAreaView as PlatformSafeAreaView } from "react-native-safe-area-context";
 import { NativeNavigator } from "./src/components/NativeNavigator";
@@ -75,10 +76,11 @@ function MainApp() {
 
       <View style={styles.body}>
         <NativeNavigator screen={tab} onChange={value => setTab(value as TabId)}
-          screens={["home", "wallets", "scan", "send", "activity", "more", "topup", "withdraw", "support", "profile", "verification"]} renderScreen={name => {
+          screens={["home", "wallets", "create-wallet", "scan", "send", "activity", "more", "topup", "withdraw", "support", "profile", "verification"]} renderScreen={name => {
           switch (name) {
             case "home": return <HomeScreen />;
             case "wallets": return <WalletsScreen />;
+            case "create-wallet": return <CreateWalletScreen />;
             case "scan": return <ScanScreen />;
             case "send": return <SendScreen />;
             case "activity": return <ActivityScreen />;

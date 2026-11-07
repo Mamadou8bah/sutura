@@ -102,3 +102,20 @@ access. Admin and developer accounts use `/login`; customer and merchant users
 use their mobile apps.
 
 Agent and merchant Settings include account information, appearance, manual refresh, support, version information and sign-out confirmation. Merchant Hide balances is saved on the device. Language is English; it is displayed as information until translations are implemented.
+
+
+## Onboarding and wallet screens
+
+Login verification codes use a dedicated screen in each mobile app and a
+separate website form. Credentials remain in the in-memory login draft; no
+session is saved until verification succeeds. Back returns to sign-in.
+
+Customer registration creates one zero-balance personal GMD wallet with its
+ledger account and normal verification limits in the same transaction. Successful
+customer login also provisions a missing GMD wallet for older accounts. Existing
+wallet names and suspended status are preserved. Merchants retain the existing
+approval-based collections-wallet process.
+
+Additional customer wallets are created on the full `create-wallet` screen.
+Currencies already owned are excluded. Wallet/currency selectors use branded
+in-app sheets across Android, iOS and web instead of OS picker dialogs.

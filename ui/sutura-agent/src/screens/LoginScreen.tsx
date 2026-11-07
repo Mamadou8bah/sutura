@@ -1,3 +1,4 @@
+import { VerificationCodeScreen } from "./VerificationCodeScreen";
 import { useHardwareBack } from "../hooks/useBackNavigation";
 import { PasswordRecoveryScreen } from "./PasswordRecoveryScreen";
 import {TwoFactorRequiredError} from "../api/twoFactor";
@@ -47,7 +48,7 @@ export function LoginScreen() {
     try {
       await signIn(username, password,challengeId?{challengeId,code:verificationCode}:undefined);
     } catch (err) {
-      if(err instanceof TwoFactorRequiredError){setChallengeId(err.challengeId);setVerificationCode("");}
+      if(err instanceof TwoFactorRequiredError){setChallengeId(err.challengeId);setVerificationCode("");setError("");return;}
       setError(err instanceof Error ? err.message : "Login failed");
     } finally {
       submitting.current=false;
@@ -55,6 +56,9 @@ export function LoginScreen() {
     }
   }
 
+  if (challengeId && !recovering) return <VerificationCodeScreen value={verificationCode}
+    onChange={setVerificationCode} busy={loading} error={error} onSubmit={() => void handleLogin()}
+    onBack={() => { if (!loading) { setChallengeId(""); setVerificationCode(""); setError(""); } }} />;
   if(recovering) return <PasswordRecoveryScreen onBack={()=>{setRecovering(false);setPassword("");setChallengeId("");setVerificationCode("");setError("");}} />;
   return (
     <Screen>
@@ -74,7 +78,6 @@ export function LoginScreen() {
         onChangeText={setPassword}
       /></Field>
 
-      {challengeId&&<Field label="Verification code"><AppInput accessibilityLabel="Verification code" value={verificationCode} onChangeText={v=>setVerificationCode(v.replace(/[^0-9]/g,"").slice(0,6))} keyboardType="number-pad" inputMode="numeric" autoComplete="sms-otp" maxLength={6} placeholder="6-digit code" editable={!loading}/><Text style={{color:colors.slate500}}>Check your SMS or email. The code expires in five minutes.</Text><Pressable onPress={()=>{setChallengeId("");setVerificationCode("");setError("");}}><Text style={{color:colors.orange,paddingVertical:12}}>Start sign-in again</Text></Pressable></Field>}
       <Pressable accessibilityRole="button" disabled={loading} onPress={()=>setRecovering(true)}><Text style={{color:colors.orangeDark,paddingVertical:12}}>Forgot password?</Text></Pressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
 

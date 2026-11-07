@@ -70,6 +70,20 @@ public class WalletService {
     return mapToResponse(wallet);
   }
 
+  /** Idempotent customer onboarding; account lock also serializes concurrent logins. */
+  @Transactional
+  public WalletResponse ensureCustomerWallet(long userId) {
+    User customer = userRepository.findForKycUpdate(userId)
+        .orElseThrow(() -> new AccountNotFoundException("Customer account not found"));
+    if (customer.getRole() != com.mamadou.sutura.user.enums.Role.USER)
+      throw new WalletOperationException("Only customer accounts receive a personal wallet");
+    return walletRepository.findByUserId(userId).stream()
+        .filter(w -> "GMD".equalsIgnoreCase(w.getCurrency()))
+        .findFirst()
+        .map(this::mapToResponse)
+        .orElseGet(() -> createForUser(customer, "Personal", "GMD"));
+  }
+
   /** Called by approval in the same transaction; never changes an existing wallet's status. */
   @Transactional
   public WalletResponse ensureMerchantCollectionsWallet(long userId) {

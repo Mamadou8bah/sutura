@@ -126,3 +126,17 @@ tests passed. The Android bridge compiles against real native dependencies.
 A Chromium check at 390x844 confirmed an orange 48-point login button and no
 horizontal overflow. UIKit compilation and physical-device appearance still need
 on-device validation.
+
+
+## Updated selector and onboarding preference
+
+The later UI preference replaces system selector dialogs with the shared styled
+`SelectionSheet` on every platform. OS button/switch/tab controls remain.
+Wallet creation is a full customer stack route with Back handling. Login OTP
+entry has a dedicated screen in all three apps and a separate website form.
+Browser checks cover invalid codes staying on the code screen, returning to
+login, wallet creation navigation and selection of an available currency.
+All nine mobile exports and the website build pass. Seventeen backend onboarding,
+session-security and wallet-privilege tests pass on the isolated H2 test database,
+including default-wallet reuse, preserved suspended status, no ledger funding,
+and rollback when registration-code delivery fails.

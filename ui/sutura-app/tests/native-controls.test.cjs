@@ -14,7 +14,7 @@ function load(platform, device = false) {
     ActionSheetIOS: { showActionSheetWithOptions(options, onSelect) { sheet = { options, onSelect }; } } };
   function Picker() {} Picker.Item = 'PickerItem';
   const react = { forwardRef: fn => fn, createContext: value => ({ value }),
-    useContext: c => c?.value, useEffect() {} };
+    useContext: c => c?.value, useEffect() {}, useState: value => [value, () => {}] };
   const exports = {};
   const source = fs.readFileSync(path.join(__dirname, '../src/components/NativeControls.tsx'), 'utf8');
   const code = ts.transpileModule(source, { compilerOptions: {
@@ -25,7 +25,7 @@ function load(platform, device = false) {
     if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
     if (name === 'react-native') return native;
     if (name === './DeviceControl') return { DeviceControl: device ? 'DeviceControl' : null, supportsButtonTint: device };
-    if (name === '@react-native-picker/picker') return { Picker };
+    if (name === './SelectionSheet') return { SelectionSheet: 'SelectionSheet' };
     if (name.includes('ThemeContext')) return { useTheme: () => ({ colors, mode: 'dark' }) };
     if (name === '@react-navigation/native') return { NavigationContext: { value: null } };
     throw new Error(name);
@@ -53,27 +53,24 @@ test('older mobile runtimes retain the fallback button and its disabled state', 
 
 });
 
-test('Android selection validates values and cannot select an inactive wallet', () => {
-  const { api } = load('android'); const changes = [];
-  const tree = api.NativeSelect({ title: 'Wallet', value: '1', options: [
-    { value: '1', label: 'Main' }, { value: '2', label: 'Frozen', enabled: false },
-  ], onChange: value => changes.push(value) });
-  const picker = tree.props.children[1];
-  assert.equal(picker.props.mode, 'dialog');
-  picker.props.onValueChange('2'); picker.props.onValueChange('unknown');
-  assert.equal(changes.length, 0);
-  picker.props.onValueChange('1'); assert.equal(changes[0], '1');
-});
-
-test('iOS action-sheet cancellation and disabled choices never change a wallet', () => {
-  const app = load('ios'); const changes = [];
-  const tree = app.api.NativeSelect({ title: 'Wallet', value: '1', options: [
-    { value: '1', label: 'Main' }, { value: '2', label: 'Frozen', enabled: false },
-  ], onChange: value => changes.push(value) });
-  tree.props.onPress();
-  assert.equal(app.sheet.options.userInterfaceStyle, 'dark');
-  app.sheet.onSelect(2); app.sheet.onSelect(1); assert.equal(changes.length, 0);
-  app.sheet.onSelect(0); assert.equal(changes[0], '1');
+test('app selection sheets replace system dialogs and prevent disabled wallet selections', () => {
+  for (const platform of ['android', 'ios', 'web']) {
+    const { api } = load(platform, true); const changes = [];
+    const props = { title: 'Wallet', value: '1', options: [
+      { value: '1', label: 'Main' }, { value: '2', label: 'Frozen', enabled: false },
+    ], onChange: value => changes.push(value) };
+    const tree = api.NativeSelect(props);
+    const sheet = tree.props.children[1];
+    assert.equal(sheet.type, 'SelectionSheet');
+    assert.equal(sheet.props.visible, false);
+    const [active, frozen] = sheet.props.children;
+    frozen.props.onPress(); assert.equal(changes.length, 0);
+    active.props.onPress(); assert.equal(changes[0], '1');
+    const disabled = api.NativeSelect({ ...props, disabled: true });
+    disabled.props.children[1].props.children[0].props.onPress();
+    assert.equal(changes.length, 1);
+    assert.equal(disabled.props.children[0].props.disabled, true);
+  }
 });
 
 test('customer, agent and merchant use identical platform controls and stack adapters', () => {
@@ -94,19 +91,6 @@ test('device buttons forward native theme and cannot invoke disabled payment act
     assert.equal(control.props.controlKind, 'button'); assert.equal(control.props.disabled, true);
     control.props.onAction(); assert.equal(calls, 0);
   }
-});
-
-test('device selector validates native events against active wallets and its disabled state', () => {
-  const { api } = load('android', true); const changes = [];
-  const props = { title: 'Wallet', value: '1', options: [
-    { value: '1', label: 'Main' }, { value: '2', label: 'Frozen', enabled: false },
-  ], onChange: value => changes.push(value) };
-  const control = api.NativeSelect(props).props.children[1];
-  for (const value of ['2', 'unknown', undefined]) control.props.onValueChange({ nativeEvent: { value } });
-  assert.equal(changes.length, 0);
-  control.props.onValueChange({ nativeEvent: { value: '1' } }); assert.equal(changes[0], '1');
-  api.NativeSelect({ ...props, disabled: true }).props.children[1].props.onValueChange({ nativeEvent: { value: '1' } });
-  assert.equal(changes.length, 1);
 });
 
 test('device switches only accept boolean changes while enabled', () => {

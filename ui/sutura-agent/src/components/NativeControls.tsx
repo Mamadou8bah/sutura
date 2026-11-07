@@ -1,9 +1,9 @@
 import { NavigationContext } from "@react-navigation/native";
-import { createContext, useContext, useEffect, forwardRef } from "react";
-import { ActionSheetIOS, PixelRatio, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View,
+import { createContext, useContext, useEffect, useState, forwardRef } from "react";
+import { PixelRatio, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View,
   type PressableProps, type SwitchProps, type TextProps, type TextInputProps, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import { DeviceControl, supportsButtonTint } from "./DeviceControl";
-import { Picker } from "@react-native-picker/picker";
+import { SelectionSheet } from "./SelectionSheet";
 import { useTheme } from "../context/ThemeContext";
 
 export const NativeHeaderContext = createContext(false);
@@ -76,36 +76,33 @@ export function NativeSwitch(props: SwitchProps) {
 export function NativeSelect({ title, value, options, onChange, disabled = false }: {
   title: string; value: string; options: readonly NativeOption[]; onChange: (value: string) => void; disabled?: boolean;
 }) {
-  const { colors, mode } = useTheme();
+  const { colors } = useTheme();
+  const [open, setOpen] = useState(false);
+  useEffect(() => { if (disabled) setOpen(false); }, [disabled]);
   const selected = options.find(option => option.value === value);
-  if (Platform.OS === "android" && DeviceControl) return <View>
-    <NativeText style={{ color: colors.slate500, fontSize: 12, paddingTop: 8 }}>{title}</NativeText>
-    <DeviceControl controlKind="select" label={title} value={value} options={options}
-      dark={mode === "dark"} disabled={disabled || !options.some(option => option.enabled !== false)}
-      style={{ alignSelf: "stretch", height: Math.max(52, Math.round(24 * PixelRatio.getFontScale() + 24)) }}
-      onValueChange={event => {
-        const next = event.nativeEvent.value;
-        if (!disabled && typeof next === "string" && options.some(option => option.value === next && option.enabled !== false)) onChange(next);
-      }} />
+  const unavailable = disabled || !options.some(option => option.enabled !== false);
+  return <View>
+    <NativePressable disabled={unavailable} accessibilityRole="button" accessibilityLabel={`${title}, ${selected?.label ?? "Choose"}`}
+      accessibilityState={{ disabled: unavailable, expanded: open }} onPress={() => { if (!unavailable) setOpen(true); }}
+      style={{ minHeight: 56, paddingVertical: 10, paddingHorizontal: 12, borderWidth: 1, borderColor: colors.border,
+        borderRadius: 12, backgroundColor: colors.surfaceMuted, opacity: unavailable ? .5 : 1, gap: 4 }}>
+      <NativeText style={{ color: colors.slate500, fontSize: 12 }}>{title}</NativeText>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+        <NativeText style={{ flex: 1, color: colors.primary, fontSize: 15, fontWeight: "600" }}>{selected?.label ?? "Choose an option"}</NativeText>
+        <NativeText style={{ color: colors.slate500 }}>⌄</NativeText>
+      </View>
+    </NativePressable>
+    <SelectionSheet visible={open && !unavailable} title={title} onClose={() => setOpen(false)}>
+      {options.map(option => <NativePressable key={option.value} accessibilityRole="radio" accessibilityLabel={option.label}
+        accessibilityState={{ checked: option.value === value, disabled: option.enabled === false || disabled }}
+        disabled={option.enabled === false || disabled} onPress={() => {
+          if (disabled || option.enabled === false) return;
+          onChange(option.value); setOpen(false);
+        }} style={{ minHeight: 56, flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 14,
+          borderBottomWidth: StyleSheet.hairlineWidth, borderColor: colors.border, opacity: option.enabled === false ? .4 : 1 }}>
+        <NativeText style={{ flex: 1, color: colors.primary, fontSize: 15 }}>{option.label}</NativeText>
+        <NativeText style={{ color: option.value === value ? colors.orange : colors.slate500, fontSize: 20 }}>{option.value === value ? "●" : "○"}</NativeText>
+      </NativePressable>)}
+    </SelectionSheet>
   </View>;
-  if (Platform.OS === "android") return <View style={{ borderBottomWidth: 1, borderColor: colors.border }}>
-    <NativeText style={{ color: colors.slate500, fontSize: 12, paddingTop: 8 }}>{title}</NativeText>
-    <Picker accessibilityLabel={title} prompt={title} mode="dialog" selectedValue={value} enabled={!disabled}
-      dropdownIconColor={colors.primary} style={{ color: colors.primary, minHeight: 48 }}
-      onValueChange={next => { if (options.some(option => option.value === next && option.enabled !== false)) onChange(String(next)); }}>
-      {options.map(option => <Picker.Item key={option.value} label={option.label} value={option.value}
-        enabled={option.enabled !== false} />)}
-    </Picker>
-  </View>;
-  return <NativePressable disabled={disabled || options.length === 0} accessibilityRole="button"
-    accessibilityLabel={`${title}, ${selected?.label ?? "Choose"}`} accessibilityState={{ disabled }}
-    onPress={() => ActionSheetIOS.showActionSheetWithOptions({ title, options: [...options.map(option => option.label), "Cancel"],
-      cancelButtonIndex: options.length, disabledButtonIndices: options.flatMap((option, index) => option.enabled === false ? [index] : []),
-      userInterfaceStyle: mode, tintColor: colors.orangeDark }, index => {
-        const option = options[index]; if (option && option.enabled !== false) onChange(option.value);
-      })} style={{ minHeight: 52, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth,
-        borderBottomColor: colors.border, opacity: disabled ? .5 : 1, gap: 5 }}>
-    <NativeText style={{ color: colors.slate500, fontSize: 12 }}>{title}</NativeText>
-    <NativeText style={{ color: colors.primary, fontSize: 17 }}>{selected?.label ?? "Choose an option"}</NativeText>
-  </NativePressable>;
 }

@@ -36,6 +36,7 @@ public class AuthService {
       java.util.EnumSet.of(Role.USER, Role.DEVELOPER);
 
   private final UserRepository userRepository;
+  private final com.mamadou.sutura.wallet.service.WalletService walletService;
   private final BCryptPasswordEncoder passwordEncoder;
   private final RefreshTokenService refreshTokenService;
   private final AuthMapper authMapper;
@@ -89,6 +90,7 @@ public class AuthService {
     User user = authMapper.toUser(request, passwordEncoder.encode(request.password()));
     if (requireSecondFactor) user.setTwoFactorEnabled(true);
     userRepository.save(user);
+    if (role == Role.USER) walletService.ensureCustomerWallet(user.getId());
 
     if (requireSecondFactor) {
       String challenge = startTwoFactorChallenge(user);
@@ -163,6 +165,7 @@ public class AuthService {
       log.info("2FA verification successful, userId={}", user.getId());
     }
 
+    if (user.getRole() == Role.USER) walletService.ensureCustomerWallet(user.getId());
     onboarding.enqueue(user);
     user.setLastLoginAt(LocalDateTime.now());
     user.setFailedLoginAttempts(0);

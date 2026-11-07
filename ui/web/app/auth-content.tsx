@@ -136,6 +136,21 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
     }
   }
 
+  if (challengeId) return <AuthShell heading="Verify it's you">
+    <form className="mt-5 space-y-4" onSubmit={handleLogin}>
+      <button type="button" disabled={loading} onClick={() => { setChallengeId(""); setVerificationCode(""); setError(""); }} className="min-h-11 text-sm font-semibold text-orange-600">← Back to sign in</button>
+      <h1 className="text-2xl font-bold text-slate-900">Enter verification code</h1>
+      <p className="text-sm leading-6 text-slate-500">Enter the six-digit code sent to your phone or email. It expires in five minutes.</p>
+      <label className="block text-sm font-semibold text-slate-900">Verification code
+        <input aria-label="Verification code" className={inputClass + " mt-2 text-center tracking-[0.5em]"} inputMode="numeric" autoComplete="one-time-code"
+          autoFocus maxLength={6} pattern="[0-9]{6}" required disabled={loading} value={verificationCode}
+          onChange={e => setVerificationCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))} />
+      </label>
+      {!!error && <p role="alert" className="text-sm text-red-600">{error}</p>}
+      <button type="submit" disabled={loading || !/^[0-9]{6}$/.test(verificationCode)} className="h-12 w-full rounded-2xl bg-orange-500 font-bold text-slate-950 disabled:opacity-50">{loading ? "Verifying…" : "Verify and continue"}</button>
+    </form>
+  </AuthShell>;
+
   return (
     <AuthShell heading={isLogin ? "Welcome back!" : "Create developer account"}>
       <div className="mt-5 sm:mt-6">
@@ -159,7 +174,6 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
               onChange={(event) => setPassword(event.target.value)}
             />
 
-            {challengeId&&<label className="block text-sm font-semibold">Verification code<input aria-label="Verification code" className={inputClass+" mt-2"} inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" required value={verificationCode} onChange={e=>setVerificationCode(e.target.value.replace(/[^0-9]/g,"").slice(0,6))}/><span className="mt-2 block text-xs text-slate-500">Check your email or SMS. The code expires in five minutes.</span><button type="button" className="mt-2 text-sm underline" onClick={()=>{setChallengeId("");setVerificationCode("");}}>Start sign-in again</button></label>}
             {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
 
             <p className="text-xs text-slate-500">For account recovery, contact your Sutura administrator. Temporary login locks expire after 15 minutes.</p>

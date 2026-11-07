@@ -1,3 +1,4 @@
+import { VerificationCodeScreen } from "./VerificationCodeScreen";
 import { useHardwareBack } from "../hooks/useBackNavigation";
 import { PasswordRecoveryScreen } from "./PasswordRecoveryScreen";
 import {TwoFactorRequiredError} from "../api/twoFactor";
@@ -81,10 +82,10 @@ export function LoginScreen() {
             if (registering)
                 await signUp({ firstName: firstName.trim(), lastName: lastName.trim(), phoneNumber: normalizedPhone!, email: email.trim() || undefined, password });
             else
-                await signIn(method === "email" ? email.trim() : phone.trim().replace(/[\s().-]/g, ""), password,challengeId?{challengeId,code:verificationCode}:undefined);
+                await signIn(method === "email" ? email.trim() : normalizedPhone!, password,challengeId?{challengeId,code:verificationCode}:undefined);
         }
         catch (err) {
-            if(err instanceof TwoFactorRequiredError){setChallengeId(err.challengeId);setVerificationCode("");if(registering){setRegistering(false);setMethod("phone");} }
+            if(err instanceof TwoFactorRequiredError){setChallengeId(err.challengeId);setVerificationCode("");if(registering){setRegistering(false);setMethod("phone");} setError("");return; }
             setError(err instanceof Error ? err.message : "Login failed");
         }
         finally {
@@ -92,6 +93,9 @@ export function LoginScreen() {
             setLoading(false);
         }
     }
+  if (challengeId && !recovering) return <VerificationCodeScreen value={verificationCode}
+    onChange={setVerificationCode} busy={loading} error={error} onSubmit={() => void handleLogin()}
+    onBack={() => { if (!loading) { setChallengeId(""); setVerificationCode(""); setError(""); } }} />;
   if(recovering) return <PasswordRecoveryScreen onBack={()=>{setRecovering(false);setPassword("");setChallengeId("");setVerificationCode("");setError("");}} />;
     return <Screen>
     <View style={styles.brandBar}><SuturaLogo size={64}/>{registering && step > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Previous step" disabled={loading} onPress={() => { Keyboard.dismiss(); setStep(value => value - 1); setError(""); }} style={{padding:12}}><Ionicons name="arrow-back" size={24} color={colors.primary}/></Pressable>}</View>
@@ -110,7 +114,7 @@ export function LoginScreen() {
     {(registering ? step === 1 : method === "email") && <Field label={registering ? "Email (optional)" : "Email"}><AppInput accessibilityLabel="Email" value={email} onChangeText={value => { if (!/\s/.test(value))
         setEmail(value); }} keyboardType="email-address" inputMode="email" autoComplete="email" autoCapitalize="none" autoCorrect={false} maxLength={254} editable={!loading} placeholder="name@example.com"/></Field>}
     {(!registering || step === 2) && <Field label="Password"><View style={{ position: "relative" }}><AppInput accessibilityLabel="Password" value={password} onChangeText={setPassword} secureTextEntry={!passwordVisible} style={{ paddingRight: 52 }} autoCapitalize="none" autoCorrect={false} autoComplete={registering ? "new-password" : "current-password"} maxLength={registering ? 72 : 256} editable={!loading} placeholder={registering ? "At least 8 characters" : "Enter your password"} onSubmitEditing={() => void handleLogin()} returnKeyType="go"/><Pressable accessibilityRole="button" accessibilityLabel={passwordVisible ? "Hide password" : "Show password"} onPress={() => setPasswordVisible(!passwordVisible)} style={{ position: "absolute", right: 4, top: 4, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}><Ionicons name={passwordVisible ? "eye-outline" : "eye-off-outline"} size={20} color={colors.slate500}/></Pressable></View></Field>}
-    {challengeId&&<Field label="Verification code"><AppInput accessibilityLabel="Verification code" value={verificationCode} onChangeText={v=>setVerificationCode(v.replace(/[^0-9]/g,"").slice(0,6))} keyboardType="number-pad" inputMode="numeric" autoComplete="sms-otp" maxLength={6} placeholder="6-digit code" editable={!loading}/><Text style={{color:colors.slate500}}>Check your SMS or email. The code expires in five minutes.</Text><Pressable onPress={()=>{setChallengeId("");setVerificationCode("");setError("");}}><Text style={styles.link}>Start sign-in again</Text></Pressable></Field>}
+
     {!registering && <Pressable accessibilityRole="button" disabled={loading} onPress={()=>setRecovering(true)}><Text style={{color:colors.orangeDark,paddingVertical:12}}>Forgot password?</Text></Pressable>}
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
     {loading && <ActivityIndicator color={colors.orange} accessibilityLabel="Signing in"/>}
