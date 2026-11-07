@@ -1,6 +1,4 @@
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
-import {isDemoMode} from "../api/demo";
-import {DemoVerificationFlow} from "../components/DemoVerificationFlow";
 import { Ionicons } from "@expo/vector-icons";
 import { fonts } from "../theme";
 import {fonts as appFonts} from "../theme";
@@ -24,7 +22,6 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
  const {colors}=useTheme();
  const styles=useThemedStyles(createStyles);
 
-  const [demoStarted,setDemoStarted]=useState(false);
   const [record, setRecord] = useState<KycStatus | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
@@ -33,14 +30,13 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
 
   async function run(action: "load" | "start" | "refresh") {
     if (inFlight.current) return;
-    if(action==="start"&&isDemoMode()){setDemoStarted(true);return;}
     inFlight.current = true;
     setBusy(true);
     setError("");
     try {
       if (action === "load") {
         let stored = await kycApi.status();
-        if (stored.status === "NOT_STARTED" && !isDemoMode()) stored = await kycApi.start();
+        if (stored.status === "NOT_STARTED") stored = await kycApi.start();
         if (active.current) setRecord(stored);
         if (stored.sessionId) {
           const fresh = await kycApi.refresh();
@@ -67,7 +63,7 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
     return () => { active.current = false; subscription.remove(); };
   }, []);
 
-  useAutoRefresh(()=>run("load"),!isDemoMode()&&(record?.status==="PENDING"||!!error||!record));
+  useAutoRefresh(()=>run("load"),(record?.status==="PENDING"||!!error||!record));
 
   async function openVerification() {
     const url = record?.hostedUrl;
@@ -76,7 +72,6 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
     catch { setError("Could not open verification. Please try again."); }
   }
 
-  if(demoStarted&&isDemoMode())return <DemoVerificationFlow onExit={()=>setDemoStarted(false)} onDone={onBack}/>;
   return (
     <ScrollView contentContainerStyle={styles.content}>
       <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Back to your account" onPress={onBack} style={styles.back}><Ionicons name="arrow-back" size={24} color={colors.primary}/></Pressable><Text style={styles.headerTitle}>Identity verification</Text></View>

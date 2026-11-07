@@ -23,29 +23,15 @@ by its `SUTURA_LOGO` brand constant. The website serves its copy from
 `web/public/brand/sutura-logo.png`. Customer PDF receipts use the bundled asset too.
 When replacing the artwork, update all four copies together.
 
-## Automatic offline demo
+## Live backend connections
 
-The three mobile apps check server availability at startup. Connection failures,
-five-second timeouts and HTTP server errors open an account named Demo User.
-Invalid credentials and other HTTP client errors keep the normal login error.
-
-Demo wallets start with GMD 12,500. Transfers, cash operations and support tickets
-are simulated in memory; no demo requests reach the backend. Use a reference
-starting with `DEMO-` when exploring the agent lookup screen. Customer identity
-verification includes a local sample-document and sample-selfie walkthrough.
-It does not upload evidence, run identity models or change the real KYC status.
-Actual verification requires the live server. Demo sessions and changes are discarded when leaving
-demo mode; real saved credentials are not replaced with demo credentials.
-
-Sign out and sign in again after restarting the server to return to your account.
-Real writes interrupted by an outage are never replayed as demo successes:
-check their actual status after signing in again. Demo operations are simulations.
-
-Validate the shared fallback implementation from `ui/sutura-app`:
-
-```bash
-node --test tests/*.test.cjs
-```
+All apps require a real account and the configured Sutura API. Outages and
+request timeouts show connection errors; they never open sample accounts or
+create simulated balances, payments, agent operations or verification results.
+Requests time out after 60 seconds to allow for free-host cold starts. Failed
+writes are not replayed automatically: check Activity or the operation status
+before retrying. A failed token refresh caused by an outage retains the session.
+Old sample sessions are rejected and removed when encountered.
 
 ## Customer appearance and input
 
@@ -88,7 +74,7 @@ Customer transfers use the recipient’s registered phone number (`recipientPhon
 not a wallet ID. Seven-digit Gambian numbers default to +220; international numbers
 can include + or 00 followed by their country code. The server resolves an active
 recipient wallet in the sending currency and rejects unknown, ambiguous or own
-numbers. In offline demo mode, use **+220 700 0002** as the sample recipient.
+numbers. Use a registered customer phone number.
 Internal payment-link collection requests continue to use destination wallet IDs.
 
 ### Agent and merchant appearance
@@ -108,8 +94,11 @@ Agent and merchant login use the same email/phone tabs and validation as custome
 
 All three mobile apps bundle Inter (regular, medium, semibold and bold) through Expo Google Fonts. Shared theme font tokens and default text/input styles use Inter.
 
-### Website demo and role settings
+### Website authentication and role settings
 
-With `npm run dev` in `ui/web`, open `http://localhost:3000/login` and enter the demo credentials: `admin@sutura.local` or `developer@sutura.local`, password `demo123`. Local demo login is enabled in development unless `NEXT_PUBLIC_ENABLE_DEMO_AUTH=false`; production builds always disable it. Admin sample wallets, transfers, webhooks, risk flags, reconciliation records and audit logs can be explored. Support replies/resolution and risk checks run locally; no model is run for sample risk checks. Sample changes reset when the dashboard reloads. Signing in with demo credentials explicitly replaces any saved live website session.
+The website requires live API authentication in development and production.
+Preview credentials and the old demo-auth environment flag no longer grant
+access. Admin and developer accounts use `/login`; customer and merchant users
+use their mobile apps.
 
 Agent and merchant Settings include account information, appearance, manual refresh, support, version information and sign-out confirmation. Merchant Hide balances is saved on the device. Language is English; it is displayed as information until translations are implemented.

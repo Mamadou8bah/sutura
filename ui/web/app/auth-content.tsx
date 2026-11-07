@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { authApi } from "../lib/auth-api";
 import { clearAuthSession, getDashboardPath, mapBackendRole, saveAuthSession } from "../lib/auth-session";
-import { authenticateDemoUser, DEMO_AUTH_ENABLED, getDemoDashboardPath, saveDemoSession } from "../lib/demo-auth";
 import { toE164Phone } from "../lib/merchant-registration";
 import { AuthField, AuthShell, DividerText, SocialButton } from "./auth-shell";
 
@@ -76,20 +75,6 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
     setLoading(true);
 
     try {
-      if (DEMO_AUTH_ENABLED) {
-        const demoUser = authenticateDemoUser(email, password);
-        if (demoUser) {
-          if (demoUser.role !== "admin" && demoUser.role !== "developer") {
-            setError("Web login is for developer and admin accounts. Use the mobile apps for customer or merchant access.");
-            return;
-          }
-          clearAuthSession();
-          saveDemoSession(demoUser);
-          window.location.href = getDemoDashboardPath(demoUser.role);
-          return;
-        }
-      }
-
       if(challengeId&&!/^[0-9]{6}$/.test(verificationCode))throw new Error("Enter the six-digit verification code.");
       const auth = await authApi.login(email.trim(), password,challengeId?{challengeId,code:verificationCode}:undefined);
       if(auth.twoFactorRequired&&auth.twoFactorChallengeId){setChallengeId(auth.twoFactorChallengeId);setVerificationCode("");return;}

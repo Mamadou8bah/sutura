@@ -1,5 +1,5 @@
 import type { VerificationCode } from "./twoFactor";
-import { availabilityFetch } from "./demo";
+import { availabilityFetch } from "./transport";
 import { API_BASE } from "./config";
 import { authFetch, readAuthJson } from "./sessionAuth";
 

@@ -39,11 +39,3 @@ export function parseAgentQr(raw: string): AgentQrPayload | null {
     return null;
   }
 }
-
-export function encodeDemoQr(payload: AgentQrPayload): string {
-  return JSON.stringify({
-    app: "sutura",
-    v: 1,
-    ...payload,
-  });
-}

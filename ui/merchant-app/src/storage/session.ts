@@ -29,7 +29,8 @@ export async function getSession(): Promise<MerchantSession | null> {
   if (!raw) return null;
   try {
     const session = JSON.parse(raw) as MerchantSession;
-    return session.accessToken?.startsWith("demo.") ? null : session;
+    if (!session.accessToken || session.accessToken.startsWith("demo.")) { await clearSession(); return null; }
+    return session;
   } catch {
     return null;
   }

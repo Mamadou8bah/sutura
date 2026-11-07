@@ -107,7 +107,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             session.firstName && session.lastName
               ? `${session.firstName} ${session.lastName}`
               : session.username,
-          email: session.accessToken.startsWith("demo.") ? "demo@example.invalid" : session.username.includes("@") ? session.username : "",
+          email: session.username.includes("@") ? session.username : "",
           phone: /^\+?[0-9]{7,15}$/.test(session.username) ? session.username : "",
           address: "",
         },

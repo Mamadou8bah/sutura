@@ -1,57 +1,12 @@
-import { findDemoUser, getDashboardPath, type DemoRole, type DemoUser } from "./mock/demo-users";
+import type { DemoUser } from "./mock/demo-users";
 
-/** Local previews allow sample accounts; production builds never enable demo auth. */
-export const DEMO_AUTH_ENABLED = process.env.NODE_ENV === "development" && process.env.NEXT_PUBLIC_ENABLE_DEMO_AUTH !== "false";
-
-const SESSION_KEY = "sutura_demo_session";
-
+// Compatibility for old preview screens: sample sessions can never authenticate.
+export const DEMO_AUTH_ENABLED = false;
 export type DemoSession = Pick<DemoUser, "email" | "role" | "name">;
-
-function readStorage(): Storage | null {
-  if (typeof window === "undefined") return null;
-  return window.localStorage;
-}
-
-export function authenticateDemoUser(email: string, password: string): DemoUser | null {
-  if (!DEMO_AUTH_ENABLED) return null;
-  return findDemoUser(email, password);
-}
-
-export function saveDemoSession(user: DemoUser): void {
-  if (!DEMO_AUTH_ENABLED) return;
-  const storage = readStorage();
-  if (!storage) return;
-
-  const session: DemoSession = {
-    email: user.email,
-    role: user.role,
-    name: user.name,
-  };
-
-  storage.setItem(SESSION_KEY, JSON.stringify(session));
-}
-
-export function getDemoSession(): DemoSession | null {
-  if (!DEMO_AUTH_ENABLED) return null;
-  const storage = readStorage();
-  if (!storage) return null;
-
-  const raw = storage.getItem(SESSION_KEY);
-  if (!raw) return null;
-
-  try {
-    return JSON.parse(raw) as DemoSession;
-  } catch {
-    return null;
-  }
-}
-
 export function clearDemoSession(): void {
-  const storage = readStorage();
-  if (!storage) return;
-  storage.removeItem(SESSION_KEY);
+  if (typeof window !== "undefined") window.localStorage.removeItem("sutura_demo_session");
 }
-
-export function getDemoDashboardPath(role: DemoRole): string {
-  return getDashboardPath(role);
+export function getDemoSession(): DemoSession | null {
+  clearDemoSession();
+  return null;
 }

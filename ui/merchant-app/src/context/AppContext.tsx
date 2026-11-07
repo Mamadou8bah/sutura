@@ -2,7 +2,6 @@ import { useBackNavigation } from "../hooks/useBackNavigation";
 import { applicationApi, type MerchantApplication } from "../api/application";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import {assertVerifiedSession, type VerificationCode} from "../api/twoFactor";
-import { demoSession, isDemoMode, recoverLiveConnection, setDemoMode, subscribeDemo } from "../api/demo";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { authApi } from "../api/merchantRegistration";
 import { bindTokenSession } from "../api/sessionAuth";
@@ -103,20 +102,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let busy = false;
-    const timer = setInterval(() => {
-      if (!isDemoMode() || busy) return;
-      busy = true;
-      void recoverLiveConnection().finally(() => { busy = false; });
-    }, 15000);
-    return () => clearInterval(timer);
-  }, []);
 
-  useEffect(() => subscribeDemo(() => {
-    setSession(isDemoMode() ? demoSession("MERCHANT") : null);
-    setScreen(isDemoMode() ? "home" : "login");
-  }), []);
   const [error, setError] = useState("");
   const [reg, setReg] = useState<RegistrationDraft>(emptyReg);
 
@@ -132,8 +118,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    if (!isDemoMode()) await clearSession();
-    setDemoMode(false);
+    await clearSession();
     sessionRef.current=null;
     setApplication(null);
     setSession(null);
@@ -159,7 +144,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [refreshSession]);
 
   const refreshApplication=useCallback(async()=>{
-    if(!sessionRef.current||isDemoMode())return;
+    if(!sessionRef.current)return;
     const email=sessionRef.current.email;
     const value=await applicationApi.status();
     // Ignore a response belonging to a previous sign-in.
@@ -168,8 +153,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     sessionRef.current=updated;await updateStoredSession(updated);setSession(updated);setApplication(value);
     if(value.userStatus==="ACTIVE")setScreen(current=>current==="pending"?"home":current);
   },[]);
-  useEffect(()=>{if(session&&!isDemoMode())void refreshApplication().catch(err=>setError(err instanceof Error?err.message:"Could not refresh application"));},[session?.email,refreshApplication]);
-  useAutoRefresh(refreshApplication,!!session&&!isDemoMode());
+  useEffect(()=>{if(session)void refreshApplication().catch(err=>setError(err instanceof Error?err.message:"Could not refresh application"));},[session?.email,refreshApplication]);
+  useAutoRefresh(refreshApplication,!!session);
 
   const value = useMemo<AppContextValue>(
     () => ({

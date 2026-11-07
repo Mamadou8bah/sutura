@@ -1,4 +1,4 @@
-import { availabilityFetch } from "./demo";
+import { availabilityFetch } from "./transport";
 import { API_BASE } from "./config";
 
 type ApiEnvelope<T> = {

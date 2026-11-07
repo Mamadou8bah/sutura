@@ -1,4 +1,4 @@
-import { availabilityFetch, demoResponse, isDemoMode } from "./demo";
+import { availabilityFetch } from "./transport";
 import { API_BASE } from "./config";
 
 export type TokenSession = {
@@ -61,8 +61,6 @@ async function refreshAccessToken(): Promise<string | null> {
       };
       await handlers?.updateSession(updated);
       return payload.data.accessToken;
-    } catch {
-      return null;
     } finally {
       refreshInFlight = null;
     }
@@ -72,7 +70,6 @@ async function refreshAccessToken(): Promise<string | null> {
 }
 
 export async function authFetch(path: string, init?: RequestInit): Promise<Response> {
-  if (isDemoMode()) return demoResponse(path, init);
   const session = handlers?.getSession();
   if (!session?.accessToken) {
     throw new Error("Not authenticated");
@@ -95,7 +92,6 @@ export async function authFetch(path: string, init?: RequestInit): Promise<Respo
 
   const newToken = await refreshAccessToken();
   if (!newToken) {
-    if (isDemoMode()) throw new Error("Server unavailable. Demo mode opened; the live request was not replayed.");
     await handlers?.clearSession();
     throw new Error("Session expired — please sign in again");
   }

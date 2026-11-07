@@ -8,8 +8,6 @@ import { ActivityIndicator, AppState, Linking, ScrollView, StyleSheet, View } fr
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { kycApi, type KycStatus } from "../api/kyc";
 
-import { isDemoMode } from "../api/demo";
-import { DemoVerificationFlow } from "../components/DemoVerificationFlow";
 import { colors } from "../theme";
 
 const descriptions: Record<KycStatus["status"], string> = {
@@ -25,7 +23,6 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
 
-  const [demoStarted, setDemoStarted] = useState(false);
   const [record, setRecord] = useState<KycStatus | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
@@ -34,14 +31,13 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
 
   async function run(action: "load" | "start" | "refresh") {
     if (inFlight.current) return;
-    if (action === "start" && isDemoMode()) { setDemoStarted(true); return; }
     inFlight.current = true;
     setBusy(true);
     setError("");
     try {
       if (action === "load") {
         let stored = await kycApi.status();
-        if (stored.status === "NOT_STARTED" && !isDemoMode()) stored = await kycApi.start();
+        if (stored.status === "NOT_STARTED") stored = await kycApi.start();
         if (active.current) setRecord(stored);
         if (stored.sessionId) {
           const fresh = await kycApi.refresh();
@@ -68,7 +64,7 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
     return () => { active.current = false; subscription.remove(); };
   }, []);
 
-  useAutoRefresh(()=>run("load"),!isDemoMode()&&(record?.status==="PENDING"||!!error||!record));
+  useAutoRefresh(()=>run("load"),(record?.status==="PENDING"||!!error||!record));
 
   async function openVerification() {
     const url = record?.hostedUrl;
@@ -77,7 +73,6 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
     catch { setError("Could not open verification. Please try again."); }
   }
 
-  if (demoStarted && isDemoMode()) return <DemoVerificationFlow onExit={() => setDemoStarted(false)} onDone={onBack} />;
 
   return (
     <ScrollView contentContainerStyle={styles.content}>
@@ -90,7 +85,7 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
           ["scan-outline","Face and liveness check","Follow the camera prompts in good lighting."],
           ["shield-checkmark-outline","Review","We'll show your verification result here."]
         ] as const).map(([icon,title,hint],index)=><View key={title} style={styles.step}><View style={styles.stepIcon}><Ionicons name={icon} size={23} color={colors.primary}/></View><View style={styles.stepCopy}><Text style={styles.stepTitle}>{title}</Text><Text style={styles.stepHint}>{hint}</Text></View><Text style={styles.number}>{index+1}</Text></View>)}</View>}
-        {record && record.status !== "NOT_STARTED" && <Text style={styles.body}>{isDemoMode() ? "Explore the verification steps with sample evidence." : descriptions[record.status]}</Text>}
+        {record && record.status !== "NOT_STARTED" && <Text style={styles.body}>{descriptions[record.status]}</Text>}
         {busy && <ActivityIndicator color={colors.orange} accessibilityLabel="Updating verification" />}
         {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
         {record && ["NOT_STARTED", "EXPIRED", "REJECTED"].includes(record.status) && (

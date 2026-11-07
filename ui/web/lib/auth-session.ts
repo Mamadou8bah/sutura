@@ -66,7 +66,12 @@ export function getAuthSession(): AppSession | null {
   const raw = localStorage.getItem(AUTH_SESSION_KEY);
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as AppSession;
+    const session = JSON.parse(raw) as AppSession;
+    if (session.source !== "api" || !session.accessToken || !session.refreshToken || session.accessToken.startsWith("demo.")) {
+      clearAuthSession();
+      return null;
+    }
+    return session;
   } catch {
     return null;
   }

@@ -1,5 +1,4 @@
 import {assertVerifiedSession, type VerificationCode} from "../api/twoFactor";
-import { demoSession, isDemoMode, recoverLiveConnection, setDemoMode, subscribeDemo } from "../api/demo";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, type AuthSession, type CustomerRegistration } from "../api/client";
 import { bindTokenSession } from "../api/sessionAuth";
@@ -25,26 +24,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    let busy = false;
-    const timer = setInterval(() => {
-      if (!isDemoMode() || busy) return;
-      busy = true;
-      void recoverLiveConnection().finally(() => { busy = false; });
-    }, 15000);
-    return () => clearInterval(timer);
-  }, []);
 
-  useEffect(() => subscribeDemo(() => setSession(isDemoMode() ? demoSession("USER") : null)), []);
 
   const persistSession = useCallback(async (stored: AuthSession) => {
-    if (!stored.accessToken.startsWith("demo.")) await saveSession(SESSION_KEY, JSON.stringify(stored));
+    if (!stored.accessToken || stored.accessToken.startsWith("demo.")) throw new Error("Please sign in again.");
+    await saveSession(SESSION_KEY, JSON.stringify(stored));
     setSession(stored);
   }, []);
 
   const signOut = useCallback(async () => {
-    if (!isDemoMode()) await clearSession(SESSION_KEY);
-    setDemoMode(false);
+    await clearSession(SESSION_KEY);
     setSession(null);
     setNewlyRegistered(false);
   }, []);
@@ -59,8 +48,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadSession(SESSION_KEY)
-      .then((raw) => {
-        if (raw) { const stored = JSON.parse(raw) as AuthSession; if (!stored.accessToken?.startsWith("demo.")) setSession(stored); }
+      .then(async (raw) => {
+        if (raw) { const stored = JSON.parse(raw) as AuthSession; if (stored.accessToken && !stored.accessToken.startsWith("demo.")) setSession(stored); else await clearSession(SESSION_KEY); }
       })
       .catch(() => {
         // Corrupted session — force re-login

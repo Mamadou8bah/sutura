@@ -1,5 +1,5 @@
 import { API_BASE } from "./config";
-// Recovery always contacts the server: demo mode must never claim to send a real code.
+// Recovery always contacts the server.
 async function request<T>(path: string, body: object): Promise<T> {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);

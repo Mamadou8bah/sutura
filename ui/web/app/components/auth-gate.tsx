@@ -3,20 +3,16 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAuthSession, type AppSession } from "../../lib/auth-session";
-import { getDemoSession } from "../../lib/demo-auth";
 import type { DemoRole } from "../../lib/mock/demo-users";
 import { SuturaLoader } from "./sutura-loader";
 
 export type SessionInfo = AppSession | { email: string; role: DemoRole; name: string; source: "demo" };
 
 export function getActiveSession(): SessionInfo | null {
-  const authenticated = getAuthSession();
-  if (authenticated) return authenticated;
-  const demo = getDemoSession();
-  return demo ? { ...demo, source: "demo" } : null;
+  return getAuthSession();
 }
 
-export function DemoAuthGate({
+export function AuthGate({
   role,
   children,
 }: {
