@@ -7,6 +7,19 @@ This folder contains four frontend apps:
 - `sutura-agent`: Expo React Native app for agents.
 - `merchant-app`: Expo React Native app for merchants.
 
+## Mobile development (Expo SDK 58)
+
+All three mobile apps use Expo 58, React Native 0.88 and React 19.3. Use Node
+22.13+, 24.3+, or 26+ and run `npm ci` inside the app folder.
+
+Run `npm start -- --clear` and scan the QR code with Expo Go for SDK 58.
+Custom native controls use their fallback in Expo Go. Use
+`npm run start:dev-client` with a development build for the full native integration.
+
+SDK 53 APKs need a new SDK 58 APK; this upgrade cannot reach them over the air.
+Production builds continue using the live backend. Native iOS builds require
+iOS 16.4 or newer.
+
 ## Mobile app updates
 
 All three APKs support EAS Update once linked to real Expo projects. Pushes to

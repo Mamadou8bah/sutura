@@ -70,7 +70,7 @@ export function WalletCardArt({ variant = "carousel" }: { variant?: "carousel" |
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   wrap: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     overflow: "hidden",
   },
 });

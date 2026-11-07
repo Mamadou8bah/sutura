@@ -10,9 +10,6 @@
       "android",
       "web"
     ],
-    "assetBundlePatterns": [
-      "**/*"
-    ],
     "ios": {
       "bundleIdentifier": "gm.sutura.agent",
       "supportsTablet": false

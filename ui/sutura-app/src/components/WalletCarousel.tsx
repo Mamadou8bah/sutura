@@ -1,7 +1,7 @@
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { useState } from "react";
-import { FlatList, StyleSheet, View, useWindowDimensions } from "react-native";
+import { FlatList, StyleSheet, View, useWindowDimensions, type LayoutChangeEvent } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
@@ -50,16 +50,16 @@ export function WalletCarousel({
   const cardWidth = availableWidth;
 
   return (
-    <FlatList
+    <FlatList<CustomerWallet>
       horizontal
-      onLayout={(event) => setAvailableWidth(event.nativeEvent.layout.width)}
+      onLayout={(event: LayoutChangeEvent) => setAvailableWidth(event.nativeEvent.layout.width)}
       data={wallets}
       keyExtractor={(item) => String(item.id)}
       showsHorizontalScrollIndicator={false}
       contentContainerStyle={styles.list}
       snapToInterval={cardWidth + 12}
       decelerationRate="fast"
-      renderItem={({ item }) => (
+      renderItem={({ item }: { item: CustomerWallet }) => (
         <WalletSlide
           wallet={item}
           width={cardWidth}

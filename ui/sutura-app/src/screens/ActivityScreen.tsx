@@ -1,3 +1,4 @@
+import type { CustomerTransaction } from "../types";
 import { useMemo, useState } from "react";
 import { FlatList, StyleSheet, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
@@ -39,7 +40,7 @@ export function ActivityScreen() {
  const incoming=completed.filter(transaction=>transaction.type==="DEPOSIT"||transaction.type==="TRANSFER_IN").reduce((sum,transaction)=>sum+transaction.amount,0);
  const outgoing=completed.filter(transaction=>transaction.type==="WITHDRAWAL"||transaction.type==="TRANSFER_OUT").reduce((sum,transaction)=>sum+transaction.amount,0);
  const summary=mode==="history"?[{label:"Money in",amount:incoming},{label:"Money out",amount:outgoing}]:[{label:mode==="income"?"Total received":"Total spent",amount:mode==="income"?incoming:outgoing}];
- return <View style={{flex:1}}><FlatList data={transactions} keyExtractor={transaction=>transaction.id} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}
+ return <View style={{flex:1}}><FlatList<CustomerTransaction> data={transactions} keyExtractor={transaction=>transaction.id} showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}
  ListHeaderComponent={<View style={styles.header}>
   <View style={styles.titleRow}><Text style={styles.title}>Activity</Text><Text style={styles.currency}>{currency}</Text></View>
   <View accessibilityRole="tablist" style={styles.tabs}>{([{id:"history",label:"History"},{id:"expenses",label:"Expenses"},{id:"income",label:"Income"}] as const).map(tab=><Pressable key={tab.id} accessibilityRole="tab" accessibilityLabel={tab.label} accessibilityState={{selected:mode===tab.id}} onPress={()=>setMode(tab.id)} style={[styles.tab,mode===tab.id&&styles.activeTab]}><Text style={[styles.tabText,mode===tab.id&&{color:colors.primary}]}>{tab.label}</Text></Pressable>)}</View>
@@ -48,7 +49,7 @@ export function ActivityScreen() {
   <View style={styles.titleRow}><Text style={styles.sectionTitle}>{mode==="history"?"Transactions":mode==="income"?"Incoming payments":"Outgoing payments"}</Text><Text style={styles.caption}>{transactions.length}</Text></View>
  </View>}
  ListEmptyComponent={<View style={styles.empty}><View style={styles.emptyIcon}><Ionicons name="receipt-outline" size={30} color={colors.orange}/></View><Text style={styles.emptyTitle}>No {mode==="history"?"transactions":mode} in this period</Text><Text style={styles.emptyHint}>Try another period. Your {currency} payments will appear here.</Text></View>}
- renderItem={({item})=><TransactionRow txn={item}/>}/>
+ renderItem={({item}: {item: CustomerTransaction})=><TransactionRow txn={item}/>}/>
  <SelectionSheet visible={periodOpen} title="Activity period" onClose={()=>setPeriodOpen(false)}>{periods.map(option=><Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={option.label} accessibilityState={{checked:period===option.id}} onPress={()=>{setPeriod(option.id);setPeriodOpen(false);}} style={styles.periodOption}><Text style={styles.periodText}>{option.label}</Text>{period===option.id&&<Ionicons name="checkmark" size={20} color={colors.orange}/>}</Pressable>)}</SelectionSheet>
  </View>;
 }

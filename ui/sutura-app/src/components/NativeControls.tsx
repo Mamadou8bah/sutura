@@ -1,5 +1,5 @@
 import { NavigationContext } from "@react-navigation/native";
-import { createContext, useContext, useEffect, useState, forwardRef } from "react";
+import { createContext, useContext, useEffect, useState, forwardRef, type ComponentRef } from "react";
 import { PixelRatio, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View,
   type PressableProps, type SwitchProps, type TextProps, type TextInputProps, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
 import { DeviceControl, supportsButtonTint } from "./DeviceControl";
@@ -22,19 +22,19 @@ export function platformTextStyle(style: TextStyle | undefined, platform = Platf
   return { ...style, fontFamily: platform === "ios" ? "System" : "sans-serif",
     fontWeight: style?.fontWeight ?? weight ?? "400" };
 }
-export type NativeText = Text;
-export type NativeInput = TextInput;
-export const NativeText = forwardRef<Text, TextProps>((props, ref) => {
+export type NativeText = ComponentRef<typeof Text>;
+export type NativeInput = ComponentRef<typeof TextInput>;
+export const NativeText = forwardRef<NativeText, TextProps>((props, ref) => {
   const { colors } = useTheme();
-  return <Text {...props} ref={ref} style={[{ color: colors.primary }, platformTextStyle(StyleSheet.flatten(props.style))]} />;
+  return <Text {...props} ref={ref} style={[{ color: colors.primary }, platformTextStyle(StyleSheet.flatten(props.style) ?? undefined)]} />;
 });
-export const NativeInput = forwardRef<TextInput, TextInputProps>((props, ref) => {
+export const NativeInput = forwardRef<NativeInput, TextInputProps>((props, ref) => {
   const { colors, mode } = useTheme();
   return <TextInput {...props} ref={ref} keyboardAppearance={props.keyboardAppearance ?? mode}
     selectionColor={props.selectionColor ?? colors.orange} underlineColorAndroid={props.underlineColorAndroid ?? "transparent"}
-    style={[{ color: colors.primary }, platformTextStyle(StyleSheet.flatten(props.style))]} />;
+    style={[{ color: colors.primary }, platformTextStyle(StyleSheet.flatten(props.style) ?? undefined)]} />;
 });
-export const NativePressable = forwardRef<View, PressableProps>((props, ref) => {
+export const NativePressable = forwardRef<ComponentRef<typeof View>, PressableProps>((props, ref) => {
   const { colors } = useTheme();
   return <Pressable {...props} ref={ref} android_ripple={props.android_ripple ?? { color: colors.border, foreground: true }}
     hitSlop={props.hitSlop ?? 4} />;

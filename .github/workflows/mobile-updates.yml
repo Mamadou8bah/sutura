@@ -85,7 +85,7 @@ jobs:
           NODE
       - uses: expo/expo-github-action@v8
         with:
-          eas-version: '20.5.1'
+          eas-version: '27.5.0'
           token: ${{ secrets.EXPO_TOKEN }}
       - run: npm ci
       - name: Publish compatible Android update

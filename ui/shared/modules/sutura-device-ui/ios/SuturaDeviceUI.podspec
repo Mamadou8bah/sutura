@@ -6,7 +6,7 @@ Pod::Spec.new do |s|
   s.license = { :type => 'Proprietary' }
   s.author = 'Sutura'
   s.homepage = 'https://github.com/Mamadou8bah/sutura'
-  s.platforms = { :ios => '15.1' }
+  s.platforms = { :ios => '16.4' }
   s.source = { :git => 'https://github.com/Mamadou8bah/sutura.git' }
   s.static_framework = true
   s.dependency 'ExpoModulesCore'

@@ -37,7 +37,7 @@ GitHub Actions.
    channel once (skip this if it already exists):
 
    ```sh
-   npx eas-cli@20.5.1 channel:create production --non-interactive
+   npx eas-cli@27.5.0 channel:create production --non-interactive
    ```
 
    This also supports APKs built locally rather than by EAS Build.
@@ -49,7 +49,7 @@ cannot gain it through an update. Build and install each app once after linking
 its real Expo project. From the relevant app directory:
 
 ```sh
-npx eas-cli@20.5.1 build --platform android --profile production-apk
+npx eas-cli@27.5.0 build --platform android --profile production-apk
 ```
 
 The `production-apk` profile creates an installable APK with the `production`
