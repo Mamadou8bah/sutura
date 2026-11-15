@@ -1,0 +1,53 @@
+name: Build mobile APKs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mobile-production-apks
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [sutura-app, sutura-agent, merchant-app]
+    defaults:
+      run:
+        working-directory: ui/${{ matrix.app }}
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: ui/${{ matrix.app }}/package-lock.json
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: '27.5.0'
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - name: Build signed installable APK
+        run: eas build --platform android --profile production-apk --non-interactive --wait --json > build-result.json
+      - name: Add APK downloads to summary
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const results = JSON.parse(fs.readFileSync('build-result.json', 'utf8'));
+          for (const build of Array.isArray(results) ? results : [results]) {
+            const url = build.artifacts?.applicationArchiveUrl || build.artifacts?.buildUrl;
+            if (build.status !== 'FINISHED' || !url) throw new Error(`APK not available: ${build.status}`);
+            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### ${process.env.APP_NAME}\n\n[Download APK](${url})\n\nBuild: ${build.id}\n`);
+            console.log(`Download APK: ${url}`);
+          }
+          NODE
+        env:
+          APP_NAME: ${{ matrix.app }}
