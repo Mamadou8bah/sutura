@@ -48,7 +48,7 @@ class ProductionVerificationTest {
         .sendCode(any(), anyString());
     var registration =
         auth.register(
-            new RegisterRequest("Phone", "Test", phone, null, password, Role.USER, false));
+            new RegisterRequest("Phone", "Test", phone, phone.substring(1) + "@example.invalid", password, Role.USER, false));
     long userId = users.findByPhoneNumber(phone).orElseThrow().getId();
     var personal = wallets.findByUserId(userId);
     assertEquals(1, personal.size());
@@ -68,7 +68,7 @@ class ProductionVerificationTest {
         auth.login(
             new LoginRequest(phone, password, registration.twoFactorChallengeId(), code.get()));
     assertNotNull(session.accessToken());
-    assertTrue(users.findByPhoneNumber(phone).orElseThrow().isPhoneVerified());
+    assertFalse(users.findByPhoneNumber(phone).orElseThrow().isPhoneVerified());
     assertEquals(1, wallets.findByUserId(userId).size());
     assertEquals(walletId, wallets.findByUserId(userId).get(0).getId());
     assertTrue(auth.login(new LoginRequest(phone, password, null, null)).twoFactorRequired());
@@ -85,7 +85,7 @@ class ProductionVerificationTest {
     long before = wallets.count();
     doThrow(new IllegalStateException("Test delivery failure")).when(delivery).sendCode(any(), anyString());
     assertThrows(IllegalStateException.class, () -> auth.register(
-        new RegisterRequest("Rollback", "Test", phone, null, "test-account-password", Role.USER, false)));
+        new RegisterRequest("Rollback", "Test", phone, phone.substring(1) + "@example.invalid", "test-account-password", Role.USER, false)));
     assertFalse(users.existsByPhoneNumber(phone));
     assertEquals(before, wallets.count());
   }

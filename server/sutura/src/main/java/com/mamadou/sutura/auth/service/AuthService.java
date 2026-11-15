@@ -161,7 +161,6 @@ public class AuthService {
         return authMapper.twoFactorRequired(user, challengeId);
       }
       verifyTwoFactorCode(user, request.twoFactorChallengeId(), request.twoFactorCode());
-      if (user.getRole() == Role.USER || user.getRole() == Role.AGENT) user.setPhoneVerified(true);
       log.info("2FA verification successful, userId={}", user.getId());
     }
 
@@ -197,6 +196,10 @@ public class AuthService {
   }
 
   private String startTwoFactorChallenge(User user) {
+    if (user.getEmail() == null || user.getEmail().isBlank()) {
+      throw new InvalidTokenException(
+          "An email address is required for login verification. Contact support to add one to your account.");
+    }
     if (user.getTwoFactorChallengeId() != null
         && user.getTwoFactorCodeHash() != null
         && user.getTwoFactorCodeExpiresAt() != null

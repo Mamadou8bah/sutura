@@ -140,7 +140,7 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
     <form className="mt-5 space-y-4" onSubmit={handleLogin}>
       <button type="button" disabled={loading} onClick={() => { setChallengeId(""); setVerificationCode(""); setError(""); }} className="min-h-11 text-sm font-semibold text-orange-600">← Back to sign in</button>
       <h1 className="text-2xl font-bold text-slate-900">Enter verification code</h1>
-      <p className="text-sm leading-6 text-slate-500">Enter the six-digit code sent to your phone or email. It expires in five minutes.</p>
+      <p className="text-sm leading-6 text-slate-500">Enter the six-digit code sent to your email. It expires in five minutes.</p>
       <label className="block text-sm font-semibold text-slate-900">Verification code
         <input aria-label="Verification code" className={inputClass + " mt-2 text-center tracking-[0.5em]"} inputMode="numeric" autoComplete="one-time-code"
           autoFocus maxLength={6} pattern="[0-9]{6}" required disabled={loading} value={verificationCode}

@@ -55,7 +55,7 @@ class AutomaticKycOnboardingTest {
     var registered =
         auth.register(
             new RegisterRequest(
-                "New", "Customer", phone, null, "test-onboarding-password", Role.USER, false));
+                "New", "Customer", phone, phone.substring(1) + "@example.invalid", "test-onboarding-password", Role.USER, false));
     long id = users.findByPhoneNumber(phone).orElseThrow().getId();
     assertFalse(jobs.existsById(id));
     auth.login(

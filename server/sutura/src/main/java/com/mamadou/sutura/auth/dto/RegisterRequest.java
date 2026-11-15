@@ -10,7 +10,7 @@ public record RegisterRequest(
     @NotBlank @Size(max = 100) String lastName,
     @NotBlank @jakarta.validation.constraints.Pattern(regexp = "\\+[1-9][0-9]{7,14}")
         String phoneNumber,
-    @Email @Size(max = 254) String email,
+    @NotBlank @Email @Size(max = 254) String email,
     @NotBlank @Size(min = 8, max = 72) String password,
     Role role,
     boolean twoFactorEnabled) {}
