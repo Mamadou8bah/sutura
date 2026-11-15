@@ -30,24 +30,21 @@ jobs:
           node-version: '22'
           cache: npm
           cache-dependency-path: ui/${{ matrix.app }}/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - uses: expo/expo-github-action@v8
         with:
           eas-version: '27.5.0'
           token: ${{ secrets.EXPO_TOKEN }}
       - run: npm ci
-      - name: Build signed installable APK
-        run: eas build --platform android --profile production-apk --non-interactive --wait --json > build-result.json
-      - name: Add APK downloads to summary
-        run: |
-          node <<'NODE'
-          const fs = require('node:fs');
-          const results = JSON.parse(fs.readFileSync('build-result.json', 'utf8'));
-          for (const build of Array.isArray(results) ? results : [results]) {
-            const url = build.artifacts?.applicationArchiveUrl || build.artifacts?.buildUrl;
-            if (build.status !== 'FINISHED' || !url) throw new Error(`APK not available: ${build.status}`);
-            fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### ${process.env.APP_NAME}\n\n[Download APK](${url})\n\nBuild: ${build.id}\n`);
-            console.log(`Download APK: ${url}`);
-          }
-          NODE
-        env:
-          APP_NAME: ${{ matrix.app }}
+      - name: Build signed installable APK on the Android runner
+        run: eas build --platform android --profile production-apk --non-interactive --local --output "${{ matrix.app }}-latest.apk"
+      - name: Upload APK download
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.app }}-apk
+          path: ui/${{ matrix.app }}/${{ matrix.app }}-latest.apk
+          if-no-files-found: error
+          retention-days: 14
