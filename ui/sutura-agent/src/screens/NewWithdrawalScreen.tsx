@@ -45,7 +45,7 @@ export function NewWithdrawalScreen() {
           <AppInput accessibilityLabel="Amount" inputMode="decimal" maxLength={18} value={amount} onChangeText={value=>{if(isAmountDraft(value))setAmount(value);}} keyboardType="decimal-pad" placeholder="0.00" editable={!busy} />
         </Field>
         <FormError message={error} />
-        <PrimaryButton label="Create withdrawal" onPress={submit} disabled={busy} color={brand.orange} />
+        <PrimaryButton loading={busy} label="Create withdrawal" onPress={submit} disabled={busy} color={brand.orange} />
       </ScrollView>
     </KeyboardAvoidingView>
   );

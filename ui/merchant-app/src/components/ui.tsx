@@ -30,10 +30,10 @@ export function AppInput(props: TextInputProps) {
   return <TextInput {...props} selectionColor={colors.orange} onFocus={event=>{setFocused(true);props.onFocus?.(event);}} onBlur={event=>{setFocused(false);props.onBlur?.(event);}} placeholderTextColor={props.placeholderTextColor ?? colors.slate500} style={[styles.input, focused && {borderColor:colors.orange}, props.style]} />;
 }
 
-export function PrimaryButton({ label, onPress, disabled = false, color, textColor, style }: {
-  label: string; onPress: () => void; disabled?: boolean; color?: string; textColor?: string; style?: ViewStyle;
+export function PrimaryButton({ label, onPress, disabled = false, color, textColor, style, loading = false }: {
+  loading?: boolean; label: string; onPress: () => void; disabled?: boolean; color?: string; textColor?: string; style?: ViewStyle;
 }) {
-  return <NativeButton label={label} onPress={onPress} disabled={disabled} color={color} textColor={textColor} style={style} />;
+  return <NativeButton loading={loading} label={label} onPress={onPress} disabled={disabled} color={color} textColor={textColor} style={style} />;
 }
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
@@ -77,12 +77,12 @@ export function SuturaLogo({ size = 40 }: { size?: number }) {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  screen: { padding: 16, paddingBottom: 24, gap: 12 },
-  field: { gap: 6 },
-  fieldLabel: {fontFamily: appFonts.bold, fontSize: 12, fontWeight: "700", color: colors.slate500,  letterSpacing: 0.6 },
+  screen: { padding: 20, paddingBottom: 32, gap: 16 },
+  field: { gap: 8 },
+  fieldLabel: {fontFamily: appFonts.bold, fontSize: 12, fontWeight: "700", color: colors.slate500,  letterSpacing: 0.1 },
   fieldHint: {fontFamily: appFonts.regular, fontSize: 12, color: colors.slate500 },
   input: {fontFamily: appFonts.regular,
-    minHeight: 48,
+    minHeight: 52,
     paddingVertical: 12,
     borderRadius: radii.md,
     backgroundColor: colors.surfaceMuted,
@@ -90,11 +90,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: colors.slate900,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   primaryButton: {
-    minHeight: 48,
+    minHeight: 52,
     paddingVertical: 12,
     borderRadius: radii.sm,
     alignItems: "center",
@@ -105,7 +105,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
     padding: 16,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   link: {fontFamily: appFonts.medium, textAlign: "left", color: colors.orangeDark, fontWeight: "500", fontSize: 14, paddingVertical:12 },

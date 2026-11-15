@@ -131,7 +131,7 @@ export function SubmitButton({ label, onPress, color = brand.orange, disabled = 
     disabled?: boolean;
     loading?: boolean;
 }) {
-    return <NativeButton label={loading ? "Processing…" : label} onPress={onPress} disabled={disabled || loading} color={color} />;
+    return <NativeButton loading={loading} label={loading ? "Processing…" : label} onPress={onPress} disabled={disabled || loading} color={color} />;
 }
 export function OptionList({ items, }: {
     items: {

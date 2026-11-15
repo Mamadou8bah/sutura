@@ -1,4 +1,3 @@
-import { NativeTabBar, supportsNativeTabs } from "./src/components/NativeTabBar";
 import { useAppFonts } from "./src/hooks/useAppFonts";
 import { SafeAreaProvider, SafeAreaView as PlatformSafeAreaView } from "react-native-safe-area-context";
 import { NativeNavigator } from "./src/components/NativeNavigator";
@@ -83,13 +82,12 @@ function MerchantNav() {
   const { colors } = useTheme();
   if (session?.userStatus !== "ACTIVE" || !merchantTabs.some(tab => tab.value === screen)) return null;
   const navigate = (value: string) => setScreen(value as import("./src/context/AppContext").Screen);
-  if (supportsNativeTabs) return <NativeTabBar active={screen} tabs={merchantTabs} onChange={navigate} />;
-  return <View style={{ flexDirection: "row", paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border }}>
+  return <View style={{ flexDirection: "row", paddingVertical: 4, backgroundColor: colors.surface, borderTopWidth: 0.5, borderTopColor: colors.border }}>
     {merchantTabs.map(({ value, icon, label }) => <Pressable key={value} accessibilityRole="tab"
       accessibilityLabel={label} accessibilityState={{ selected: screen === value }} onPress={() => navigate(value)}
       style={{ flex: 1, alignItems: "center", paddingVertical: 8, gap: 5 }}>
       <Ionicons name={icon} size={23} color={screen === value ? colors.orange : colors.slate500} />
-      <Text style={{ fontSize: 11, color: screen === value ? colors.primary : colors.slate500 }}>{label}</Text>
+      <Text style={{ fontSize: 12, color: screen === value ? colors.orange : colors.slate500 }}>{label}</Text>
     </Pressable>)}
   </View>;
 }

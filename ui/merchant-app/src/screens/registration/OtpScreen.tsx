@@ -43,7 +43,7 @@ export function OtpScreen() {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <PrimaryButton label={loading ? "Verifying…" : "Continue"} onPress={handleSubmit} disabled={loading || reg.otp.length !== 6} />
+      <PrimaryButton loading={loading} label={loading ? "Verifying…" : "Continue"} onPress={handleSubmit} disabled={loading || reg.otp.length !== 6} />
       <LinkButton label="Back" onPress={() => setScreen("reg-phone")} />
     </Screen>
   );

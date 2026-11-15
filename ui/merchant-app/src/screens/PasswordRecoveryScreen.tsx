@@ -44,7 +44,7 @@ export function PasswordRecoveryScreen({ onBack }: { onBack: () => void }) {
         <Field label="Confirm password"><AppInput accessibilityLabel="Confirm password" value={confirmation} onChangeText={setConfirmation} secureTextEntry autoComplete="new-password" autoCapitalize="none" autoCorrect={false} maxLength={72} editable={!busy} /></Field>
       </>}
       {!!error && <Text accessibilityRole="alert" style={{ color: colors.rose800 }}>{error}</Text>}
-      <PrimaryButton label={busy ? "Please wait..." : requestId ? "Reset password" : "Send recovery code"} disabled={busy} onPress={() => void submit()} />
+      <PrimaryButton loading={busy} label={busy ? "Please wait..." : requestId ? "Reset password" : "Send recovery code"} disabled={busy} onPress={() => void submit()} />
       {!!requestId && <Pressable disabled={busy} onPress={() => { setRequestId(""); setCode(""); setError(""); }}><Text style={{ color: colors.orangeDark, paddingVertical: 12 }}>Use another number or request a new code</Text></Pressable>}
     </>}
   </Screen>;

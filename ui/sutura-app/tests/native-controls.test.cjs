@@ -81,15 +81,17 @@ test('customer, agent and merchant use identical platform controls and stack ada
   }
 });
 
-test('device buttons forward native theme and cannot invoke disabled payment actions', () => {
-  for (const platform of ['android', 'ios']) {
-    const { api } = load(platform, true); let calls = 0;
-    const control = api.NativeButton({ label: 'Pay GMD 100', disabled: true, onPress: () => calls++ }).props.children;
-    assert.equal(control.type, 'DeviceControl'); assert.equal(control.props.dark, true);
-    assert.equal(control.props.buttonColor, '#f0a000');
-    assert.equal(control.props.textColor, '#181a20');
-    assert.equal(control.props.controlKind, 'button'); assert.equal(control.props.disabled, true);
-    control.props.onAction(); assert.equal(calls, 0);
+test('branded buttons stay consistent with or without a native bridge and block busy payments', () => {
+  for (const platform of ['android', 'ios', 'web']) {
+    for (const native of [true, false]) {
+      const { api } = load(platform, native); let calls = 0;
+      const button = api.NativeButton({ label: 'Pay GMD 100', loading: true, onPress: () => calls++ });
+      assert.equal(button.props.accessibilityRole, 'button');
+      assert.equal(button.props.accessibilityState.busy, true);
+      assert.equal(button.props.disabled, true);
+      assert.equal(button.props.style({pressed:false})[0].backgroundColor, '#f0a000');
+      button.props.onPress(); assert.equal(calls, 0);
+    }
   }
 });
 

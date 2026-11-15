@@ -44,7 +44,7 @@ export function CreateWalletScreen() {
       <NativeSelect title="Currency" value={currency} onChange={setCurrency} disabled={busy}
         options={available.map(value => ({ value, label: value }))} />
       {!!error && <Text accessibilityRole="alert" style={{ color: colors.rose800, lineHeight: 20 }}>{error}</Text>}
-      <PrimaryButton label={busy ? "Creating…" : "Create wallet"} disabled={busy || !name.trim() || !available.includes(currency)} onPress={() => void create()} />
+      <PrimaryButton loading={busy} label={busy ? "Creating…" : "Create wallet"} disabled={busy || !name.trim() || !available.includes(currency)} onPress={() => void create()} />
     </>}
   </Screen>;
 }

@@ -48,7 +48,7 @@ export function HomeScreen() {
         </Pressable>
       </View>
 
-      {recentCompleted.length === 0 && <View style={{borderWidth:1,borderStyle:"dashed",borderColor:colors.border,borderRadius:16,padding:24,alignItems:"center",gap:12}}><Ionicons name="receipt-outline" size={30} color={colors.orange}/><Text style={{fontFamily:fonts.medium,color:colors.primary,fontSize:16,textAlign:"center"}}>Ready for your next customer</Text><Text style={{fontFamily:fonts.regular,color:colors.slate500,fontSize:12,textAlign:"center",lineHeight:19}}>Your completed cash-in and cash-out operations will appear here.</Text></View>}
+      {recentCompleted.length === 0 && <View style={{borderWidth:1,borderColor:colors.border,borderRadius:16,padding:24,alignItems:"center",gap:12}}><Ionicons name="receipt-outline" size={30} color={colors.orange}/><Text style={{fontFamily:fonts.medium,color:colors.primary,fontSize:16,textAlign:"center"}}>Ready for your next customer</Text><Text style={{fontFamily:fonts.regular,color:colors.slate500,fontSize:12,textAlign:"center",lineHeight:19}}>Your completed cash-in and cash-out operations will appear here.</Text></View>}
       {recentCompleted.map((op) => (
         <OperationRow key={op.reference} op={op} onPress={() => openOperation(op)} />
       ))}
@@ -59,6 +59,6 @@ export function HomeScreen() {
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: { padding: spacing.screen, paddingBottom: 24, gap: 16 },
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4 },
-  sectionTitle: { fontSize: 18, fontFamily: fonts.bold, color: colors.slate900 },
+  sectionTitle: { fontSize: 20, letterSpacing: -0.3, fontFamily: fonts.bold, color: colors.slate900 },
   seeAll: { fontSize: 14, fontFamily: fonts.medium, color: colors.primary },
 });

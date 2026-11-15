@@ -1,10 +1,11 @@
+import { LoginMethodPicker } from "../components/LoginMethodPicker";
 import { VerificationCodeScreen } from "./VerificationCodeScreen";
 import { useHardwareBack } from "../hooks/useBackNavigation";
 import { PasswordRecoveryScreen } from "./PasswordRecoveryScreen";
 import {TwoFactorRequiredError} from "../api/twoFactor";
 import { Ionicons } from "@expo/vector-icons";
 import { useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, Keyboard, View } from "react-native";
+import { StyleSheet, Keyboard, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { SuturaLogo } from "../components/SuturaLogo";
 import { AppInput, Field, PrimaryButton, Screen } from "../components/ui";
@@ -47,7 +48,7 @@ export function LoginScreen() {
         }
         if (step === 1) {
             if (!normalizePhone(phone)) { setError("Enter a valid phone number, including its country code."); return; }
-            if (email.trim() && !isValidEmail(email.trim())) { setError("Enter a valid email address."); return; }
+            if (!isValidEmail(email.trim())) { setError("Enter a valid email address."); return; }
         }
         Keyboard.dismiss();
         setStep(value => Math.min(value + 1, 2));
@@ -66,7 +67,7 @@ export function LoginScreen() {
             setError("Enter a valid phone number, including its country code.");
             return;
         }
-        if ((registering ? !!email.trim() : method === "email") && !isValidEmail(email.trim())) {
+        if ((registering || method === "email") && !isValidEmail(email.trim())) {
             setError("Enter a valid email address.");
             return;
         }
@@ -101,8 +102,8 @@ export function LoginScreen() {
     <View style={styles.brandBar}><SuturaLogo size={64}/>{registering && step > 0 && <Pressable accessibilityRole="button" accessibilityLabel="Previous step" disabled={loading} onPress={() => { Keyboard.dismiss(); setStep(value => value - 1); setError(""); }} style={{padding:12}}><Ionicons name="arrow-back" size={24} color={colors.primary}/></Pressable>}</View>
     {registering && <View style={{gap:10}}><Text accessibilityLiveRegion="polite" style={{color:colors.slate500,fontSize:12}}>Step {step + 1} of 3</Text><View style={{flexDirection:"row",gap:6}}>{stages.map((stage,index)=><View key={stage} style={{flex:1,height:3,borderRadius:2,backgroundColor:index<=step?colors.orange:colors.border}}/>)}</View></View>}
     <Text style={styles.title}>{registering ? stages[step] : "Log in"}</Text>
-    <Text style={styles.subtitle}>{registering ? ["Let’s start with your first and last name.", "Use your phone number to receive money. Email is optional.", "Choose a password with at least 8 characters."][step] : "Log in to your Sutura account."}</Text>
-    {!registering && <View accessibilityRole="tablist" style={styles.tabs}>{(["email", "phone"] as const).map(value => <Pressable accessibilityRole="tab" accessibilityLabel={value === "email" ? "Email login" : "Phone login"} accessibilityState={{ selected: method === value }} key={value} disabled={loading} onPress={() => { setChallengeId("");setVerificationCode("");setMethod(value); setError(""); }} style={[styles.tab, method === value && styles.activeTab]}><Text style={[styles.tabText, method === value && { color: colors.primary }]}>{value === "email" ? "Email" : "Phone number"}</Text></Pressable>)}</View>}
+    <Text style={styles.subtitle}>{registering ? ["Let’s start with your first and last name.", "Use your phone number to receive money and email for verification codes.", "Choose a password with at least 8 characters."][step] : "Log in to your Sutura account."}</Text>
+    {!registering && <LoginMethodPicker value={method} disabled={loading} onChange={value => { setChallengeId(""); setVerificationCode(""); setMethod(value); setError(""); }} />}
     {registering && step === 0 && <>
       <Field label="First name"><AppInput accessibilityLabel="First name" value={firstName} onChangeText={value => { if (isNameDraft(value))
             setFirstName(value); }} maxLength={80} autoComplete="given-name" autoCapitalize="words" editable={!loading} placeholder="First name"/></Field>
@@ -111,16 +112,15 @@ export function LoginScreen() {
     </>}
     {(registering ? step === 1 : method === "phone") && <Field label="Phone number"><AppInput accessibilityLabel="Phone number" value={phone} onChangeText={value => { if (isPhoneDraft(value))
         setPhone(value); }} inputMode="tel" keyboardType="phone-pad" autoComplete="tel" maxLength={40} editable={!loading} placeholder="+220 700 0001"/></Field>}
-    {(registering ? step === 1 : method === "email") && <Field label={registering ? "Email (optional)" : "Email"}><AppInput accessibilityLabel="Email" value={email} onChangeText={value => { if (!/\s/.test(value))
+    {(registering ? step === 1 : method === "email") && <Field label="Email"><AppInput accessibilityLabel="Email" value={email} onChangeText={value => { if (!/\s/.test(value))
         setEmail(value); }} keyboardType="email-address" inputMode="email" autoComplete="email" autoCapitalize="none" autoCorrect={false} maxLength={254} editable={!loading} placeholder="name@example.com"/></Field>}
     {(!registering || step === 2) && <Field label="Password"><View style={{ position: "relative" }}><AppInput accessibilityLabel="Password" value={password} onChangeText={setPassword} secureTextEntry={!passwordVisible} style={{ paddingRight: 52 }} autoCapitalize="none" autoCorrect={false} autoComplete={registering ? "new-password" : "current-password"} maxLength={registering ? 72 : 256} editable={!loading} placeholder={registering ? "At least 8 characters" : "Enter your password"} onSubmitEditing={() => void handleLogin()} returnKeyType="go"/><Pressable accessibilityRole="button" accessibilityLabel={passwordVisible ? "Hide password" : "Show password"} onPress={() => setPasswordVisible(!passwordVisible)} style={{ position: "absolute", right: 4, top: 4, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}><Ionicons name={passwordVisible ? "eye-outline" : "eye-off-outline"} size={20} color={colors.slate500}/></Pressable></View></Field>}
 
     {!registering && <Pressable accessibilityRole="button" disabled={loading} onPress={()=>setRecovering(true)}><Text style={{color:colors.orangeDark,paddingVertical:12}}>Forgot password?</Text></Pressable>}
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
-    {loading && <ActivityIndicator color={colors.orange} accessibilityLabel="Signing in"/>}
-    <PrimaryButton label={loading ? "Please wait..." : registering ? step < 2 ? "Continue" : "Create account" : "Log in"} disabled={loading} onPress={() => void handleLogin()}/>
+    <PrimaryButton loading={loading} label={loading ? "Please wait..." : registering ? step < 2 ? "Continue" : "Create account" : "Log in"} disabled={loading} onPress={() => void handleLogin()}/>
     <Pressable accessibilityRole="button" disabled={loading} onPress={() => { setChallengeId("");setVerificationCode("");setRegistering(!registering); setStep(0); setPassword(""); setPasswordVisible(false); setError(""); }}><Text style={styles.link}>{registering ? "Already have an account? Log in" : "New to Sutura? Create an account"}</Text></Pressable>
 
   </Screen>;
 }
-const createStyles = (colors: ThemeColors) => StyleSheet.create({ brandBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }, title: { fontFamily: fonts.bold, fontSize: 34, color: colors.primary }, subtitle: { fontFamily: fonts.regular, color: colors.slate500, fontSize: 14, lineHeight: 21, marginBottom: 8 }, tabs: { flexDirection: "row", gap: 24, borderBottomWidth: 1, borderBottomColor: colors.border }, tab: { paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: "transparent" }, activeTab: { borderBottomColor: colors.orange }, tabText: { fontFamily: fonts.bold, fontSize: 15, color: colors.slate500 }, error: { color: colors.rose800, fontSize: 13, lineHeight: 20 }, link: { fontFamily: fonts.medium, color: colors.orangeDark, fontSize: 14, paddingVertical: 12, textAlign: "left" }, appearanceLabel: { fontFamily: fonts.medium, fontSize: 12, color: colors.slate500, marginTop: 16 } });
+const createStyles = (colors: ThemeColors) => StyleSheet.create({ brandBar: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }, title: { fontFamily: fonts.bold, fontSize: 34, lineHeight: 41, letterSpacing: -0.7, color: colors.primary }, subtitle: { fontFamily: fonts.regular, color: colors.slate500, fontSize: 14, lineHeight: 21, marginBottom: 8 }, tabs: { flexDirection: "row", gap: 24, borderBottomWidth: 1, borderBottomColor: colors.border }, tab: { paddingVertical: 12, borderBottomWidth: 2, borderBottomColor: "transparent" }, activeTab: { borderBottomColor: colors.orange }, tabText: { fontFamily: fonts.bold, fontSize: 15, color: colors.slate500 }, error: { color: colors.rose800, fontSize: 13, lineHeight: 20 }, link: { fontFamily: fonts.medium, color: colors.orangeDark, fontSize: 14, paddingVertical: 12, textAlign: "left" }, appearanceLabel: { fontFamily: fonts.medium, fontSize: 12, color: colors.slate500, marginTop: 16 } });

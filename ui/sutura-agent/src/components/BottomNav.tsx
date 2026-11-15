@@ -1,4 +1,3 @@
-import { NativeTabBar, supportsNativeTabs } from "./NativeTabBar";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { StyleSheet, View } from "react-native";
@@ -22,7 +21,6 @@ export function BottomNav({ active, onChange }: { active: TabId; onChange: (tab:
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
 
-  if (supportsNativeTabs) return <NativeTabBar active={active} tabs={tabs.map(tab => ({ ...tab, value: tab.id }))} onChange={value => onChange(value as TabId)} />;
 
   return (
     <View style={styles.wrapper}>
@@ -67,7 +65,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderRadius: 0,
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
     shadowColor: "#000000",
     shadowOpacity: 0,
@@ -82,8 +80,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: "center",
     minHeight: 52,
     minWidth: 0,
-    gap: 4,
-    paddingVertical: 10,
+    gap: 5,
+    paddingVertical: 8,
     paddingHorizontal: 2,
     borderRadius: 0,
   },
@@ -91,7 +89,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: "transparent",
   },
   label: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: fonts.medium,
     color: colors.white,
   },

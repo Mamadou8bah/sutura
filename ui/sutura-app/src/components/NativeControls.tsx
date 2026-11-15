@@ -1,8 +1,8 @@
 import { NavigationContext } from "@react-navigation/native";
 import { createContext, useContext, useEffect, useState, forwardRef, type ComponentRef } from "react";
-import { PixelRatio, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View,
+import { ActivityIndicator, PixelRatio, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View,
   type PressableProps, type SwitchProps, type TextProps, type TextInputProps, type StyleProp, type TextStyle, type ViewStyle } from "react-native";
-import { DeviceControl, supportsButtonTint } from "./DeviceControl";
+import { DeviceControl } from "./DeviceControl";
 import { SelectionSheet } from "./SelectionSheet";
 import { useTheme } from "../context/ThemeContext";
 
@@ -36,27 +36,25 @@ export const NativeInput = forwardRef<NativeInput, TextInputProps>((props, ref) 
 });
 export const NativePressable = forwardRef<ComponentRef<typeof View>, PressableProps>((props, ref) => {
   const { colors } = useTheme();
-  return <Pressable {...props} ref={ref} android_ripple={props.android_ripple ?? { color: colors.border, foreground: true }}
+  return <Pressable {...props} ref={ref}
+    style={state => [typeof props.style === "function" ? props.style(state) : props.style,
+      state.pressed && !props.disabled && { opacity: 0.72 }]} android_ripple={props.android_ripple ?? { color: colors.border, foreground: true }}
     hitSlop={props.hitSlop ?? 4} />;
 });
 
-export function NativeButton({ label, onPress, disabled = false, color, textColor, style }: {
-  label: string; onPress: () => void; disabled?: boolean; color?: string; textColor?: string; style?: StyleProp<ViewStyle>;
+export function NativeButton({ label, onPress, disabled = false, color, textColor, style, loading = false }: {
+  loading?: boolean; label: string; onPress: () => void; disabled?: boolean; color?: string; textColor?: string; style?: StyleProp<ViewStyle>;
 }) {
   const { colors, mode } = useTheme();
+  disabled = disabled || loading;
   const background = color ?? colors.orange;
   const foreground = textColor ?? (background === colors.surface || background === colors.surfaceMuted ? colors.primary : "#181a20");
-  const height = Math.max(48, Math.round(24 * PixelRatio.getFontScale() + 20));
-  if (DeviceControl && supportsButtonTint) return <View style={[{ minWidth: 112, minHeight: height }, style]}>
-    <DeviceControl controlKind="button" label={label} dark={mode === "dark"} disabled={disabled}
-      buttonColor={background} textColor={foreground} onAction={() => { if (!disabled) onPress(); }}
-      style={{ alignSelf: "stretch", height }} />
-  </View>;
+  const height = Math.max(52, Math.round(24 * PixelRatio.getFontScale() + 20));
   return <NativePressable disabled={disabled} accessibilityRole="button"
-    accessibilityState={{ disabled }} onPress={() => { if (!disabled) onPress(); }}
-    style={({ pressed }) => [{ minHeight: height, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 12,
-      backgroundColor: background, justifyContent: "center", alignItems: "center", opacity: disabled ? .45 : pressed ? .8 : 1 }, style]}>
-    <NativeText style={{ fontWeight: "700", color: foreground, fontSize: 16, textAlign: "center" }}>{label}</NativeText>
+    accessibilityLabel={label} accessibilityState={{ disabled, busy: loading }} onPress={() => { if (!disabled) onPress(); }}
+    style={({ pressed }) => [{ minHeight: height, paddingVertical: 12, paddingHorizontal: 16, borderRadius: 14,
+      backgroundColor: background, justifyContent: "center", alignItems: "center", opacity: loading ? 1 : disabled ? .45 : pressed ? .8 : 1 }, style]}>
+    <View style={{ flexDirection: "row", gap: 8, alignItems: "center", maxWidth: "100%" }}>{loading && <ActivityIndicator size="small" color={foreground}/>}<NativeText style={{ flexShrink: 1, fontWeight: "600", color: foreground, fontSize: 17, textAlign: "center" }}>{label}</NativeText></View>
   </NativePressable>;
 }
 

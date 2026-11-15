@@ -68,7 +68,7 @@ export function BusinessScreen() {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <PrimaryButton label={loading ? "Saving…" : "Continue"} onPress={handleSubmit} disabled={loading} />
+      <PrimaryButton loading={loading} label={loading ? "Saving…" : "Continue"} onPress={handleSubmit} disabled={loading} />
       <LinkButton label="Back" onPress={() => setScreen("reg-otp")} />
     </Screen>
   );

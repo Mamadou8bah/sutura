@@ -1,3 +1,4 @@
+import { LoginMethodPicker } from "../components/LoginMethodPicker";
 import { VerificationCodeScreen } from "./VerificationCodeScreen";
 import { useHardwareBack } from "../hooks/useBackNavigation";
 import { PasswordRecoveryScreen } from "./PasswordRecoveryScreen";
@@ -64,7 +65,7 @@ export function LoginScreen() {
       <Text style={styles.title}>Log in</Text>
       <Text style={styles.sub}>Sign in to your merchant account</Text>
 
-      <View accessibilityRole="tablist" style={{flexDirection:"row",gap:24,borderBottomWidth:1,borderBottomColor:colors.border}}>{(["email","phone"] as const).map(value=><Pressable accessibilityRole="tab" accessibilityLabel={value==="email"?"Email login":"Phone login"} accessibilityState={{selected:method===value}} key={value} disabled={loading} onPress={()=>{setChallengeId("");setVerificationCode("");setMethod(value);setError("");}} style={{paddingVertical:12,borderBottomWidth:2,borderBottomColor:method===value?colors.orange:"transparent"}}><Text style={{fontFamily:appFonts.bold,fontSize:15,color:method===value?colors.primary:colors.slate500}}>{value==="email"?"Email":"Phone number"}</Text></Pressable>)}</View>
+      <LoginMethodPicker value={method} disabled={loading} onChange={value => { setChallengeId(""); setVerificationCode(""); setMethod(value); setError(""); }} />
       {method==="email"?<Field label="Email"><AppInput accessibilityLabel="Email" inputMode="email" keyboardType="email-address" autoComplete="email" autoCapitalize="none" autoCorrect={false} value={email} onChangeText={v=>{if(!/\s/.test(v))setEmail(v);}} maxLength={254} editable={!loading} placeholder="name@example.com"/></Field>:<Field label="Phone number"><AppInput accessibilityLabel="Phone number" inputMode="tel" keyboardType="phone-pad" autoComplete="tel" value={phone} onChangeText={v=>{if(isPhoneDraft(v))setPhone(v);}} maxLength={40} editable={!loading} placeholder="+220 700 0001"/></Field>}
       <Field label="Password">
         <PasswordInput accessibilityLabel="Password" editable={!loading} autoComplete="current-password" autoCapitalize="none" secureTextEntry value={password} onChangeText={setPassword} placeholder="Your password" />
@@ -73,14 +74,14 @@ export function LoginScreen() {
       <Pressable accessibilityRole="button" disabled={loading} onPress={()=>setRecovering(true)}><Text style={{color:colors.orangeDark,paddingVertical:12}}>Forgot password?</Text></Pressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <PrimaryButton label={loading ? "Please wait…" : "Log in"} onPress={handleSubmit} disabled={loading} />
+      <PrimaryButton loading={loading} label={loading ? "Please wait…" : "Log in"} onPress={handleSubmit} disabled={loading} />
       <LinkButton label="New to Sutura? Create a merchant account" onPress={() => setScreen("reg-phone")} />
     </Screen>
   );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  title: {fontFamily: appFonts.bold, fontSize: 34, fontWeight: "800", color: colors.slate900 },
+  title: {fontFamily: appFonts.bold, fontSize: 34, lineHeight: 41, letterSpacing: -0.7, fontWeight: "800", color: colors.slate900 },
   sub: {fontFamily: appFonts.regular, fontSize: 14, color: colors.slate500, marginBottom: 8 },
   error: {fontFamily: appFonts.medium, color: colors.rose800, fontWeight: "600", fontSize: 14 },
 });

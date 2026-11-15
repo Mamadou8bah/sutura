@@ -10,7 +10,7 @@ export function money(value: number, currency: string, hidden = false) { return 
 export function Heading({ title, subtitle }: {
     title: string;
     subtitle?: string;
-}) { const { colors } = useTheme(); return <View style={{ gap: 8, marginBottom: 8 }}><Text style={{ fontFamily: fonts.bold, fontSize: 26, color: colors.primary }}>{title}</Text>{subtitle && <Text style={{ fontFamily: fonts.regular, color: colors.slate500, fontSize: 13, lineHeight: 20 }}>{subtitle}</Text>}</View>; }
+}) { const { colors } = useTheme(); return <View style={{ gap: 8, marginBottom: 8 }}><Text style={{ fontFamily: fonts.bold, fontSize: 30, lineHeight: 36, letterSpacing: -0.5, color: colors.primary }}>{title}</Text>{subtitle && <Text style={{ fontFamily: fonts.regular, color: colors.slate500, fontSize: 13, lineHeight: 20 }}>{subtitle}</Text>}</View>; }
 export function DataNotice() { const { colors } = useTheme(); const { loading, error, refresh } = useMerchant(); return <>{!!error && <Text accessibilityRole="alert" style={{ color: colors.rose800, lineHeight: 20 }}>{error}</Text>}<Pressable accessibilityRole="button" accessibilityLabel="Refresh merchant data" disabled={loading} onPress={() => void refresh()} style={{ alignSelf: "flex-start", flexDirection: "row", gap: 8, paddingVertical: 8 }}><Ionicons name="refresh-outline" size={16} color={colors.slate500}/><Text style={{ fontFamily: fonts.medium, color: colors.slate500, fontSize: 12 }}>{loading ? "Refreshing…" : "Refresh"}</Text></Pressable></>; }
 export function Empty({ title, hint }: {
     title: string;

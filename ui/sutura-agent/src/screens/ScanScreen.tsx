@@ -71,7 +71,7 @@ export function ScanScreen() {
             />
           </Field>
           <FormError message={error} />
-          <PrimaryButton label={busy ? "Looking up..." : "Look up operation"} disabled={busy || !reference.trim()} onPress={handleReference} color={brand.orange} />
+          <PrimaryButton loading={busy} label={busy ? "Looking up..." : "Look up operation"} disabled={busy || !reference.trim()} onPress={handleReference} color={brand.orange} />
           {Platform.OS !== "web" ? (
             <Pressable onPress={() => setScanning(true)} style={styles.toggleBtn}>
               <Text style={styles.toggleText}>Open camera scanner</Text>

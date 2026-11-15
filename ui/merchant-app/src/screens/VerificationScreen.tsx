@@ -84,16 +84,15 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
           ["shield-checkmark-outline","Review","We'll show your verification result here."]
         ] as const).map(([icon,title,hint],index)=><View key={title} style={styles.step}><View style={styles.stepIcon}><Ionicons name={icon} size={23} color={colors.primary}/></View><View style={styles.stepCopy}><Text style={styles.stepTitle}>{title}</Text><Text style={styles.stepHint}>{hint}</Text></View><Text style={styles.number}>{index+1}</Text></View>)}</View>}
         {record && record.status !== "NOT_STARTED" && <Text style={styles.body}>{descriptions[record.status]}</Text>}
-        {busy && <ActivityIndicator color={colors.orange} accessibilityLabel="Updating verification" />}
         {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
         {record && ["NOT_STARTED", "EXPIRED", "REJECTED"].includes(record.status) && (
-          <Pressable accessibilityRole="button" disabled={busy} onPress={() => void run("start")} style={[styles.button, busy && styles.disabled]}><Text style={styles.buttonText}>Start verification</Text></Pressable>
+          <Pressable accessibilityRole="button" disabled={busy} onPress={() => void run("start")} style={[styles.button, busy && styles.disabled]}>{busy ? <ActivityIndicator color={colors.primary}/> : <Text style={styles.buttonText}>Start verification</Text>}</Pressable>
         )}
         {record?.status === "PENDING" && record.hostedUrl && (
           <Pressable accessibilityRole="button" disabled={busy} onPress={() => void openVerification()} style={styles.button}><Text style={styles.buttonText}>Continue verification</Text></Pressable>
         )}
-        {record?.sessionId && <Pressable accessibilityRole="button" disabled={busy} onPress={() => void run("refresh")}><Text style={styles.link}>Refresh status</Text></Pressable>}
-        {!record && !busy && <Pressable accessibilityRole="button" onPress={() => void run("load")}><Text style={styles.link}>Try again</Text></Pressable>}
+        {record?.sessionId && <Pressable accessibilityRole="button" disabled={busy} onPress={() => void run("refresh")}>{busy ? <ActivityIndicator color={colors.orange}/> : <Text style={styles.link}>Refresh status</Text>}</Pressable>}
+        {!record && <Pressable disabled={busy} accessibilityRole="button" onPress={() => void run("load")}>{busy ? <ActivityIndicator color={colors.orange}/> : <Text style={styles.link}>Try again</Text>}</Pressable>}
       </View>
     </ScrollView>
   );

@@ -101,8 +101,8 @@ export function ConfirmScreen() {
             </Text>
           </View>
           <FormError message={error} />
-          <PrimaryButton label={historyLoading ? "Checking status…" : "Check operation status"} disabled={busy||historyLoading} onPress={()=>void refreshHistory()} color={colors.surfaceMuted}/>
-          <PrimaryButton label={busy ? "Confirming..." : "Complete operation"} disabled={busy||!["AWAITING_AGENT","PENDING","APPROVED"].includes(op.status)} onPress={handleComplete} color={brand.orange} />
+          <PrimaryButton loading={historyLoading} label={historyLoading ? "Checking status…" : "Check operation status"} disabled={busy||historyLoading} onPress={()=>void refreshHistory()} color={colors.surfaceMuted}/>
+          <PrimaryButton loading={busy} label={busy ? "Confirming..." : "Complete operation"} disabled={busy||!["AWAITING_AGENT","PENDING","APPROVED"].includes(op.status)} onPress={handleComplete} color={brand.orange} />
         </>
       ) : (
         <>

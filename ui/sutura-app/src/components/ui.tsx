@@ -27,10 +27,10 @@ export function AppInput(props: TextInputProps) {
   return <TextInput {...props} placeholderTextColor={props.placeholderTextColor ?? colors.slate500} selectionColor={colors.orange} onFocus={event => {setFocused(true); props.onFocus?.(event);}} onBlur={event => {setFocused(false);props.onBlur?.(event);}} style={[styles.input, Platform.OS === "web" && {outlineColor:colors.orange}, focused && {borderColor:colors.orange}, props.style]} />;
 }
 
-export function PrimaryButton({ label, onPress, disabled = false, color, textColor, style }: {
-  label: string; onPress: () => void; disabled?: boolean; color?: string; textColor?: string; style?: ViewStyle;
+export function PrimaryButton({ label, onPress, disabled = false, color, textColor, style, loading = false }: {
+  loading?: boolean; label: string; onPress: () => void; disabled?: boolean; color?: string; textColor?: string; style?: ViewStyle;
 }) {
-  return <NativeButton label={label} onPress={onPress} disabled={disabled} color={color} textColor={textColor} style={style} />;
+  return <NativeButton loading={loading} label={label} onPress={onPress} disabled={disabled} color={color} textColor={textColor} style={style} />;
 }
 
 export function Card({ children, style }: { children: React.ReactNode; style?: ViewStyle }) {
@@ -88,10 +88,10 @@ export function MethodRow({
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  field: { gap: 6 },
+  field: { gap: 8 },
   fieldLabel: { fontSize: 13, fontWeight: "600", color: colors.slate500 },
   input: {
-    minHeight: 48,
+    minHeight: 52,
     paddingVertical: 12,
     borderRadius: radii.md,
     backgroundColor: colors.surfaceMuted,
@@ -99,11 +99,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 16,
     fontWeight: "500",
     color: colors.slate900,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   primaryButton: {
-    minHeight: 48,
+    minHeight: 52,
     paddingVertical: 12,
     borderRadius: radii.sm,
     alignItems: "center",
@@ -114,7 +114,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
     padding: 16,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
   amountWrap: {
@@ -159,5 +159,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
 export function Screen({ children }: { children: React.ReactNode }) {
   const { colors } = useTheme();
 
-  return <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.surface }} behavior={Platform.OS === "ios" ? "padding" : undefined}><ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ flexGrow: 1, width: "100%", maxWidth: 560, alignSelf: "center", padding: 20, paddingBottom: 24, gap: 12 }}>{children}</ScrollView></KeyboardAvoidingView>;
+  return <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.surface }} behavior={Platform.OS === "ios" ? "padding" : undefined}><ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ flexGrow: 1, width: "100%", maxWidth: 560, alignSelf: "center", padding: 20, paddingBottom: 32, gap: 16 }}>{children}</ScrollView></KeyboardAvoidingView>;
 }

@@ -31,9 +31,9 @@ export function PendingScreen(){
  <OptionPicker label="Identity document type" options={ID_TYPES} value={draft.ownerIdType} onChange={value=>setDraft({...draft,ownerIdType:value})} disabled={busy}/>
  {field("ownerIdNumber","Owner identity document number",40)}{field("explanation","What did you correct?",1000)}
  <Text style={{color:colors.slate500}}>Changing owner identity details starts a new verification. The account stays pending until reviewed.</Text>
- <PrimaryButton label={busy?"Submitting...":"Submit corrections"} disabled={busy} onPress={()=>void submit()}/><LinkButton label="Cancel changes" onPress={()=>{if(!busy)setDraft(null);}}/>
+ <PrimaryButton loading={busy} label={busy ?"Submitting...":"Submit corrections"} disabled={busy} onPress={()=>void submit()}/><LinkButton label="Cancel changes" onPress={()=>{if(!busy)setDraft(null);}}/>
  </>}
- <PrimaryButton label={busy?"Please wait...":"Check application status"} disabled={busy} onPress={()=>{setBusy(true);setError("");void refreshApplication().catch(err=>setError(err instanceof Error?err.message:"Could not refresh")).finally(()=>setBusy(false));}}/>
+ <PrimaryButton loading={busy} label={busy ?"Please wait...":"Check application status"} disabled={busy} onPress={()=>{setBusy(true);setError("");void refreshApplication().catch(err=>setError(err instanceof Error?err.message:"Could not refresh")).finally(()=>setBusy(false));}}/>
  <LinkButton label="Sign out" onPress={()=>void signOut()}/>
  </Screen>;
 }

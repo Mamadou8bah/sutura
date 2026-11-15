@@ -1,3 +1,4 @@
+import { LoginMethodPicker } from "../components/LoginMethodPicker";
 import { VerificationCodeScreen } from "./VerificationCodeScreen";
 import { useHardwareBack } from "../hooks/useBackNavigation";
 import { PasswordRecoveryScreen } from "./PasswordRecoveryScreen";
@@ -8,7 +9,7 @@ import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
 import { SuturaLogo } from "../components/SuturaLogo";
 import { useRef, useState } from "react";
-import { ActivityIndicator, StyleSheet, View } from "react-native";
+import { StyleSheet, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text, NativeInput as TextInput } from "../components/NativeControls";
 import { AppInput, PasswordInput, Field, PrimaryButton, Screen } from "../components/ui";
 import { useAuth } from "../context/AuthContext";
@@ -66,7 +67,7 @@ export function LoginScreen() {
       <Text style={styles.title}>Log in</Text>
       <Text style={styles.subtitle}>Log in to your Sutura agent account.</Text>
 
-      <View accessibilityRole="tablist" style={{flexDirection:"row",gap:24,borderBottomWidth:1,borderBottomColor:colors.border}}>{(["email","phone"] as const).map(value=><Pressable accessibilityRole="tab" accessibilityLabel={value==="email"?"Email login":"Phone login"} accessibilityState={{selected:method===value}} key={value} disabled={loading} onPress={()=>{setChallengeId("");setVerificationCode("");setMethod(value);setError("");}} style={{paddingVertical:12,borderBottomWidth:2,borderBottomColor:method===value?colors.orange:"transparent"}}><Text style={{fontFamily:appFonts.bold,fontSize:15,color:method===value?colors.primary:colors.slate500}}>{value==="email"?"Email":"Phone number"}</Text></Pressable>)}</View>
+      <LoginMethodPicker value={method} disabled={loading} onChange={value => { setChallengeId(""); setVerificationCode(""); setMethod(value); setError(""); }} />
       {method==="email"?<Field label="Email"><AppInput accessibilityLabel="Email" inputMode="email" keyboardType="email-address" autoComplete="email" autoCapitalize="none" autoCorrect={false} value={email} onChangeText={v=>{if(!/\s/.test(v))setEmail(v);}} maxLength={254} editable={!loading} placeholder="name@example.com"/></Field>:<Field label="Phone number"><AppInput accessibilityLabel="Phone number" inputMode="tel" keyboardType="phone-pad" autoComplete="tel" value={phone} onChangeText={v=>{if(isPhoneDraft(v))setPhone(v);}} maxLength={40} editable={!loading} placeholder="+220 700 0001"/></Field>}
       <Field label="Password"><PasswordInput
         placeholder="Password"
@@ -82,18 +83,14 @@ export function LoginScreen() {
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
       <Text style={{fontFamily:appFonts.regular,color:colors.slate500,fontSize:12,lineHeight:19}}>Agent accounts are provided by Sutura. Use your assigned account to log in.</Text>
-      {loading ? (
-        <ActivityIndicator color={colors.primary} />
-      ) : (
-        <PrimaryButton label={loading ? "Please wait…" : "Log in"} disabled={loading} onPress={handleLogin} />
-      )}
+      <PrimaryButton loading={loading} label={loading ? "Please wait…" : "Log in"} disabled={loading} onPress={handleLogin} />
     </Screen>
   );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: colors.background },
-  title: {fontFamily: appFonts.bold, fontSize: 34, fontWeight: "800", color: colors.slate900 },
+  title: {fontFamily: appFonts.bold, fontSize: 34, lineHeight: 41, letterSpacing: -0.7, fontWeight: "800", color: colors.slate900 },
   subtitle: {fontFamily: appFonts.regular, lineHeight:21, marginBottom:8, fontSize: 14, color: colors.slate500 },
   input: {fontFamily: appFonts.regular,
     marginBottom: 12,

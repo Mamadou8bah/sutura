@@ -54,7 +54,7 @@ export function PhoneScreen() {
 
       {error ? <Text style={styles.error}>{error}</Text> : null}
 
-      <PrimaryButton label={loading ? "Sending…" : "Send verification code"} onPress={handleSubmit} disabled={loading || reg.phoneLocal.length < 7} />
+      <PrimaryButton loading={loading} label={loading ? "Sending…" : "Send verification code"} onPress={handleSubmit} disabled={loading || reg.phoneLocal.length < 7} />
       <LinkButton label="Back" onPress={() => setScreen("welcome")} />
     </Screen>
   );
