@@ -32,6 +32,16 @@ class ProductionVerificationTest {
   @MockitoBean TwoFactorDeliveryService delivery;
 
   @Test
+  void mandatoryRegistrationVerificationDoesNotEnableLoginTwoFactor() {
+    String phone = "+" + java.util.concurrent.ThreadLocalRandom.current().nextLong(1000000000000L, 9999999999999L);
+    auth.register(new RegisterRequest("Email", "Customer", phone, phone.substring(1) + "@example.invalid", "test-account-password", Role.USER, false));
+    assertFalse(users.findByPhoneNumber(phone).orElseThrow().isTwoFactorEnabled());
+    var login = auth.login(new LoginRequest(phone, "test-account-password", null, null));
+    assertFalse(login.twoFactorRequired());
+    assertNotNull(login.accessToken());
+  }
+
+  @Test
   void customerCannotReceiveSessionBeforePhoneOtpAndCannotDisableProductionSecondFactor() {
     String phone =
         "+"
@@ -48,7 +58,7 @@ class ProductionVerificationTest {
         .sendCode(any(), anyString());
     var registration =
         auth.register(
-            new RegisterRequest("Phone", "Test", phone, phone.substring(1) + "@example.invalid", password, Role.USER, false));
+            new RegisterRequest("Phone", "Test", phone, phone.substring(1) + "@example.invalid", password, Role.USER, true));
     long userId = users.findByPhoneNumber(phone).orElseThrow().getId();
     var personal = wallets.findByUserId(userId);
     assertEquals(1, personal.size());

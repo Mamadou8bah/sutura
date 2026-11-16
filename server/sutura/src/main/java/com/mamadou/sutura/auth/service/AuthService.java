@@ -88,7 +88,6 @@ public class AuthService {
     }
 
     User user = authMapper.toUser(request, passwordEncoder.encode(request.password()));
-    if (requireSecondFactor) user.setTwoFactorEnabled(true);
     userRepository.save(user);
     if (role == Role.USER) walletService.ensureCustomerWallet(user.getId());
 
@@ -153,7 +152,7 @@ public class AuthService {
       throw new InvalidPasswordException("Invalid username or password");
     }
 
-    if (user.isTwoFactorEnabled() || requireSecondFactor) {
+    if (user.isTwoFactorEnabled() || request.twoFactorChallengeId() != null) {
       if (request.twoFactorCode() == null || request.twoFactorCode().isBlank()) {
         String challengeId = startTwoFactorChallenge(user);
         userRepository.save(user);
