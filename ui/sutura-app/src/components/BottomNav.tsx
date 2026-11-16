@@ -1,3 +1,4 @@
+import { GlassBackdrop } from "./GlassBackdrop";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { StyleSheet, View } from "react-native";
@@ -24,7 +25,7 @@ export function BottomNav({ active, onChange }: { active: TabId; onChange: (tab:
 
   return (
     <View style={styles.wrapper}>
-      <View style={styles.capsule}>
+      <View style={styles.capsule}><GlassBackdrop />
         {tabs.map((item) => {
           const isActive = active === item.id;
           return (
@@ -52,8 +53,8 @@ export function BottomNav({ active, onChange }: { active: TabId; onChange: (tab:
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   wrapper: {
-    paddingHorizontal: 0,
-    paddingTop: 0,
+    paddingHorizontal: 12,
+    paddingTop: 6,
     paddingBottom: 4,
     backgroundColor: colors.surface,
   },
@@ -62,10 +63,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     backgroundColor: colors.surface,
-    borderRadius: 0,
+    borderRadius: 24, overflow: "hidden",
     paddingVertical: 4,
     paddingHorizontal: 10,
-    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopWidth: 0,
     borderColor: colors.border,
     shadowColor: "#000000",
     shadowOpacity: 0,

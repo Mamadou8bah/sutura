@@ -8,6 +8,11 @@ chrome is not the visual identity of the app.
 
 - White light-mode canvas, neutral grouped surfaces and black dark-mode canvas.
 - Orange action buttons and selected navigation accents.
+- Tab bars and selection sheets use a bounded glass material. Supported iOS 26+
+  builds use native Liquid Glass. Android 12+ uses a frosted blur treatment;
+  older Android devices use a translucent fallback to avoid expensive blur.
+  Reduce Transparency switches these surfaces to solid backgrounds. Payment
+  information and action buttons remain sharp above the material.
 - System typography on devices, with tight display titles and readable body copy.
 - Custom buttons and tab bars stay visually consistent when the native bridge
   is installed. Buttons have a minimum 52-point height, wrap long labels, disable

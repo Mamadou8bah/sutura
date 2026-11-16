@@ -1,3 +1,4 @@
+import { GlassBackdrop } from "./src/components/GlassBackdrop";
 import { useAppFonts } from "./src/hooks/useAppFonts";
 import { SafeAreaProvider, SafeAreaView as PlatformSafeAreaView } from "react-native-safe-area-context";
 import { NativeNavigator } from "./src/components/NativeNavigator";
@@ -82,7 +83,7 @@ function MerchantNav() {
   const { colors } = useTheme();
   if (session?.userStatus !== "ACTIVE" || !merchantTabs.some(tab => tab.value === screen)) return null;
   const navigate = (value: string) => setScreen(value as import("./src/context/AppContext").Screen);
-  return <View style={{ flexDirection: "row", paddingVertical: 4, backgroundColor: colors.surface, borderTopWidth: 0.5, borderTopColor: colors.border }}>
+  return <View style={{ flexDirection: "row", paddingVertical: 4, marginHorizontal: 12, marginTop: 6, marginBottom: 4, borderRadius: 24, overflow: "hidden" }}><GlassBackdrop />
     {merchantTabs.map(({ value, icon, label }) => <Pressable key={value} accessibilityRole="tab"
       accessibilityLabel={label} accessibilityState={{ selected: screen === value }} onPress={() => navigate(value)}
       style={{ flex: 1, alignItems: "center", paddingVertical: 8, gap: 5 }}>
