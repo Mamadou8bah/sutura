@@ -10,6 +10,17 @@ export function GlassBackdrop() {
   const target = useRef<ComponentRef<typeof View> | null>(null);
   const [solid, setSolid] = useState(true);
   useEffect(() => {
+    if (Platform.OS === "web") {
+      const media = window.matchMedia("(prefers-reduced-transparency: reduce)");
+      setSolid(media.matches);
+      const change = () => setSolid(media.matches);
+      media.addEventListener("change", change);
+      return () => media.removeEventListener("change", change);
+    }
+    if (typeof AccessibilityInfo.isReduceTransparencyEnabled !== "function") {
+      setSolid(false);
+      return;
+    }
     let active = true;
     void AccessibilityInfo.isReduceTransparencyEnabled().then(value => { if (active) setSolid(value); }).catch(() => {});
     const listener = AccessibilityInfo.addEventListener("reduceTransparencyChanged", setSolid);
