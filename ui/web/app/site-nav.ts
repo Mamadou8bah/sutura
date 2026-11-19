@@ -13,11 +13,11 @@ export const headerNavGroups: SiteNavGroup[] = [
     ],
   },
   {
-    label: "Operations",
+    label: "Trust",
     links: [
-      { label: "Admin dashboard", href: "/dashboard" },
-      { label: "Reconciliation", href: "/operations/reconciliation" },
+      { label: "How reconciliation works", href: "/operations/reconciliation" },
       { label: "Security", href: "/company/security" },
+      { label: "Compliance", href: "/company/compliance" },
     ],
   },
   {
@@ -49,14 +49,14 @@ export const footerColumns: Array<{
       { label: "About Sutura", href: "/company/about" },
       { label: "Security", href: "/company/security" },
       { label: "Compliance", href: "/company/compliance" },
-      { label: "Contact sales", href: "/contact" },
+      { label: "Contact", href: "/contact" },
     ],
   },
   {
     title: "Resources",
     links: [
       { label: "API reference", href: "/docs#api" },
-      { label: "Status page", href: "/status" },
+      { label: "Service status", href: "/status" },
       { label: "Help center", href: "/help" },
       { label: "Release notes", href: "/release-notes" },
     ],

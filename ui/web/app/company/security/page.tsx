@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { ContentBlock, SitePage } from "../../site-page";
+
+export const metadata: Metadata = {
+  title: "Security",
+  description: "How Sutura protects accounts, APIs, wallets, and operational access.",
+};
 
 export default function SecurityPage() {
   return (
@@ -25,7 +31,7 @@ export default function SecurityPage() {
       <ContentBlock title="Reporting">
         <p>
           If you believe you have found a security issue, contact us through the{" "}
-          <a href="/contact" className="font-bold text-[#123c91]">
+          <a href="/contact">
             contact page
           </a>{" "}
           with enough detail for us to reproduce and prioritize the report.

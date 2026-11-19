@@ -1,5 +1,6 @@
+import { clearDeviceData } from "../storage/deviceVault";
 import {assertVerifiedSession, type VerificationCode} from "../api/twoFactor";
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { agentApi, type AuthSession } from "../api/client";
 import { bindTokenSession } from "../api/sessionAuth";
 import { clearSession, loadSession, saveSession } from "../storage/secureSession";
@@ -18,26 +19,37 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [loading, setLoading] = useState(true);
+  // Child effects may read immediately when a restored session mounts the app.
+  const sessionEpoch = useRef(0);
+  const sessionRef = useRef<AuthSession | null>(session);
+  sessionRef.current = session;
 
 
   const persistSession = useCallback(async (stored: AuthSession) => {
     if (!stored.accessToken || stored.accessToken.startsWith("demo.")) throw new Error("Please sign in again.");
+    const epoch = sessionEpoch.current;
     await saveSession(SESSION_KEY, JSON.stringify(stored));
+    if (epoch !== sessionEpoch.current) return;
+    sessionRef.current = stored;
     setSession(stored);
   }, []);
 
   const signOut = useCallback(async () => {
+    sessionEpoch.current++;
+    const owner = sessionRef.current?.username;
     await clearSession(SESSION_KEY);
+    sessionRef.current = null;
+    if (owner) await clearDeviceData(`agent:${owner}`).catch(() => undefined);
     setSession(null);
   }, []);
 
   useEffect(() => {
     bindTokenSession({
-      getSession: () => session,
+      getSession: () => sessionRef.current,
       updateSession: persistSession,
       clearSession: signOut,
     });
-  }, [session, persistSession, signOut]);
+  }, [persistSession, signOut]);
 
   useEffect(() => {
     loadSession(SESSION_KEY)

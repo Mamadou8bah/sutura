@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { ContentBlock, SitePage } from "../../site-page";
+
+export const metadata: Metadata = {
+  title: "Integration guide",
+  description: "A practical path for developers accepting payments with Sutura.",
+};
 
 export default function IntegrationGuidePage() {
   return (
@@ -11,7 +17,7 @@ export default function IntegrationGuidePage() {
           Sign up on the web as a developer, then open the dashboard to create an API key for your backend.
         </p>
         <p>
-          <a href="/signup" className="font-bold text-[#123c91]">
+          <a href="/signup">
             Create developer account
           </a>
         </p>
@@ -28,11 +34,11 @@ export default function IntegrationGuidePage() {
         <p>
           Subscribe to payment lifecycle events so your system learns when a payment is paid, failed, or needs follow-up.
           See{" "}
-          <a href="/merchants/webhooks" className="font-bold text-[#123c91]">
+          <a href="/merchants/webhooks">
             webhook updates
           </a>{" "}
           and the{" "}
-          <a href="/docs" className="font-bold text-[#123c91]">
+          <a href="/docs">
             API docs
           </a>
           .

@@ -1,9 +1,51 @@
 import { getAuthSession } from "./auth-session";
 import { getMerchantSession } from "./merchant-api";
-import { mockMerchantDashboard } from "./mock/merchant-dashboard";
 import { walletApi } from "./wallet-api";
 
-export type MerchantDashboardData = typeof mockMerchantDashboard;
+export type MerchantWallet = {
+  id: number;
+  name: string;
+  currency: string;
+  /** Ledger balance from /wallets/{id}/balance. */
+  balance: number;
+  status: string;
+};
+
+export type MerchantTransactionKind = "deposit" | "withdrawal" | "transfer" | "other";
+
+export type MerchantTransaction = {
+  id: number;
+  reference: string;
+  type: string;
+  kind: MerchantTransactionKind;
+  amount: number;
+  currency: string;
+  status: string;
+  description: string;
+  time: string;
+  sourceWalletId: number | null;
+  destinationWalletId: number | null;
+  /** True when money arrived in one of this merchant's wallets. */
+  incoming: boolean;
+};
+
+export type MerchantPaymentLink = {
+  id: number;
+  reference: string;
+  title: string;
+  amount: number;
+  currency: string;
+  status: string;
+  expiresAt: string;
+  transactionReference: string | null;
+};
+
+export type MerchantDashboardData = {
+  storeName: string;
+  wallets: MerchantWallet[];
+  transactions: MerchantTransaction[];
+  paymentLinks: MerchantPaymentLink[];
+};
 
 export function hasLiveMerchantApi(): boolean {
   const auth = getAuthSession();
@@ -19,10 +61,15 @@ export function resolveMerchantStoreName(): string {
   return "Your business";
 }
 
-function formatMoney(currency: string, amount: number): string {
-  return `${currency} ${Number(amount).toLocaleString()}`;
+function kindOf(type: string): MerchantTransactionKind {
+  const t = type.toUpperCase();
+  if (t.includes("DEPOSIT")) return "deposit";
+  if (t.includes("WITHDRAW")) return "withdrawal";
+  if (t.includes("TRANSFER")) return "transfer";
+  return "other";
 }
 
+/** Loads everything from the API. Throws on failure; there is no sample fallback. */
 export async function loadMerchantDashboardFromApi(): Promise<MerchantDashboardData> {
   const storeName = resolveMerchantStoreName();
   const [wallets, transactions, links] = await Promise.all([
@@ -31,87 +78,45 @@ export async function loadMerchantDashboardFromApi(): Promise<MerchantDashboardD
     walletApi.listPaymentLinks(),
   ]);
   const balances = await Promise.all(wallets.map((w) => walletApi.getBalance(w.id)));
-
-  const walletRows = wallets.map((w, i) => ({
-    id: w.id,
-    name: w.name,
-    currency: w.currency,
-    balance: formatMoney(w.currency, balances[i]?.balance ?? 0),
-    status: w.status,
-    dailyLimit: "—",
-    dailyUsed: "—",
-  }));
-
-  const deposits = transactions
-    .filter((t) => t.type.toUpperCase().includes("DEPOSIT"))
-    .map((t) => ({
-      id: t.id,
-      walletId: t.destinationWalletId ?? t.sourceWalletId ?? wallets[0]?.id ?? 0,
-      amount: formatMoney(t.currency, t.amount),
-      status: t.status,
-      reference: t.reference,
-      time: t.createdAt,
-    }));
-
-  const withdrawals = transactions
-    .filter((t) => t.type.toUpperCase().includes("WITHDRAW"))
-    .map((t) => ({
-      id: t.id,
-      walletId: t.sourceWalletId ?? wallets[0]?.id ?? 0,
-      amount: formatMoney(t.currency, t.amount),
-      status: t.status,
-      reference: t.reference,
-      time: t.createdAt,
-    }));
-
-  const transfers = transactions
-    .filter((t) => t.type.toUpperCase().includes("TRANSFER"))
-    .map((t) => ({
-      id: t.id,
-      from: t.sourceWalletId ?? 0,
-      to: t.destinationWalletId ?? 0,
-      amount: formatMoney(t.currency, t.amount),
-      status: t.status,
-      reference: t.reference,
-      time: t.createdAt,
-    }));
-
-  const activeLinks = links.filter((l) => l.status === "ACTIVE").length;
-  const totalBalance = balances.reduce((sum, b) => sum + Number(b.balance), 0);
-  const currency = wallets[0]?.currency ?? "GMD";
-
-  const recentPayments = transactions.slice(0, 8).map((t) => ({
-    id: t.reference,
-    customer: t.description || "Customer",
-    amount: formatMoney(t.currency, t.amount),
-    status: t.status.toLowerCase(),
-    time: t.createdAt,
-  }));
-
-  const paymentLinks = links.map((l) => ({
-    id: l.reference,
-    title: l.description || l.reference,
-    amount: formatMoney(l.currency, l.amount),
-    status: l.status.toLowerCase(),
-    uses: l.status === "PAID" ? 1 : 0,
-  }));
+  const ownIds = new Set(wallets.map((w) => w.id));
 
   return {
     storeName,
-    stats: [
-      { label: "Total balance", value: formatMoney(currency, totalBalance), hint: `${wallets.length} wallets` },
-      { label: "Pending operations", value: String(deposits.filter((d) => d.status !== "COMPLETED").length + withdrawals.filter((w) => w.status !== "COMPLETED").length), hint: "Awaiting completion" },
-      { label: "Active payment links", value: String(activeLinks), hint: `${links.length} total` },
-      { label: "Recent transactions", value: String(transactions.length), hint: "Loaded from API" },
-    ],
-    wallets: walletRows,
-    deposits,
-    withdrawals,
-    transfers,
-    subscriptions: [],
-    recentPayments,
-    paymentLinks,
-    webhooks: [],
-    charts: mockMerchantDashboard.charts,
+    wallets: wallets.map((w, i) => ({
+      id: w.id,
+      name: w.name,
+      currency: w.currency,
+      balance: Number(balances[i]?.balance ?? 0),
+      status: w.status,
+    })),
+    transactions: transactions.map((t) => {
+      const kind = kindOf(t.type);
+      const dest = t.destinationWalletId ?? null;
+      const src = t.sourceWalletId ?? null;
+      return {
+        id: t.id,
+        reference: t.reference,
+        type: t.type,
+        kind,
+        amount: Number(t.amount),
+        currency: t.currency,
+        status: t.status,
+        description: t.description || "",
+        time: t.createdAt,
+        sourceWalletId: src,
+        destinationWalletId: dest,
+        incoming: kind === "deposit" || (dest !== null && ownIds.has(dest) && (src === null || !ownIds.has(src))),
+      };
+    }),
+    paymentLinks: links.map((l) => ({
+      id: l.id,
+      reference: l.reference,
+      title: l.description || l.reference,
+      amount: Number(l.amount),
+      currency: l.currency,
+      status: l.status,
+      expiresAt: l.expiresAt,
+      transactionReference: l.transactionReference ?? null,
+    })),
   };
 }

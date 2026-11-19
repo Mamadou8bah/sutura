@@ -8,7 +8,6 @@ import { NativePressable as Pressable, NativeText as Text } from "./NativeContro
 import { Ionicons } from "@expo/vector-icons";
 import { useWallet } from "../context/WalletContext";
 import { colors, radii } from "../theme";
-import { getGreeting } from "../utils/format";
 
 export function AppHeader() {
   const { colors } = useTheme();
@@ -18,23 +17,16 @@ export function AppHeader() {
 
   return (
     <View style={styles.row}>
-      <Pressable accessibilityRole="button" accessibilityLabel="Open account" onPress={() => setTab("more")}><SuturaLogo size={44} /></Pressable>
+      <Pressable accessibilityRole="button" accessibilityLabel="Open account" onPress={() => setTab("more")} style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}><SuturaLogo size={44} /></Pressable>
       <View style={styles.greeting}>
-        <Text style={styles.greetingLabel}>SUTURA</Text>
-        <Text numberOfLines={1} style={styles.greetingName}>{data.session.name}</Text>
+        <Text accessibilityRole="header" numberOfLines={1} style={styles.greetingName}>{data.session.name || "Home"}</Text>
+        {!!data.session.phone && <Text style={{ fontSize: 12, color: colors.slate500 }}>{data.session.phone}</Text>}
       </View>
 
       <Pressable accessibilityRole="button" accessibilityLabel="Support" style={styles.iconBtn} onPress={() => setTab("support")}>
         <Ionicons name="chatbubble-outline" size={20} color={colors.slate700} />
       </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel="View activity" onPress={() => setTab("activity")} style={styles.iconBtn}>
-        <Ionicons name="time-outline" size={20} color={colors.slate700} />
-        {data.pendingCount > 0 ? (
-          <View style={styles.badge}>
-            <Text style={styles.badgeText}>{data.pendingCount}</Text>
-          </View>
-        ) : null}
-      </Pressable>
+
     </View>
   );
 }
@@ -45,7 +37,7 @@ export function ScreenTitle({ title, subtitle }: { title: string; subtitle?: str
 
   return (
     <View style={styles.titleWrap}>
-      <Text style={styles.title}>{title}</Text>
+      <Text accessibilityRole="header" style={styles.title}>{title}</Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
   );
@@ -61,7 +53,7 @@ export function BackHeader({ title, onBack }: { title: string; onBack: () => voi
       <Pressable accessibilityRole="button" accessibilityLabel="Go back" hitSlop={8} onPress={onBack} style={styles.backBtn}>
         <Ionicons name={Platform.OS === "ios" ? "chevron-back" : "arrow-back"} size={22} color={colors.primary} />
       </Pressable>
-      <Text style={styles.backTitle}>{title}</Text>
+      <Text accessibilityRole="header" style={styles.backTitle}>{title}</Text>
       <View style={styles.backSpacer} />
     </View>
   );
@@ -70,11 +62,10 @@ export function BackHeader({ title, onBack }: { title: string; onBack: () => voi
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
   greeting: { flex: 1, minWidth: 0 },
-  greetingLabel: { fontSize: 13, fontWeight: "600", color: colors.slate500 },
-  greetingName: { fontSize: 14, fontWeight: "800", color: colors.slate900, marginTop: 2 },
+  greetingName: { fontSize: 17, fontWeight: "600", color: colors.primary },
   iconBtn: {
-    width: 44,
-    height: 44,
+    width: 48,
+    height: 48,
     borderRadius: radii.md,
     backgroundColor: colors.surface,
     alignItems: "center",
@@ -85,20 +76,20 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     position: "absolute",
     top: 2,
     right: 2,
-    minWidth: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: colors.rose500,
+    minWidth: 18,
+    minHeight: 18,
+    borderRadius: 9,
+    backgroundColor: colors.dangerFg,
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 3,
   },
-  badgeText: { color: colors.white, fontSize: 9, fontWeight: "800" },
+  badgeText: { color: colors.background, fontSize: 12, lineHeight: 16, fontWeight: "600" },
   titleWrap: { marginBottom: 4 },
-  title: { fontSize: 24, fontWeight: "800", color: colors.slate900 },
-  subtitle: { fontSize: 14, color: colors.slate500, marginTop: 4 },
+  title: { fontSize: 28, lineHeight: 34, fontWeight: "600", color: colors.primary },
+  subtitle: { fontSize: 15, color: colors.slate500, marginTop: 4 },
   backRow: { flexDirection: "row", alignItems: "center", marginBottom: 8 },
-  backBtn: { width: 36, height: 36, alignItems: "center", justifyContent: "center" },
-  backTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "700", color: colors.slate900 },
-  backSpacer: { width: 36 },
+  backBtn: { width: 48, height: 48, alignItems: "center", justifyContent: "center" },
+  backTitle: { flex: 1, textAlign: "center", fontSize: 17, fontWeight: "600", color: colors.primary },
+  backSpacer: { width: 48 },
 });

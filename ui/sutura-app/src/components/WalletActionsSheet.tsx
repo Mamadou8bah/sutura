@@ -8,7 +8,8 @@ import { useWallet } from "../context/WalletContext";
 import { brand } from "../constants/brand";
 import { colors, fonts, radii } from "../theme";
 import type { TabId } from "../types";
-import { formatBalance } from "../utils/format";
+import { Money } from "./Money";
+import { StatusPill } from "./StatusPill";
 
 type Action = {
   label: string;
@@ -49,16 +50,13 @@ export function WalletActionsSheet() {
           {wallet ? (
             <>
               <Text style={styles.title}>{wallet.name}</Text>
-              <Text style={styles.balance}>
-                {formatBalance(wallet.balance, wallet.currency, balanceHidden)}
-              </Text>
-              <Text style={styles.meta}>
-                {wallet.currency} · #{wallet.id} · {wallet.status}
-              </Text>
+              <Money amount={wallet.balance} currency={wallet.currency} hidden={balanceHidden} style={styles.balance} />
+              <Text style={styles.meta}>{wallet.currency} · Wallet #{wallet.id}</Text>
+              {wallet.status !== "ACTIVE" ? <View style={styles.status}><StatusPill status={wallet.status} /></View> : null}
 
               <View style={styles.actions}>
                 {actions.map((action) => (
-                  <Pressable key={action.label} style={styles.actionRow} onPress={() => runAction(action.tab)}>
+                  <Pressable key={action.label} accessibilityRole="button" accessibilityLabel={`${action.label}, ${action.subtitle}`} style={styles.actionRow} onPress={() => runAction(action.tab)}>
                     <View style={styles.actionIcon}>
                       <Ionicons name={action.icon} size={22} color={colors.primary} />
                     </View>
@@ -73,7 +71,7 @@ export function WalletActionsSheet() {
             </>
           ) : null}
 
-          <Pressable style={styles.cancelBtn} onPress={closeWalletActions}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Cancel" style={styles.cancelBtn} onPress={closeWalletActions}>
             <Text style={styles.cancelText}>Cancel</Text>
           </Pressable>
   </SelectionSheet>;
@@ -101,8 +99,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.slate300,
     marginBottom: 16,
   },
-  title: { fontSize: 20, fontFamily: fonts.bold, color: colors.slate900 },
-  balance: { fontSize: 24, fontFamily: fonts.black, color: brand.orange, marginTop: 4 },
+  title: { fontSize: 22, fontFamily: fonts.semibold, color: colors.slate900 },
+  balance: { fontSize: 28, lineHeight: 34, fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary, marginTop: 4 },
+  status: { marginBottom: 12 },
   meta: { fontSize: 13, fontFamily: fonts.regular, color: colors.slate500, marginTop: 4, marginBottom: 16 },
   actions: { gap: 8 },
   actionRow: {
@@ -120,17 +119,18 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: radii.sm,
-    backgroundColor: colors.blue100,
+    backgroundColor: colors.surface,
     alignItems: "center",
     justifyContent: "center",
   },
   actionBody: { flex: 1 },
   actionLabel: { fontSize: 15, fontFamily: fonts.bold, color: colors.slate900 },
-  actionSub: { fontSize: 12, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
+  actionSub: { fontSize: 13, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
   cancelBtn: {
     marginTop: 16,
     alignItems: "center",
-    paddingVertical: 14,
+    justifyContent: "center",
+    minHeight: 48,
   },
-  cancelText: { fontSize: 15, fontFamily: fonts.bold, color: colors.slate500 },
+  cancelText: { fontSize: 17, fontFamily: fonts.medium, color: colors.primary },
 });

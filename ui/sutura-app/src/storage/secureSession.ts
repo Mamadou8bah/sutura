@@ -2,22 +2,22 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Platform } from "react-native";
 
 /**
- * Prefer SecureStore on native; fall back to AsyncStorage on web.
- * Tokens are never written to plain storage on iOS/Android when SecureStore is available.
+ * Require SecureStore on native; use AsyncStorage only on web.
+ * Tokens are never written to plain storage on iOS/Android.
  */
 async function getSecureStore() {
   if (Platform.OS === "web") return null;
   try {
     return await import("expo-secure-store");
   } catch {
-    return null;
+    throw new Error("Secure device storage is unavailable. Install the latest app build.");
   }
 }
 
 export async function saveSession(key: string, value: string): Promise<void> {
   const secureStore = await getSecureStore();
   if (secureStore) {
-    await secureStore.setItemAsync(key, value);
+    await secureStore.setItemAsync(key, value, { keychainAccessible: secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY });
     return;
   }
   await AsyncStorage.setItem(key, value);

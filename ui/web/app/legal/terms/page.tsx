@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { ContentBlock, SitePage } from "../../site-page";
+
+export const metadata: Metadata = {
+  title: "Terms of service",
+  description: "The terms that govern use of Sutura’s websites, developer tools, APIs, and related services.",
+};
 
 export default function TermsOfServicePage() {
   return (
@@ -48,14 +54,14 @@ export default function TermsOfServicePage() {
       <ContentBlock title="Contact">
         <p>
           Questions about these terms can be sent through our{" "}
-          <a href="/contact" className="font-bold text-[#123c91]">
+          <a href="/contact">
             contact page
           </a>
           .
         </p>
       </ContentBlock>
 
-      <p className="text-sm text-slate-500">Last updated: August 23, 2026</p>
+      <p className="text-sm text-ink-3">Last updated: August 23, 2026</p>
     </SitePage>
   );
 }

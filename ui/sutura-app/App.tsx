@@ -1,3 +1,5 @@
+import { DeviceLockProvider } from "./src/context/DeviceLockContext";
+import { FirstLaunchGate } from "./src/components/FirstLaunchGate";
 import { CreateWalletScreen } from "./src/screens/CreateWalletScreen";
 import { useAppFonts } from "./src/hooks/useAppFonts";
 import { SafeAreaProvider, SafeAreaView as PlatformSafeAreaView } from "react-native-safe-area-context";
@@ -116,7 +118,7 @@ function Root() {
   const styles = useThemedStyles(createStyles);
 
 
-  const { session, loading } = useAuth();
+  const { session, loading, signOut } = useAuth();
 
   if (loading) {
 
@@ -134,17 +136,17 @@ function Root() {
 
   if (!session) {
 
-    return <PlatformSafeAreaView edges={["top"]} style={{flex:1}}><LoginScreen /></PlatformSafeAreaView>;
+    return <FirstLaunchGate app="customer"><PlatformSafeAreaView edges={["top"]} style={{flex:1}}><LoginScreen /></PlatformSafeAreaView></FirstLaunchGate>;
 
   }
 
   return (
 
-    <WalletProvider key={session.username}>
+    <FirstLaunchGate app="customer" authenticated><DeviceLockProvider scope={`customer:${session.username}`} onSignOut={signOut}><WalletProvider key={session.username}>
 
       <MainApp />
 
-    </WalletProvider>
+    </WalletProvider></DeviceLockProvider></FirstLaunchGate>
 
   );
 

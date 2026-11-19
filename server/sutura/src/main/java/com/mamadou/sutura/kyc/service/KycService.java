@@ -59,6 +59,8 @@ public class KycService {
         && ("VERIFIED".equals(current.getStatus())
             || "FLAGGED".equals(current.getStatus())
             || ("PENDING".equals(current.getStatus())
+                && current.getSentinelSessionId() != null
+                && current.getSentinelSessionId() > 0
                 && current.getExpiresAt().isAfter(Instant.now())))) {
       return KycStatusResponse.from(current);
     }
@@ -83,6 +85,16 @@ public class KycService {
                 () ->
                     new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Start identity verification first"));
+    // Presentation fixtures have local negative IDs, not remotely refreshable sessions.
+    if (record.getSentinelSessionId() == null || record.getSentinelSessionId() <= 0) {
+      if ("VERIFIED".equals(record.getStatus())
+          || "FLAGGED".equals(record.getStatus())
+          || "REJECTED".equals(record.getStatus())) {
+        return KycStatusResponse.from(record);
+      }
+      throw new ResponseStatusException(
+          HttpStatus.CONFLICT, "No Sentinel verification session exists. Start identity verification again.");
+    }
     try {
       return apply(record, client.get(record.getSentinelSessionId(), Long.toString(user.getId())));
     } catch (RestClientException e) {
@@ -108,6 +120,9 @@ public class KycService {
 
   @Transactional
   public void refreshFromCallback(Long userId, Long sessionId) {
+    if (sessionId == null || sessionId <= 0) {
+      throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Sentinel session ID");
+    }
     userRepository
         .findForKycUpdate(userId)
         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));

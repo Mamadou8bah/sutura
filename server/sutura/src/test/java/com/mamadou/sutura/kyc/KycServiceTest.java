@@ -96,6 +96,39 @@ class KycServiceTest {
     }
 
     @Test
+    void seededVerificationRefreshDoesNotCallSentinelOrRewriteEvidence() {
+        var seeded = record("VERIFIED");
+        seeded.setSentinelSessionId(-1000000007L);
+        seeded.setExplanation("Presentation fixture; no identity evidence was checked.");
+        when(records.findById(7L)).thenReturn(Optional.of(seeded));
+        var result = service.refresh();
+        assertThat(result.status()).isEqualTo("VERIFIED");
+        assertThat(result.explanation()).isEqualTo(seeded.getExplanation());
+        verifyNoInteractions(client);
+        verify(records, never()).save(any());
+    }
+
+    @Test
+    void invalidPendingSessionMustBeRestartedAndCanBeReplaced() {
+        var invalid = record("PENDING");
+        invalid.setSentinelSessionId(-7L);
+        when(records.findById(7L)).thenReturn(Optional.of(invalid));
+        assertThatThrownBy(service::refresh).isInstanceOfSatisfying(ResponseStatusException.class,
+                e -> assertThat(e.getStatusCode().value()).isEqualTo(409));
+        verifyNoInteractions(client);
+        when(client.start("7")).thenReturn(response("PENDING", null));
+        assertThat(service.start().sessionId()).isEqualTo(42L);
+    }
+
+    @Test
+    void invalidCallbackIsRejectedBeforeAccessingAnyAccount() {
+        assertThatThrownBy(() -> service.refreshFromCallback(7L, -7L))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getStatusCode().value()).isEqualTo(400));
+        verifyNoInteractions(users, client);
+    }
+
+    @Test
     void agentsCannotStartVerificationForOtherPeople() {
         user.setRole(Role.AGENT);
         assertThatThrownBy(service::start).isInstanceOfSatisfying(ResponseStatusException.class,

@@ -1,3 +1,4 @@
+import { parseWalletDepositQr } from "../utils/walletDepositQr";
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
 import { lazy, Suspense, useCallback, useRef, useState } from "react";
@@ -16,7 +17,7 @@ export function ScanScreen() {
  const {colors}=useTheme();
  const styles=useThemedStyles(createStyles);
 
-  const { lookupReference, lookupQr } = useAgent();
+  const { lookupReference, lookupQr, prepareDepositQr } = useAgent();
   const lookupInFlight = useRef(false);
   const [busy, setBusy] = useState(false);
   const [reference, setReference] = useState("");
@@ -27,33 +28,35 @@ export function ScanScreen() {
     if (lookupInFlight.current || !reference.trim()) return;
     lookupInFlight.current = true; setBusy(true); setError(null);
     try {
-      const result = await lookupReference(reference.trim());
+      const wallet = parseWalletDepositQr(reference.trim());
+      const result = wallet ? await prepareDepositQr(wallet) : await lookupReference(reference.trim());
       if (!result.ok) setError(result.error ?? null);
     } finally { lookupInFlight.current = false; setBusy(false); }
-  }, [lookupReference, reference]);
+  }, [lookupReference, prepareDepositQr, reference]);
 
   const handleBarcode = useCallback(
     async (raw: string) => {
       if (lookupInFlight.current) return;
       setScanning(false);
       setError(null);
-      const payload = parseAgentQr(raw);
+      const wallet = parseWalletDepositQr(raw);
+      const payload = wallet ?? parseAgentQr(raw);
       if (!payload) {
         setError("Unrecognized Sutura QR code.");
         return;
       }
       lookupInFlight.current = true; setBusy(true);
       try {
-        const result = await lookupQr(payload);
+        const result = wallet ? await prepareDepositQr(wallet) : await lookupQr(payload as import("../types").AgentQrPayload);
         if (!result.ok) setError(result.error ?? null);
       } finally { lookupInFlight.current = false; setBusy(false); }
     },
-    [lookupQr],
+    [lookupQr, prepareDepositQr],
   );
 
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-      <ScreenTitle title="Scan operation" subtitle="Scan a customer QR or enter a reference manually" />
+      <ScreenTitle title="Scan customer QR" subtitle="Scan a deposit wallet or an existing cash operation" />
 
       {scanning && Platform.OS !== "web" ? (
         <Suspense fallback={<Text>Opening camera...</Text>}>
@@ -61,8 +64,9 @@ export function ScanScreen() {
         </Suspense>
       ) : (
         <View style={styles.manual}>
-          <Field label="Operation reference" hint="Example: dep_1301 or wd_901">
+          <Field label="Reference or QR code" hint="Enter an operation reference or paste a customer’s code.">
             <AppInput
+              accessibilityLabel="Reference or QR code"
               value={reference}
               onChangeText={setReference}
               placeholder="dep_1301"
@@ -71,7 +75,7 @@ export function ScanScreen() {
             />
           </Field>
           <FormError message={error} />
-          <PrimaryButton loading={busy} label={busy ? "Looking up..." : "Look up operation"} disabled={busy || !reference.trim()} onPress={handleReference} color={brand.orange} />
+          <PrimaryButton loading={busy} label={busy ? "Looking up…" : "Look up operation"} disabled={busy || !reference.trim()} onPress={handleReference} color={brand.orange} />
           {Platform.OS !== "web" ? (
             <Pressable onPress={() => setScanning(true)} style={styles.toggleBtn}>
               <Text style={styles.toggleText}>Open camera scanner</Text>

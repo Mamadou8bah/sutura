@@ -12,13 +12,17 @@
     ],
     "ios": {
       "bundleIdentifier": "gm.sutura.customer",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "icon": "./assets/app-icon.png"
     },
     "android": {
       "package": "gm.sutura.customer",
       "adaptiveIcon": {
-        "backgroundColor": "#0a0a0a"
-      }
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff",
+        "monochromeImage": "./assets/monochrome-icon.png"
+      },
+      "icon": "./assets/app-icon.png"
     },
     "plugins": [
       "expo-asset",
@@ -30,6 +34,12 @@
           "cameraPermission": "Allow Sutura to scan merchant payment QR codes.",
           "recordAudioAndroid": false
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Sutura to use Face ID to unlock your saved session on this device."
+        }
       ]
     ],
     "extra": {
@@ -38,6 +48,6 @@
       }
     },
     "owner": "mamadou8bah",
-    "icon": "./assets/sutura-logo.png"
+    "icon": "./assets/app-icon.png"
   }
 }

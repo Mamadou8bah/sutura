@@ -75,7 +75,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   segmentActive: { backgroundColor: colors.surface, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 4, elevation: 1 },
   text: { fontSize: 13, fontWeight: "600", color: colors.slate500 },
-  textActive: { color: colors.primary, fontWeight: "700" },
+  textActive: { color: colors.primary, fontWeight: "600" },
   row: {
     flexDirection: "row",
     alignItems: "center",

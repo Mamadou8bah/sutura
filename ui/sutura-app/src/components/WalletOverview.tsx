@@ -1,21 +1,48 @@
-import { useState } from "react";
-import { View } from "react-native";
-import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
+import { StyleSheet, View, useWindowDimensions } from "react-native";
+import { NativePressable, NativeText as Text } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { useWallet } from "../context/WalletContext";
-import { useTheme } from "../context/ThemeContext";
+import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import { WalletPicker } from "./OperationForm";
-import { formatBalance } from "../utils/format";
-export function WalletOverview({ deposit = true, selectable = true }: {
-    deposit?: boolean;
-    selectable?: boolean;
-}) {
-    const { colors } = useTheme();
-    const { data, selectedWallet, selectedWalletId, setSelectedWalletId, balanceHidden, toggleBalanceHidden, setTab } = useWallet();
-    const [balanceWidth, setBalanceWidth] = useState(240);
-    const balance = formatBalance(selectedWallet.balance, selectedWallet.currency, balanceHidden);
-    const balanceFontSize = Math.min(36, balanceWidth / (Math.max(balance.length, 1) * 0.65));
-    if (!data.wallets.length)
-        return null;
-    return <View style={{ gap: 16, paddingVertical: 8 }}>{selectable ? <WalletPicker compact wallets={data.wallets} selectedId={selectedWalletId} onSelect={setSelectedWalletId} hidden={balanceHidden}/> : <Text style={{color:colors.slate500,fontSize:13}}>{selectedWallet.name} · {selectedWallet.currency}</Text>}<View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}><Text style={{ color: colors.slate500, fontSize: 13 }}>Available balance</Text><Pressable accessibilityRole="button" accessibilityLabel={balanceHidden ? "Show balance" : "Hide balance"} hitSlop={10} onPress={toggleBalanceHidden}><Ionicons name={balanceHidden ? "eye-off-outline" : "eye-outline"} color={colors.slate500} size={18}/></Pressable></View><View onLayout={event => setBalanceWidth(event.nativeEvent.layout.width)}><Text numberOfLines={1} adjustsFontSizeToFit style={{ fontSize: balanceFontSize, fontWeight: "700", letterSpacing: -1, color: colors.primary }}>{balance}</Text></View>{deposit && <Pressable accessibilityRole="button" accessibilityLabel="Top up" onPress={() => setTab("topup")} style={{ backgroundColor: colors.orange, alignSelf: "flex-start", paddingHorizontal: 28, paddingVertical: 13, borderRadius: 14 }}><Text style={{ color: "#181a20", fontWeight: "700" }}>Add money</Text></Pressable>}</View>;
+import { WalletDepositQr } from "./WalletDepositQr";
+import { WalletAction } from "./WalletAction";
+import { Money } from "./Money";
+import { formatClock } from "./StaleNotice";
+import { fonts, type, type ThemeColors } from "../theme";
+
+export function WalletOverview({ selectable = true, showDepositQr = false }: { selectable?: boolean; showDepositQr?: boolean }) {
+  const { colors } = useTheme();
+  const styles = useThemedStyles(createStyles);
+  const { width } = useWindowDimensions();
+  const { data, selectedWallet, selectedWalletId, setSelectedWalletId, balanceHidden, toggleBalanceHidden, refreshError, lastUpdated, setTab } = useWallet();
+  if (!data.wallets.length) return null;
+  const active = selectedWallet.status === "ACTIVE";
+  const time = formatClock(lastUpdated);
+  return <View style={{ gap: 12 }}>
+    {selectable && (data.wallets.length > 1 || !showDepositQr) && <WalletPicker compact wallets={data.wallets} selectedId={selectedWalletId} onSelect={setSelectedWalletId} hidden={balanceHidden} />}
+    {!selectable && <Text style={styles.meta}>{selectedWallet.name} · {selectedWallet.currency}</Text>}
+    <View style={{ alignItems: showDepositQr ? "center" : "stretch", gap: 2 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: showDepositQr ? "center" : "flex-start", gap: 4 }}>
+        <Text style={[styles.meta, showDepositQr && { color: colors.walletMuted }]}>{showDepositQr ? "Your balance" : "Available balance"}</Text>
+        <NativePressable accessibilityRole="button" accessibilityLabel={balanceHidden ? "Show balance" : "Hide balance"}
+          onPress={toggleBalanceHidden} style={{ width: 48, height: 48, alignItems: "center", justifyContent: "center" }}>
+          <Ionicons name={balanceHidden ? "eye-off-outline" : "eye-outline"} size={18} color={showDepositQr ? colors.walletMuted : colors.slate500} />
+        </NativePressable>
+      </View>
+      <Money amount={selectedWallet.balance} currency={selectedWallet.currency} hidden={balanceHidden}
+        style={[styles.balance, showDepositQr && { textAlign: "center", color: colors.walletInk, fontSize: width < 360 ? 27 : 32 }, !!refreshError && { color: colors.slate500 }]} />
+    </View>
+    {showDepositQr && <View style={styles.actions}>
+      <WalletAction label="Send money" icon="paper-plane-outline" onPress={() => setTab("send")} disabled={!active} />
+      <WalletAction label="Top up" icon="add" onPress={() => setTab("topup")} disabled={!active} />
+      <WalletAction label="Withdraw" icon="remove" onPress={() => setTab("withdraw")} disabled={!active} />
+      {active && <WalletDepositQr key={selectedWallet.id} walletId={selectedWallet.id} walletName={selectedWallet.name} currency={selectedWallet.currency} />}
+    </View>}
+    {!!refreshError && <Text style={{ color: colors.warningFg, fontSize: 13, lineHeight: 20 }}>{time ? `Balance from ${time}. It may be out of date.` : "Balance may be out of date."}</Text>}
+  </View>;
 }
+const createStyles = (colors: ThemeColors) => StyleSheet.create({
+  meta: { fontSize: type.caption, color: colors.slate500, flexShrink: 1 },
+  balance: { fontSize: type.display, lineHeight: 44, fontFamily: fonts.semibold, color: colors.primary },
+  actions: { flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 6, paddingTop: 12 },
+});

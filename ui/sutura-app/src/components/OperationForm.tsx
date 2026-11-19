@@ -13,6 +13,8 @@ import { brand } from "../constants/brand";
 import { colors, fonts, radii, shadow, spacing } from "../theme";
 import type { CustomerWallet, QuickContact } from "../types";
 import { formatBalance } from "../utils/format";
+import { statusLabel } from "./StatusPill";
+import { tabular, type } from "../theme";
 export function OperationScreen({ title, subtitle, children, }: {
     title: string;
     subtitle?: string;
@@ -38,11 +40,11 @@ export function WalletPicker({ wallets, selectedId, onSelect, hidden, compact = 
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState("");
     const selected = wallets.find(w => w.id === selectedId) ?? wallets[0];
-    if (Platform.OS !== "web") return <NativeSelect title="Wallet" value={String(selected?.id ?? "")}
+    if (Platform.OS !== "web" && !compact) return <NativeSelect title="Wallet" value={String(selected?.id ?? "")}
       options={wallets.map(wallet => ({ value: String(wallet.id), enabled: wallet.status === "ACTIVE",
-        label: `${wallet.name} · ${wallet.currency} · ${formatBalance(wallet.balance, wallet.currency, hidden)}${wallet.status === "ACTIVE" ? "" : ` · ${wallet.status}`}` }))}
+        label: `${wallet.name} · ${wallet.currency} · ${formatBalance(wallet.balance, wallet.currency, hidden)}${wallet.status === "ACTIVE" ? "" : ` · ${statusLabel(wallet.status)}`}` }))}
       onChange={value => onSelect(Number(value))} disabled={wallets.length === 0} />;
-    return <><Pressable accessibilityRole="button" accessibilityLabel="Select wallet" disabled={!wallets.length} onPress={() => { setSearch(""); setOpen(true); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border }}><View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceMuted, alignItems: "center", justifyContent: "center" }}><Text style={{ fontWeight: "700", color: colors.primary, fontSize: 12 }}>{selected?.currency ?? "—"}</Text></View><View style={{ flex: 1, gap: 4 }}><Text style={{ color: colors.primary, fontWeight: "600" }}>{selected?.name ?? "Choose wallet"}</Text>{!compact && <Text style={{ color: colors.slate500, fontSize: 12 }}>Available: {selected ? formatBalance(selected.balance, selected.currency, hidden) : "—"}</Text>}</View><Ionicons name="chevron-down" size={18} color={colors.primary}/></Pressable><SelectionSheet visible={open} title="Select wallet" onClose={() => setOpen(false)}><AppInput accessibilityLabel="Search wallets" placeholder="Search name or currency" value={search} onChangeText={setSearch}/>{wallets.filter(w => `${w.name} ${w.currency}`.toLowerCase().includes(search.toLowerCase())).map(w => <Pressable key={w.id} accessibilityRole="radio" accessibilityLabel={`${w.name}, ${w.currency}`} accessibilityState={{ checked: w.id === selectedId, disabled: w.status !== "ACTIVE" }} disabled={w.status !== "ACTIVE"} onPress={() => { onSelect(w.id); setOpen(false); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: colors.border, opacity: w.status === "ACTIVE" ? 1 : 0.5 }}><View style={{ flex: 1, gap: 5 }}><Text style={{ color: colors.primary, fontSize: 16, fontWeight: "600" }}>{w.name}</Text><Text style={{ color: colors.slate500, fontSize: 12 }}>{w.currency} · {w.status === "ACTIVE" ? "Available balance" : w.status}</Text></View><Text style={{ color: colors.primary }}>{formatBalance(w.balance, w.currency, hidden)}</Text>{w.id === selectedId && <Ionicons name="checkmark" color={colors.orange} size={20}/>}</Pressable>)}{!wallets.some(w => `${w.name} ${w.currency}`.toLowerCase().includes(search.toLowerCase())) && <Text style={{ paddingVertical: 24, color: colors.slate500 }}>No matching wallets</Text>}</SelectionSheet></>;
+    return <><Pressable accessibilityRole="button" accessibilityLabel="Select wallet" disabled={!wallets.length} onPress={() => { setSearch(""); setOpen(true); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 48, paddingVertical: compact ? 0 : 16, borderBottomWidth: compact ? 0 : 1, borderBottomColor: colors.border }}><View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceMuted, alignItems: "center", justifyContent: "center" }}><Ionicons name="wallet-outline" size={20} color={colors.slate500} /></View><View style={{ flex: 1, gap: 4 }}><Text style={{ color: colors.primary, fontWeight: "600" }}>{selected?.name ?? "Choose wallet"}</Text>{!compact && <Text style={[{ color: colors.slate500, fontSize: 13 }, tabular]}>Available: {selected ? formatBalance(selected.balance, selected.currency, hidden) : "—"}</Text>}</View><Ionicons name="chevron-down" size={18} color={colors.primary}/></Pressable><SelectionSheet visible={open} title="Select wallet" onClose={() => setOpen(false)}><AppInput accessibilityLabel="Search wallets" placeholder="Search name or currency" value={search} onChangeText={setSearch}/>{wallets.filter(w => `${w.name} ${w.currency}`.toLowerCase().includes(search.toLowerCase())).map(w => <Pressable key={w.id} accessibilityRole="radio" accessibilityLabel={`${w.name}, ${w.currency}`} accessibilityState={{ checked: w.id === selectedId, disabled: w.status !== "ACTIVE" }} disabled={w.status !== "ACTIVE"} onPress={() => { onSelect(w.id); setOpen(false); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: colors.border, opacity: w.status === "ACTIVE" ? 1 : 0.5 }}><View style={{ flex: 1, gap: 5 }}><Text style={{ color: colors.primary, fontSize: 16, fontWeight: "600" }}>{w.name}</Text><Text style={{ color: colors.slate500, fontSize: 13 }}>{w.currency} · {w.status === "ACTIVE" ? "Available balance" : statusLabel(w.status)}</Text></View><Text style={[{ color: colors.primary }, tabular]}>{formatBalance(w.balance, w.currency, hidden)}</Text>{w.id === selectedId && <Ionicons name="checkmark" color={colors.accentText} size={20} accessibilityLabel="Selected"/>}</Pressable>)}{!wallets.some(w => `${w.name} ${w.currency}`.toLowerCase().includes(search.toLowerCase())) && <Text style={{ paddingVertical: 24, color: colors.slate500 }}>No matching wallets</Text>}</SelectionSheet></>;
 }
 export function AmountHero({ amount, onChange, currency, }: {
     amount: string;
@@ -56,7 +58,7 @@ export function AmountHero({ amount, onChange, currency, }: {
       <View style={styles.amountRow}>
         <Text style={styles.amountCurrency}>{currency}</Text>
         <TextInput value={amount} onChangeText={(value) => { if (isAmountDraft(value))
-        onChange(value); }} keyboardType="decimal-pad" inputMode="decimal" autoComplete="off" placeholder="0.00" accessibilityLabel="Amount" maxLength={18} placeholderTextColor={colors.slate500} style={styles.amountInput}/>
+        onChange(value); }} keyboardType="decimal-pad" inputMode="decimal" autoComplete="off" placeholder="0.00" accessibilityLabel={`Amount in ${currency}`} maxLength={18} placeholderTextColor={colors.slate500} style={[styles.amountInput, tabular]}/>
       </View>
     </View>);
 }
@@ -74,7 +76,7 @@ export function ContactChips({ contacts, selected, onSelect, }: {
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
         {contacts.map((c) => {
             const active = selected === c.phone;
-            return (<Pressable key={c.id} onPress={() => onSelect(c.phone)} style={[styles.contactChip, active && styles.contactChipActive]}>
+            return (<Pressable key={c.id} accessibilityRole="radio" accessibilityState={{ checked: active }} accessibilityLabel={`${c.name}, ${c.phone}`} onPress={() => onSelect(c.phone)} style={[styles.contactChip, active && styles.contactChipActive]}>
               <Text style={[styles.contactName, active && styles.contactNameActive]}>{c.name}</Text>
               <Text style={[styles.contactPhone, active && styles.contactPhoneActive]}>{c.phone}</Text>
             </Pressable>);
@@ -92,10 +94,10 @@ export function MethodTabs<T extends string>({ options, value, onChange, }: {
 }) {
     const { colors } = useTheme();
     const styles = useThemedStyles(createStyles);
-    return (<View style={styles.methodTabs}>
+    return (<View accessibilityRole="tablist" style={styles.methodTabs}>
       {options.map((opt) => {
             const active = opt.id === value;
-            return (<Pressable key={opt.id} onPress={() => onChange(opt.id)} style={[styles.methodTab, active && styles.methodTabActive]}>
+            return (<Pressable key={opt.id} accessibilityRole="tab" accessibilityLabel={opt.label} accessibilityState={{ selected: active }} onPress={() => onChange(opt.id)} style={[styles.methodTab, active && styles.methodTabActive]}>
             <Text style={[styles.methodTabText, active && styles.methodTabTextActive]}>{opt.label}</Text>
           </Pressable>);
         })}
@@ -144,7 +146,7 @@ export function OptionList({ items, }: {
     const { colors } = useTheme();
     const styles = useThemedStyles(createStyles);
     return (<View style={[styles.optionList, shadow.card]}>
-      {items.map((item, index) => (<Pressable key={item.label} onPress={item.onPress} style={[styles.optionRow, index < items.length - 1 && styles.optionBorder]}>
+      {items.map((item, index) => (<Pressable key={item.label} accessibilityRole="button" accessibilityLabel={item.subtitle ? `${item.label}, ${item.subtitle}` : item.label} onPress={item.onPress} style={[styles.optionRow, index < items.length - 1 && styles.optionBorder]}>
           <View style={styles.optionIcon}>
             <Ionicons name={item.icon} size={20} color={colors.primary}/>
           </View>
@@ -158,8 +160,8 @@ export function OptionList({ items, }: {
 }
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
     scroll: { padding: spacing.screen, paddingBottom: 32, gap: spacing.gap },
-    title: { fontSize: 26, fontFamily: fonts.bold, color: colors.slate900 },
-    subtitle: { fontSize: 14, fontFamily: fonts.regular, color: colors.slate500, marginTop: 4 },
+    title: { fontSize: type.title, lineHeight: 34, fontFamily: fonts.semibold, fontWeight: "600", color: colors.slate900 },
+    subtitle: { fontSize: 15, fontFamily: fonts.regular, color: colors.slate500, marginTop: 4 },
     banner: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -174,7 +176,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     bannerWallet: { flexShrink: 1, fontSize: 15, fontFamily: fonts.bold, color: colors.slate900, marginTop: 2 },
     bannerAmount: { fontSize: 18, fontFamily: fonts.bold, color: colors.slate900, flexShrink: 1, textAlign: "right" },
     section: { gap: 10 },
-    sectionLabel: { fontSize: 13, fontFamily: fonts.bold, color: colors.slate700, textTransform: "uppercase", letterSpacing: 0.6 },
+    sectionLabel: { fontSize: 13, fontFamily: fonts.medium, color: colors.slate500 },
     chips: { gap: 10, paddingRight: 8 },
     chip: {
         paddingHorizontal: 16,
@@ -192,19 +194,20 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     chipBalActive: { color: colors.slate700 },
     amountCard: {
         backgroundColor: colors.surface,
-        borderRadius: radii.sm,
-        padding: 20,
+        borderRadius: radii.lg,
+        padding: 16,
         borderWidth: 1,
         borderColor: colors.border,
     },
-    amountLabel: { fontSize: 13, fontFamily: fonts.bold, color: colors.slate500, textTransform: "uppercase", letterSpacing: 0.6 },
+    amountLabel: { fontSize: 13, fontFamily: fonts.medium, color: colors.slate500 },
     amountRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 12 },
-    amountCurrency: { fontSize: 22, fontFamily: fonts.bold, color: colors.slate500 },
+    amountCurrency: { fontSize: 22, fontFamily: fonts.medium, color: colors.slate500 },
     amountInput: {
         flex: 1,
         minWidth: 0,
-        fontSize: 40,
-        fontFamily: fonts.black,
+        fontSize: 36,
+        fontFamily: fonts.semibold,
+        fontWeight: "600",
         color: colors.slate900,
         textAlign: "left",
         padding: 0,
@@ -218,25 +221,23 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
         borderColor: colors.border,
         marginRight: 4,
     },
-    contactChipActive: { borderColor: brand.orange, backgroundColor: brand.orange + "12" },
+    contactChipActive: { borderColor: colors.primary, backgroundColor: colors.surfaceMuted },
     contactName: { fontSize: 14, fontFamily: fonts.bold, color: colors.slate900 },
-    contactNameActive: { color: brand.orange },
-    contactPhone: { fontSize: 11, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
+    contactNameActive: { color: colors.primary },
+    contactPhone: { fontSize: 13, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
     contactPhoneActive: { color: colors.slate700 },
     methodTabs: {
         flexDirection: "row",
-        backgroundColor: colors.surface,
-        borderRadius: radii.sm,
+        backgroundColor: colors.surfaceMuted,
+        borderRadius: radii.md,
         padding: 4,
-        borderWidth: 1,
-        borderColor: colors.border,
     },
-    methodTab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: radii.sm },
-    methodTabActive: { backgroundColor: brand.orange },
-    methodTabText: { fontSize: 13, fontFamily: fonts.medium, color: colors.slate500 },
-    methodTabTextActive: { color: "#181a20", fontFamily: fonts.bold },
+    methodTab: { flex: 1, minHeight: 44, paddingVertical: 10, paddingHorizontal: 4, alignItems: "center", justifyContent: "center", borderRadius: radii.sm },
+    methodTabActive: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+    methodTabText: { fontSize: 15, fontFamily: fonts.medium, color: colors.slate500, textAlign: "center" },
+    methodTabTextActive: { color: colors.primary, fontFamily: fonts.semibold, fontWeight: "600" },
     field: { gap: 8 },
-    fieldLabel: { fontSize: 13, fontFamily: fonts.bold, color: colors.slate700 },
+    fieldLabel: { fontSize: 13, fontFamily: fonts.medium, color: colors.slate500 },
     input: {
         minHeight: 52,
         borderRadius: radii.md,
@@ -249,7 +250,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
         borderWidth: 1,
         borderColor: colors.border,
     },
-    error: { fontSize: 13, fontFamily: fonts.medium, color: colors.rose800, textAlign: "center" },
+    error: { fontSize: 15, lineHeight: 21, fontFamily: fonts.medium, color: colors.dangerFg },
     submit: {
         minHeight: 52,
         borderRadius: radii.sm,
@@ -271,11 +272,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
         width: 40,
         height: 40,
         borderRadius: radii.sm,
-        backgroundColor: colors.blue100,
+        backgroundColor: colors.surfaceMuted,
         alignItems: "center",
         justifyContent: "center",
     },
     optionBody: { flex: 1 },
     optionLabel: { fontSize: 15, fontFamily: fonts.bold, color: colors.slate900 },
-    optionSub: { fontSize: 12, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
+    optionSub: { fontSize: 13, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
 });

@@ -153,6 +153,9 @@ logging:
       total-size-cap: 10GB
 
 sutura:
+  kyc:
+    connect-timeout-ms: ${SUTURA_KYC_CONNECT_TIMEOUT_MS:5000}
+    read-timeout-ms: ${SUTURA_KYC_READ_TIMEOUT_MS:20000}
   auth:
     require-second-factor: true
   cors:

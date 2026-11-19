@@ -1,35 +1,48 @@
 import Link from "next/link";
 import { AuthShell } from "../../auth-shell";
 
+const steps = [
+  ["Verify your phone", "We send a code to the business phone number."],
+  ["Add business details", "Name, category, region and address. A registration number is optional."],
+  ["Add the owner", "The owner's name and ID document. Sutura checks the ID before the account goes live."],
+  ["Wait for review", "You'll be told if anything needs correcting, and you can fix it and resubmit."],
+];
+
 export default function MerchantRegisterPage() {
   return (
-    <AuthShell heading="Merchant registration">
-      <div className="mt-6 space-y-5 text-center">
-        <p className="text-sm leading-relaxed text-slate-600">
-          Merchant registration is handled in the <strong>Sutura Merchant</strong> mobile app — designed for Gambian businesses with phone verification, business details, and owner ID checks.
-        </p>
-        <div className="rounded-2xl border border-blue-200 bg-blue-50 px-5 py-5 text-left text-sm text-slate-700">
-          <p className="font-bold text-slate-900">Run the merchant app locally</p>
-          <pre className="mt-3 overflow-x-auto rounded-xl bg-slate-950 p-4 font-mono text-xs text-emerald-100">{`cd ui/merchant-app
-npm install
-npm start`}</pre>
-        </div>
-        <p className="text-xs text-slate-500">
-          Web registration is for developers. Admins sign in with an existing account.
-        </p>
-        <Link
-          href="/signup"
-          className="inline-flex h-14 w-full items-center justify-center rounded-full bg-[#123c91] text-base font-black text-white transition-colors hover:bg-[#0d2f76]"
-        >
-          Create a developer account
-        </Link>
-        <p className="text-sm text-slate-600">
-          Already registered?{" "}
-          <Link href="/login" className="font-black text-[#123c91]">
-            Sign in
+    <AuthShell
+      heading="Register your business"
+      description="Merchants register in the Sutura Merchant app. Here is what you'll need and what happens next."
+    >
+      <ol className="mt-6 space-y-4">
+        {steps.map(([title, text], i) => (
+          <li key={title} className="flex gap-3">
+            <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-surface-2 text-sm font-semibold text-ink tabular-nums">
+              {i + 1}
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-ink">{title}</p>
+              <p className="mt-0.5 text-sm text-ink-2">{text}</p>
+            </div>
+          </li>
+        ))}
+      </ol>
+      <div className="mt-6 rounded-card border border-line bg-surface-2 p-4 text-sm text-ink-2">
+        <p className="font-semibold text-ink">The merchant app is coming soon</p>
+        <p className="mt-1">
+          It isn&apos;t in the app stores yet. To join the merchant rollout,{" "}
+          <Link href="/contact" className="font-semibold text-accent-ink underline underline-offset-2">
+            contact us
           </Link>
+          .
         </p>
       </div>
+      <p className="mt-6 text-sm text-ink-2">
+        Building an integration instead?{" "}
+        <Link href="/signup" className="font-semibold text-accent-ink underline underline-offset-2">
+          Create a developer account
+        </Link>
+      </p>
     </AuthShell>
   );
 }

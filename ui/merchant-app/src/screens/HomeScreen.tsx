@@ -1,21 +1,105 @@
-import { View } from "react-native";
+import { WalletSurface } from "../components/WalletSurface";
+import { ActivityIndicator, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
-import { Screen, SuturaLogo } from "../components/ui";
-import { DataNotice, Empty, money } from "../components/MerchantUI";
-import { useApp, type Screen as Route } from "../context/AppContext";
+import { Screen, SuturaLogo, LinkButton } from "../components/ui";
+import { DataNotice } from "../components/MerchantUI";
+import { ActionIcon } from "../components/ActionIcon";
+import { Money } from "../components/Money";
+import { StatusPill, statusLabel, statusTone } from "../components/StatusPill";
+import { SkeletonBalance, SkeletonRows } from "../components/Skeleton";
+import { useApp } from "../context/AppContext";
 import { useMerchant } from "../context/MerchantContext";
 import { useTheme } from "../context/ThemeContext";
-import { fonts } from "../theme";
+import { fonts, type } from "../theme";
+import { formatTimestamp } from "../utils/format";
+
+/** Shown instead of Home when the account is suspended, closed or rejected. */
+function BlockedAccount({ status }: { status: string }) {
+  const { colors } = useTheme();
+  const { signOut, setScreen } = useApp();
+  return <Screen>
+    <View style={{ gap: 12, paddingTop: 24 }}>
+      <SuturaLogo size={48} />
+      <Text accessibilityRole="header" style={{ fontFamily: fonts.semibold, fontWeight: "600", fontSize: type.title, lineHeight: 34, color: colors.primary }}>Payments are paused</Text>
+      <StatusPill status={status} />
+      <Text style={{ color: colors.slate500, fontSize: type.body, lineHeight: 22 }}>
+        This business account is {statusLabel(status).toLowerCase()}, so it cannot collect payments. Contact Sutura support to find out why and what to do next.
+      </Text>
+    </View>
+    <LinkButton label="Contact support" onPress={() => setScreen("support")} />
+    <LinkButton label="Sign out" onPress={() => void signOut()} />
+  </Screen>;
+}
+
 export function HomeScreen() {
-    const { colors } = useTheme();
-    const { session, setScreen } = useApp();
-    const { wallets, selectedId, hidden, setHidden, transactions, collections } = useMerchant();
-    const wallet = wallets.find(w => w.id === selectedId);
-    return <Screen>
-    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}><SuturaLogo /><View style={{ flex: 1 }}><Text style={{ fontFamily: fonts.bold, color: colors.primary, fontSize: 20 }}>{session?.businessName || "Your business"}</Text><Text style={{ color: colors.slate500 }}>Merchant workspace</Text></View><Pressable accessibilityRole="button" accessibilityLabel="Settings" onPress={() => setScreen("settings")}><Ionicons name="settings-outline" size={24} color={colors.primary}/></Pressable></View><DataNotice />
-    <View style={{ padding: 22, borderRadius: 16, backgroundColor: colors.surfaceMuted, gap: 16 }}><View style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ color: colors.slate500 }}>Business balance</Text><Pressable accessibilityRole="button" accessibilityLabel={hidden ? "Show balance" : "Hide balance"} onPress={() => setHidden(!hidden)}><Ionicons name={hidden ? "eye-off-outline" : "eye-outline"} size={20} color={colors.primary}/></Pressable></View><Text style={{ fontFamily: fonts.bold, fontSize: 30, color: colors.primary }}>{wallet ? money(wallet.balance ?? 0, wallet.currency, hidden) : "—"}</Text><Pressable accessibilityRole="button" onPress={() => setScreen("wallets")}><Text style={{ color: colors.primary }}>{wallet?.name || "Add a business wallet"}  ›</Text></Pressable></View>
-    <View style={{ flexDirection: "row", gap: 12 }}>{([['collections', 'qr-code-outline', 'Collect payment'], ['wallets', 'wallet-outline', 'Wallets']] as const).map(([route, icon, label]) => <Pressable accessibilityRole="button" key={route} onPress={() => setScreen(route)} style={{ flex: 1, padding: 16, gap: 10, borderRadius: 12, backgroundColor: colors.orange }}><Ionicons name={icon} size={24} color="#181a20"/><Text style={{ fontFamily: fonts.bold, color: "#181a20" }}>{label}</Text></Pressable>)}</View>
-    <Text style={{ fontFamily: fonts.bold, color: colors.primary, fontSize: 20 }}>Collections at a glance</Text><View style={{ flexDirection: "row", gap: 12 }}>{["ACTIVE", "PAID", "REVIEW"].map(status => <View key={status} style={{ flex: 1, gap: 8, paddingVertical: 16 }}><Text style={{ fontFamily: fonts.bold, color: colors.primary, fontSize: 24 }}>{collections.filter(c => c.status === status).length}</Text><Text style={{ color: colors.slate500, fontSize: 12 }}>{status === "ACTIVE" ? "Awaiting payment" : status === "PAID" ? "Paid" : "Under review"}</Text></View>)}</View>
-    <Pressable accessibilityRole="button" onPress={() => setScreen("activity")} style={{ flexDirection: "row", justifyContent: "space-between" }}><Text style={{ fontFamily: fonts.bold, color: colors.primary, fontSize: 20 }}>Recent payments</Text><Text style={{ color: colors.slate500 }}>View all ›</Text></Pressable>{transactions.slice(0, 4).map(t => <Pressable accessibilityRole="button" key={t.id} onPress={() => setScreen("activity")} style={{ paddingVertical: 16, borderBottomWidth: 1, borderBottomColor: colors.border, gap: 8 }}><Text style={{ color: colors.primary, fontFamily: fonts.medium }}>{t.description || t.type}</Text><Text style={{ color: colors.primary }}>{money(t.amount, t.currency, hidden)} · {t.status}</Text></Pressable>)}{!transactions.length && <Empty title="Ready for your first payment" hint="Create a collection QR for a customer to scan in Sutura."/>}</Screen>;
+  const { colors } = useTheme();
+  const { session, setScreen } = useApp();
+  const { wallets, selectedId, hidden, setHidden, transactions, collections, loaded, refresh, loading } = useMerchant();
+  if (session && session.userStatus !== "ACTIVE" && statusTone(session.userStatus) === "danger") return <BlockedAccount status={session.userStatus} />;
+  const wallet = wallets.find(w => w.id === selectedId);
+  const firstLoad = !loaded;
+  const openCount = collections.filter(c => c.status === "ACTIVE").length;
+  const reviewCount = collections.filter(c => c.status === "REVIEW").length;
+  return <Screen>
+    <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <SuturaLogo />
+      <View style={{ flex: 1, minWidth: 0 }}>
+        <Text numberOfLines={2} style={{ fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary, fontSize: type.headline }}>{session?.businessName || "Your business"}</Text>
+
+      </View>
+      <Pressable accessibilityRole="button" accessibilityLabel="Refresh merchant data" accessibilityState={{ busy: loading, disabled: loading }} disabled={loading} onPress={() => void refresh()} style={{ width: 48, height: 48, alignItems: "center", justifyContent: "center" }}>
+        {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={22} color={colors.primary} />}
+      </Pressable>
+    </View>
+    <DataNotice errorOnly />
+    <WalletSurface>
+      {firstLoad ? <SkeletonBalance /> : <>
+        <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8 }}>
+          <Text style={{ fontSize: type.body, color: colors.walletMuted }}>{wallet ? "Your balance" : "Balance"}</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel={hidden ? "Show balance" : "Hide balance"} onPress={() => setHidden(!hidden)} style={{ width: 48, height: 48, alignItems: "center", justifyContent: "center" }}>
+            <Ionicons name={hidden ? "eye-off-outline" : "eye-outline"} size={20} color={colors.primary} />
+          </Pressable>
+        </View>
+        {wallet ? <Money amount={wallet.balance ?? 0} currency={wallet.currency} hidden={hidden}
+          style={{ fontFamily: fonts.semibold, fontWeight: "600", fontSize: type.display, lineHeight: 46, color: colors.walletInk, textAlign: "center" }} />
+          : <Text style={{ color: colors.slate500, fontSize: type.body }}>No business wallet yet.</Text>}
+
+      </>}
+    </WalletSurface>
+    <Text accessibilityRole="header" style={{ fontFamily: fonts.semibold, fontSize: type.section, color: colors.primary }}>Services</Text>
+    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
+      {([["collections", "qr", "Create payment QR"]] as const).map(([route, icon, label]) =>
+        <Pressable accessibilityRole="button" accessibilityLabel={label} key={route} onPress={() => setScreen(route)}
+          style={{ flexGrow: 1, flexBasis: 128, minWidth: 0, minHeight: 104, paddingVertical: 12, paddingHorizontal: 8, gap: 8, alignItems: "center" }}>
+          <ActionIcon name={icon} />
+          <Text style={{ fontFamily: fonts.semibold, fontWeight: "600", fontSize: type.body, color: colors.primary, textAlign: "center", alignSelf: "stretch" }}>{label}</Text>
+        </Pressable>)}
+    </View>
+    {!firstLoad && (openCount > 0 || reviewCount > 0) && <Pressable accessibilityRole="button" accessibilityLabel="View open payment requests"
+      onPress={() => setScreen("collections")} style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: 8 }}>
+      <Text style={{ flex: 1, color: colors.slate500, fontSize: type.body }}>
+        {[openCount > 0 ? `${openCount} unpaid ${openCount === 1 ? "request" : "requests"}` : "", reviewCount > 0 ? `${reviewCount} under review` : ""].filter(Boolean).join(", ")}
+      </Text><Ionicons name="chevron-forward" size={16} color={colors.slate500} />
+    </Pressable>}
+    <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
+      <Text accessibilityRole="header" style={{ fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary, fontSize: type.section, flexShrink: 1 }}>Recent payments</Text>
+      {transactions.length > 0 && <Pressable accessibilityRole="button" accessibilityLabel="View all payments" onPress={() => setScreen("activity")} style={{ flexDirection: "row", alignItems: "center", gap: 2, minHeight: 48 }}>
+        <Text style={{ color: colors.accentText, fontSize: type.body, fontFamily: fonts.medium, fontWeight: "500" }}>View all</Text>
+      </Pressable>}
+    </View>
+    {firstLoad ? <SkeletonRows rows={3} label="Loading payments" /> : transactions.slice(0, 4).map(t =>
+      <Pressable accessibilityRole="button" accessibilityLabel={`${t.description || "Payment"}, ${statusLabel(t.status)}. Open activity`} key={t.id} onPress={() => setScreen("activity")}
+        style={{ paddingVertical: 14, borderBottomWidth: 0, borderBottomColor: colors.border, gap: 6 }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
+          <Text style={{ color: colors.primary, fontFamily: fonts.medium, fontWeight: "500", fontSize: type.body, flexShrink: 1 }}>{t.description || statusLabel(t.type)}</Text>
+          <Money amount={t.amount} currency={t.currency} hidden={hidden} style={{ color: colors.primary, fontSize: type.body, fontFamily: fonts.medium, fontWeight: "500" }} />
+        </View>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+          <StatusPill status={t.status} />
+          <Text style={{ color: colors.slate500, fontSize: type.caption }}>{formatTimestamp(t.createdAt)}</Text>
+        </View>
+      </Pressable>)}
+    {loaded && !transactions.length && <View style={{ paddingVertical: 20, gap: 6 }}><Text style={{ fontSize: type.headline, color: colors.primary, fontWeight: "600" }}>No payments yet</Text><Text style={{ fontSize: type.caption, color: colors.slate500, lineHeight: 19 }}>Payments you receive will appear here.</Text></View>}
+  </Screen>;
 }

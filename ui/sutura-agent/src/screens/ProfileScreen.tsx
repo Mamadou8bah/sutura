@@ -47,8 +47,9 @@ export function ProfileScreen() {
       </Card>
 
       <PrimaryButton
-        label="Log out"
-        color={colors.rose500}
+        label="Sign out"
+        color={colors.surfaceMuted}
+        textColor={colors.dangerFg}
         onPress={() => {
           void signOut();
         }}

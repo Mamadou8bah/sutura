@@ -40,53 +40,6 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
   return <View style={[styles.card, shadow.card, style]}>{children}</View>;
 }
 
-export function AmountDisplay({ amount, onChange }: { amount: string; onChange: (v: string) => void }) {
-  const { colors } = useTheme();
-  const styles = useThemedStyles(createStyles);
-
-  return (
-    <View style={styles.amountWrap}>
-      <Text style={styles.amountCurrency}>GMD</Text>
-      <TextInput
-        value={amount}
-        onChangeText={(value) => { if (isAmountDraft(value)) onChange(value); }}
-        keyboardType="decimal-pad"
-        placeholder="0.00"
-        placeholderTextColor={colors.slate300}
-        style={styles.amountInput}
-      />
-    </View>
-  );
-}
-
-export function MethodRow({
-  label,
-  subtitle,
-  onPress,
-  icon,
-}: {
-  label: string;
-  subtitle?: string;
-  onPress: () => void;
-  icon?: string;
-}) {
-  const { colors } = useTheme();
-  const styles = useThemedStyles(createStyles);
-
-  return (
-    <Pressable onPress={onPress} style={styles.methodRow}>
-      <View style={styles.methodIcon}>
-        <Text style={styles.methodIconText}>{icon ?? "›"}</Text>
-      </View>
-      <View style={styles.methodBody}>
-        <Text style={styles.methodLabel}>{label}</Text>
-        {subtitle ? <Text style={styles.methodSub}>{subtitle}</Text> : null}
-      </View>
-      <Text style={styles.methodChevron}>›</Text>
-    </Pressable>
-  );
-}
-
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   field: { gap: 8 },
   fieldLabel: { fontSize: 13, fontWeight: "600", color: colors.slate500 },
@@ -109,7 +62,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryButtonText: { fontSize: 16, fontWeight: "700" },
+  primaryButtonText: { fontSize: 16, fontWeight: "600" },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
@@ -127,7 +80,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   amountCurrency: { fontSize: 14, fontWeight: "600", color: colors.slate500 },
   amountInput: {
     fontSize: 40,
-    fontWeight: "800",
+    fontWeight: "600",
     color: colors.slate900,
     marginTop: 4,
     minWidth: 120,
@@ -149,7 +102,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  methodIconText: { fontSize: 18, fontWeight: "700", color: colors.primary },
+  methodIconText: { fontSize: 18, fontWeight: "600", color: colors.primary },
   methodBody: { flex: 1 },
   methodLabel: { fontSize: 15, fontWeight: "600", color: colors.slate900 },
   methodSub: { fontSize: 12, color: colors.slate500, marginTop: 2 },

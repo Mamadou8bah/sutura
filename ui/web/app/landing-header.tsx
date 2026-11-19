@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { Icon, ThemeToggle } from "./components/ui";
 
 export type LandingNavGroup = {
   label: string;
@@ -10,8 +11,10 @@ export type LandingNavGroup = {
 
 export function LandingHeader({ groups }: { groups: LandingNavGroup[] }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [openDesktopGroup, setOpenDesktopGroup] = useState<string | null>(null);
+  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const navRef = useRef<HTMLElement>(null);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -34,53 +37,75 @@ export function LandingHeader({ groups }: { groups: LandingNavGroup[] }) {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  // Escape closes whichever menu is open and returns focus to its trigger.
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setMobileOpen(false);
+      if (e.key !== "Escape") return;
+      if (openGroup) {
+        const trigger = navRef.current?.querySelector<HTMLButtonElement>(`[data-group="${openGroup}"]`);
+        setOpenGroup(null);
+        trigger?.focus();
+      }
+      if (mobileOpen) {
+        setMobileOpen(false);
+        menuButtonRef.current?.focus();
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [openGroup, mobileOpen]);
+
+  // Click outside closes the desktop menu.
+  useEffect(() => {
+    if (!openGroup) return;
+    function onDown(e: MouseEvent) {
+      if (navRef.current && !navRef.current.contains(e.target as Node)) setOpenGroup(null);
+    }
+    document.addEventListener("mousedown", onDown);
+    return () => document.removeEventListener("mousedown", onDown);
+  }, [openGroup]);
 
   const mobileMenu =
     mounted &&
     createPortal(
-      <div className={`fixed inset-0 z-[100000] md:hidden ${mobileOpen ? "" : "pointer-events-none"}`} aria-hidden={!mobileOpen}>
+      <div className={`fixed inset-0 z-[100000] md:hidden ${mobileOpen ? "" : "pointer-events-none"}`} aria-hidden={!mobileOpen} inert={!mobileOpen}>
         <button
           type="button"
-          className={`absolute inset-0 bg-slate-900/50 transition-opacity duration-200 ${mobileOpen ? "opacity-100" : "opacity-0"}`}
+          tabIndex={-1}
+          className={`absolute inset-0 bg-black/45 transition-opacity duration-200 ${mobileOpen ? "opacity-100" : "opacity-0"}`}
           aria-label="Close menu"
           onClick={() => setMobileOpen(false)}
         />
         <aside
-          className={`absolute inset-y-0 right-0 flex w-full max-w-sm flex-col border-l border-slate-200 bg-white transition-transform duration-300 ease-out ${
+          role="dialog"
+          aria-modal="true"
+          aria-label="Menu"
+          className={`absolute inset-y-0 right-0 flex w-full max-w-sm flex-col border-l border-line bg-surface transition-transform duration-300 ease-out ${
             mobileOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
-          <div className="flex h-14 shrink-0 items-center justify-between border-b border-slate-200 px-4">
-            <p className="text-sm font-black text-[#123c91]">Menu</p>
+          <div className="flex h-14 shrink-0 items-center justify-between border-b border-line px-4">
+            <p className="text-base font-semibold text-ink">Menu</p>
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100"
+              className="grid h-10 w-10 place-items-center rounded-control text-ink-2 hover:bg-surface-2"
               aria-label="Close menu"
               onClick={() => setMobileOpen(false)}
             >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
+              <Icon name="x" />
             </button>
           </div>
 
-          <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
+          <nav aria-label="Site" className="min-h-0 flex-1 overflow-y-auto px-2 py-3">
             {groups.map((group) => (
               <div key={group.label} className="mb-4">
-                <p className="px-3 py-2 text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{group.label}</p>
+                <h2 className="px-3 py-2 text-sm font-semibold text-ink-2">{group.label}</h2>
                 <ul className="space-y-0.5">
                   {group.links.map((link) => (
                     <li key={`${group.label}-${link.label}`}>
                       <a
                         href={link.href}
-                        className="block rounded-lg px-3 py-3 text-base font-semibold text-slate-900 hover:bg-slate-100"
+                        className="block rounded-control px-3 py-3 text-base font-medium text-ink hover:bg-surface-2"
                         onClick={() => setMobileOpen(false)}
                       >
                         {link.label}
@@ -90,22 +115,23 @@ export function LandingHeader({ groups }: { groups: LandingNavGroup[] }) {
                 </ul>
               </div>
             ))}
+            <div className="flex items-center justify-between px-3 py-2">
+              <span className="text-sm text-ink-2">Theme</span>
+              <ThemeToggle />
+            </div>
           </nav>
 
-          <div
-            className="shrink-0 space-y-2 border-t border-slate-200 p-4"
-            style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
-          >
+          <div className="shrink-0 space-y-2 border-t border-line p-4" style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}>
             <a
               href="/signup"
-              className="flex h-12 items-center justify-center rounded-full bg-orange-600 text-sm font-bold text-slate-900"
+              className="flex h-12 items-center justify-center rounded-control bg-accent text-base font-semibold text-accent-on hover:bg-accent-hover"
               onClick={() => setMobileOpen(false)}
             >
-              Get started
+              Open an account
             </a>
             <a
               href="/login"
-              className="flex h-12 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-bold text-slate-900"
+              className="flex h-12 items-center justify-center rounded-control border border-line-strong text-base font-semibold text-ink hover:bg-surface-2"
               onClick={() => setMobileOpen(false)}
             >
               Log in
@@ -117,103 +143,79 @@ export function LandingHeader({ groups }: { groups: LandingNavGroup[] }) {
     );
 
   return (
-    <header className="sticky top-0 z-[9999] border-b border-slate-200 bg-white">
-      <div className="mx-auto flex h-14 w-[min(1280px,calc(100%-1.5rem))] items-center gap-3 sm:h-16">
-        <a href="/" className="flex shrink-0 items-center gap-2.5">
-          <img
-            src="/brand/sutura-logo.png"
-            alt="Sutura"
-            className="h-8 w-8 object-contain sm:h-9 sm:w-9"
-          />
-          <span className="text-base font-black tracking-tight text-[#123c91] sm:text-lg">Sutura</span>
+    <header className="sticky top-0 z-[9999] border-b border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85">
+      <a href="#main" className="sr-only-focusable fixed left-2 top-2 z-[100002] rounded-control bg-surface px-3 py-2 text-sm font-semibold shadow-pop">
+        Skip to content
+      </a>
+      <div className="mx-auto flex h-14 w-full max-w-[1200px] items-center gap-3 px-4 sm:h-16 sm:px-6 lg:px-8">
+        <a href="/" className="flex shrink-0 items-center gap-2 rounded-control" aria-label="Sutura home">
+          <img src="/brand/sutura-logo.png" alt="" width={32} height={32} className="h-8 w-8 object-contain" />
+          <span className="text-lg font-semibold text-ink">Sutura</span>
         </a>
 
-        <nav className="mx-auto hidden items-center justify-center gap-0.5 text-sm font-semibold text-slate-700 md:flex lg:gap-1">
+        <nav ref={navRef} aria-label="Site" className="mx-auto hidden items-center gap-1 text-sm font-medium text-ink-2 md:flex">
           {groups.map((group) => {
-            const open = openDesktopGroup === group.label;
+            const open = openGroup === group.label;
+            const menuId = `nav-${group.label.toLowerCase()}`;
             return (
-              <div
-                key={group.label}
-                className="relative"
-                onMouseEnter={() => setOpenDesktopGroup(group.label)}
-                onMouseLeave={() => setOpenDesktopGroup(null)}
-              >
+              <div key={group.label} className="relative">
                 <button
-                  className="flex items-center gap-1 rounded-full px-3 py-2 transition-colors hover:bg-slate-100 hover:text-slate-950 lg:px-3.5"
                   type="button"
+                  data-group={group.label}
+                  className={`flex h-9 items-center gap-1 rounded-control px-3 transition-colors hover:bg-surface-2 hover:text-ink ${open ? "bg-surface-2 text-ink" : ""}`}
                   aria-expanded={open}
-                  onClick={() => setOpenDesktopGroup(open ? null : group.label)}
+                  aria-controls={menuId}
+                  onClick={() => setOpenGroup(open ? null : group.label)}
                 >
                   {group.label}
-                  <svg
-                    viewBox="0 0 20 20"
-                    className={`h-3.5 w-3.5 text-slate-400 transition-transform ${open ? "rotate-180" : ""}`}
-                    fill="currentColor"
-                    aria-hidden="true"
-                  >
-                    <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" />
-                  </svg>
+                  <Icon name={open ? "chevron-up" : "chevron-down"} size={14} className="text-ink-3" />
                 </button>
-                <div
-                  className={`absolute left-1/2 top-full z-[10000] mt-2 w-56 -translate-x-1/2 rounded-xl border border-slate-200 bg-white p-1.5 transition-all ${
-                    open ? "visible translate-y-0 opacity-100" : "invisible -translate-y-1 opacity-0"
-                  }`}
-                >
-                  <div className="absolute -top-3 left-0 h-3 w-full" />
-                  {group.links.map((link) => (
-                    <a
-                      key={link.label}
-                      href={link.href}
-                      className="block rounded-lg px-3.5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-orange-50 hover:text-orange-700"
-                      onClick={() => setOpenDesktopGroup(null)}
-                    >
-                      {link.label}
-                    </a>
-                  ))}
-                </div>
+                {open ? (
+                  <div
+                    id={menuId}
+                    className="absolute left-1/2 top-full z-[10000] mt-2 w-60 -translate-x-1/2 rounded-card border border-line bg-surface p-1.5 shadow-pop"
+                  >
+                    <ul>
+                      {group.links.map((link) => (
+                        <li key={link.label}>
+                          <a
+                            href={link.href}
+                            className="block rounded-control px-3 py-2 text-sm text-ink transition-colors hover:bg-surface-2"
+                            onClick={() => setOpenGroup(null)}
+                          >
+                            {link.label}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
             );
           })}
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
-          <a
-            className="hidden h-10 items-center rounded-full border border-slate-200 px-4 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-50 sm:inline-flex"
-            href="/login"
-          >
+          <ThemeToggle className="hidden lg:inline-flex" />
+          <a className="hidden h-10 items-center rounded-control px-3 text-sm font-semibold text-ink hover:bg-surface-2 sm:inline-flex" href="/login">
             Log in
           </a>
           <a
-            className="hidden h-10 items-center rounded-full bg-orange-600 px-4 text-sm font-bold text-slate-900 transition-colors hover:bg-orange-500 sm:inline-flex"
+            className="hidden h-10 items-center rounded-control bg-accent px-4 text-sm font-semibold text-accent-on transition-colors hover:bg-accent-hover sm:inline-flex"
             href="/signup"
           >
-            Get started
+            Open an account
           </a>
           <button
+            ref={menuButtonRef}
             type="button"
-            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-800 transition-colors hover:bg-slate-100 md:hidden"
+            className="grid h-10 w-10 place-items-center rounded-control text-ink hover:bg-surface-2 md:hidden"
             aria-expanded={mobileOpen}
+            aria-haspopup="dialog"
             aria-label={mobileOpen ? "Close menu" : "Open menu"}
             onClick={() => setMobileOpen((v) => !v)}
           >
-            <span className="sr-only">Menu</span>
-            <span className="relative block h-3.5 w-5">
-              <span
-                className={`absolute left-0 block h-0.5 w-5 rounded-full bg-slate-900 transition-all duration-200 ${
-                  mobileOpen ? "top-1.5 rotate-45" : "top-0"
-                }`}
-              />
-              <span
-                className={`absolute left-0 top-1.5 block h-0.5 w-5 rounded-full bg-slate-900 transition-all duration-200 ${
-                  mobileOpen ? "opacity-0" : "opacity-100"
-                }`}
-              />
-              <span
-                className={`absolute left-0 block h-0.5 w-5 rounded-full bg-slate-900 transition-all duration-200 ${
-                  mobileOpen ? "top-1.5 -rotate-45" : "top-3"
-                }`}
-              />
-            </span>
+            <Icon name={mobileOpen ? "x" : "menu"} />
           </button>
         </div>
       </div>

@@ -84,10 +84,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   chartContainer: { width: 200, height: 200, alignSelf: "center", alignItems: "center", justifyContent: "center" },
   center: { position: "absolute", alignItems: "center" },
   centerLabel: { fontSize: 12, color: colors.slate500, fontWeight: "600" },
-  centerValue: { fontSize: 18, fontWeight: "800", color: colors.slate900, marginTop: 2 },
+  centerValue: { fontSize: 18, fontWeight: "600", color: colors.slate900, marginTop: 2 },
   legend: { marginTop: 20, gap: 10 },
   legendRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   dot: { width: 10, height: 10, borderRadius: 5 },
   legendLabel: { flex: 1, fontSize: 14, color: colors.slate700, fontWeight: "500" },
-  legendAmount: { fontSize: 14, fontWeight: "700", color: colors.slate900 },
+  legendAmount: { fontSize: 14, fontWeight: "600", color: colors.slate900 },
 });

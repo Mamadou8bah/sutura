@@ -47,7 +47,7 @@ export function SupportTickets({ onBack }: { onBack: () => void }) {
     <TextInput style={[styles.input, styles.message]} value={message} onChangeText={setMessage} maxLength={5000} placeholder="How can we help?" multiline editable={!busy} />
     {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
     {!!notice && <Text style={styles.text}>{notice}</Text>}
-    <Pressable style={styles.button} disabled={busy || !subject.trim() || !message.trim()} onPress={send}><Text style={styles.buttonText}>{busy ? "Submitting..." : "Submit ticket"}</Text></Pressable>
+    <Pressable style={styles.button} disabled={busy || !subject.trim() || !message.trim()} onPress={send}><Text style={styles.buttonText}>{busy ? "Submitting…" : "Submit ticket"}</Text></Pressable>
     <Pressable onPress={() => { setError(""); load().catch((err) => setError(err instanceof Error ? err.message : "Could not refresh")); }}><Text style={styles.text}>Refresh replies</Text></Pressable>
     {tickets.map((ticket) => <View style={styles.card} key={ticket.id}>
       <Text style={styles.title}>#{ticket.id} · {ticket.subject}</Text>
@@ -61,11 +61,11 @@ export function SupportTickets({ onBack }: { onBack: () => void }) {
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: { padding: spacing.screen, paddingBottom: 32, gap: 14 },
   text: {fontFamily: appFonts.regular, color: colors.slate800, fontSize: 14, lineHeight: 21 },
-  title: {fontFamily: appFonts.bold, color: colors.slate900, fontSize: 16, fontWeight: "700" },
+  title: {fontFamily: appFonts.bold, color: colors.slate900, fontSize: 16, fontWeight: "600" },
   input: { backgroundColor: colors.surfaceMuted, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 14, color: colors.slate900 },
   message: { minHeight: 120, textAlignVertical: "top" },
   error: { color: colors.rose800 },
   button: { backgroundColor: colors.orange, padding: 16, borderRadius: 12, alignItems: "center" },
-  buttonText: { color: "#181a20", fontWeight: "700" },
+  buttonText: { color: "#181a20", fontWeight: "600" },
   card: { backgroundColor: colors.surface, borderRadius: 12, padding: 16, gap: 8, borderWidth: 1, borderColor: colors.border },
 });

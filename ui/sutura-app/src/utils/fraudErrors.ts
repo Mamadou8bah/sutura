@@ -14,7 +14,7 @@ export function formatFraudError(message: string): string {
     return message;
   }
   if (/review/i.test(message)) {
-    return "This transaction needs additional review. Please try again later or contact support.";
+    return "This transaction is under review. No money has moved yet. Check Activity for the result before trying again.";
   }
   return "This transaction was blocked for your security. If you believe this is a mistake, contact Sutura support.";
 }

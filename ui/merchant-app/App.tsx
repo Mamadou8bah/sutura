@@ -1,9 +1,9 @@
-import { GlassBackdrop } from "./src/components/GlassBackdrop";
+import { DeviceLockProvider } from "./src/context/DeviceLockContext";
+import { FirstLaunchGate } from "./src/components/FirstLaunchGate";
+import { BottomNav, merchantTabs } from "./src/components/BottomNav";
 import { useAppFonts } from "./src/hooks/useAppFonts";
 import { SafeAreaProvider, SafeAreaView as PlatformSafeAreaView } from "react-native-safe-area-context";
 import { NativeNavigator } from "./src/components/NativeNavigator";
-import { Ionicons } from "@expo/vector-icons";
-import { Pressable, Text } from "react-native";
 import { MerchantProvider } from "./src/context/MerchantContext";
 import { CollectionsScreen } from "./src/screens/CollectionsScreen";
 import { WalletsScreen } from "./src/screens/WalletsScreen";
@@ -71,34 +71,18 @@ function Router({ route }: { route?: string }) {
             return <WelcomeScreen />;
     }
 }
-const merchantTabs = [
-  { value: "home", label: "Home", icon: "home-outline" },
-  { value: "collections", label: "Collections", icon: "qr-code-outline" },
-  { value: "activity", label: "Activity", icon: "receipt-outline" },
-  { value: "more", label: "More", icon: "grid-outline" },
-] as const;
-
 function MerchantNav() {
   const { screen, setScreen, session } = useApp();
-  const { colors } = useTheme();
-  if (session?.userStatus !== "ACTIVE" || !merchantTabs.some(tab => tab.value === screen)) return null;
-  const navigate = (value: string) => setScreen(value as import("./src/context/AppContext").Screen);
-  return <View style={{ flexDirection: "row", paddingVertical: 4, marginHorizontal: 12, marginTop: 6, marginBottom: 4, borderRadius: 24, overflow: "hidden" }}><GlassBackdrop />
-    {merchantTabs.map(({ value, icon, label }) => <Pressable key={value} accessibilityRole="tab"
-      accessibilityLabel={label} accessibilityState={{ selected: screen === value }} onPress={() => navigate(value)}
-      style={{ flex: 1, alignItems: "center", paddingVertical: 8, gap: 5 }}>
-      <Ionicons name={icon} size={23} color={screen === value ? colors.orange : colors.slate500} />
-      <Text style={{ fontSize: 12, color: screen === value ? colors.orange : colors.slate500 }}>{label}</Text>
-    </Pressable>)}
-  </View>;
+  if (session?.userStatus !== "ACTIVE" || !merchantTabs.some(tab => tab.id === screen)) return null;
+  return <BottomNav active={screen} onChange={setScreen} />;
 }
 function MerchantScreens() {
   const { screen, setScreen, session, loading } = useApp();
   if (loading) return <Router />;
-  return <View style={{flex:1}}><NativeNavigator screen={screen} scope={session?.email ?? "guest"}
+  return <FirstLaunchGate app="merchant" authenticated={!!session}><View style={{flex:1}}><NativeNavigator screen={screen} scope={session?.email ?? "guest"}
     onChange={value => setScreen(value as import("./src/context/AppContext").Screen)}
     screens={["welcome","login","reg-phone","reg-otp","reg-business","reg-owner","reg-account","verification","pending","collections","wallets","activity","more","support","settings","home"]}
-    renderScreen={name => <Router route={name}/>} /></View>;
+    renderScreen={name => <Router route={name}/>} /></View></FirstLaunchGate>;
 }
 function MainApp() {
     const { colors, mode } = useTheme();
@@ -113,7 +97,12 @@ function ThemedApp() {
   const styles = useThemedStyles(createStyles);
   const fontsLoaded = useAppFonts();
   if (!fontsLoaded) return <View style={styles.loading}><ActivityIndicator size="large" color={colors.primary}/></View>;
-  return <AppProvider><MerchantProvider><MainApp /></MerchantProvider></AppProvider>;
+  return <AppProvider><SecuredMerchantApp /></AppProvider>;
+}
+
+function SecuredMerchantApp() {
+  const { session, signOut } = useApp();
+  return <DeviceLockProvider scope={session ? `merchant:${session.email}` : null} onSignOut={signOut}><MerchantProvider><MainApp /></MerchantProvider></DeviceLockProvider>;
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({

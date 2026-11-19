@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { ContentBlock, SitePage } from "../../site-page";
+
+export const metadata: Metadata = {
+  title: "Privacy policy",
+  description: "How Sutura collects, uses, and protects personal and business data across our web platform, APIs, and mobile apps.",
+};
 
 export default function PrivacyPolicyPage() {
   return (
@@ -54,14 +60,14 @@ export default function PrivacyPolicyPage() {
         <p>
           You can update account details, request access or correction where applicable, and contact us about privacy
           questions at{" "}
-          <a href="/contact" className="font-bold text-[#123c91]">
+          <a href="/contact">
             Contact sales
           </a>
           .
         </p>
       </ContentBlock>
 
-      <p className="text-sm text-slate-500">Last updated: August 23, 2026</p>
+      <p className="text-sm text-ink-3">Last updated: August 23, 2026</p>
     </SitePage>
   );
 }

@@ -1,3 +1,4 @@
+import { clearDeviceData } from "../storage/deviceVault";
 import {assertVerifiedSession, type VerificationCode} from "../api/twoFactor";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { api, type AuthSession, type CustomerRegistration } from "../api/client";
@@ -21,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null);
   const [newlyRegistered, setNewlyRegistered] = useState(false);
   const pendingSignup=useRef<Pick<CustomerRegistration,"firstName"|"lastName"|"phoneNumber">|null>(null);
+  const sessionEpoch = useRef(0);
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const [loading, setLoading] = useState(true);
@@ -28,12 +30,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const persistSession = useCallback(async (stored: AuthSession) => {
     if (!stored.accessToken || stored.accessToken.startsWith("demo.")) throw new Error("Please sign in again.");
+    const epoch = sessionEpoch.current;
     await saveSession(SESSION_KEY, JSON.stringify(stored));
+    if (epoch !== sessionEpoch.current) return;
+    sessionRef.current = stored;
     setSession(stored);
   }, []);
 
   const signOut = useCallback(async () => {
+    sessionEpoch.current++;
+    const owner = sessionRef.current?.username;
     await clearSession(SESSION_KEY);
+    sessionRef.current = null;
+    if (owner) await clearDeviceData(`customer:${owner}`).catch(() => undefined);
     setSession(null);
     setNewlyRegistered(false);
   }, []);

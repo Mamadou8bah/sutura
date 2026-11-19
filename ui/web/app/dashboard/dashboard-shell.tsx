@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { clearAuthSession, getAuthSession } from "../../lib/auth-session";
 import { clearDemoSession, getDemoSession } from "../../lib/demo-auth";
 import type { DemoRole } from "../../lib/mock/demo-users";
+import { Icon, InlineAlert, ThemeToggle } from "../components/ui";
 import type { DashboardTab } from "./dashboard-tabs";
 
 const roleLabels: Record<DemoRole, string> = {
@@ -25,6 +26,7 @@ export function DashboardShell({
   activeTab: string;
   onTabChange: (tab: string) => void;
   children: React.ReactNode;
+  /** Inline banner. Prefer useToast() for success and inline errors next to the action. */
   message?: { type: "success" | "error"; text: string } | null;
 }) {
   const [session, setSession] = useState(() => getAuthSession() ?? getDemoSession());
@@ -40,18 +42,29 @@ export function DashboardShell({
     if (!menuOpen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
     };
   }, [menuOpen]);
+
+  const activeLabel = tabs.find((t) => t.id === activeTab)?.label ?? "Dashboard";
+
+  // Functional page title per view.
+  useEffect(() => {
+    const role = session ? roleLabels[session.role] : "Dashboard";
+    document.title = `${activeLabel} · ${role} · Sutura`;
+  }, [activeLabel, session]);
 
   function handleLogout() {
     clearAuthSession();
     clearDemoSession();
     window.location.href = "/login";
   }
-
-  const isLive = session && "source" in session && session.source === "api";
 
   const initials = session?.name
     ?.split(" ")
@@ -60,9 +73,7 @@ export function DashboardShell({
     .slice(0, 2)
     .toUpperCase();
 
-  const adminNavigation=session?.role === "admin";
-
-  const activeLabel = tabs.find((t) => t.id === activeTab)?.label ?? "Menu";
+  const sidebarNavigation = session?.role === "admin";
 
   function selectTab(id: string) {
     onTabChange(id);
@@ -72,39 +83,39 @@ export function DashboardShell({
   const mobileMenu =
     mounted &&
     createPortal(
-      <div className={`fixed inset-0 z-[100000] md:hidden ${menuOpen ? "" : "pointer-events-none"}`} aria-hidden={!menuOpen}>
+      <div className={`fixed inset-0 z-[100000] md:hidden ${menuOpen ? "" : "pointer-events-none"}`} aria-hidden={!menuOpen} inert={!menuOpen}>
         <button
           type="button"
-          className={`absolute inset-0 bg-slate-900/50 transition-opacity duration-200 ${menuOpen ? "opacity-100" : "opacity-0"}`}
+          tabIndex={-1}
+          className={`absolute inset-0 bg-black/45 transition-opacity duration-200 ${menuOpen ? "opacity-100" : "opacity-0"}`}
           aria-label="Close menu"
           onClick={() => setMenuOpen(false)}
         />
         <div
-          className={`absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto border-t border-slate-200 bg-white transition-transform duration-300 ease-out ${
+          role="dialog"
+          aria-modal="true"
+          aria-label="All sections"
+          className={`absolute inset-x-0 bottom-0 max-h-[85vh] overflow-y-auto rounded-t-panel border-t border-line bg-surface transition-transform duration-300 ease-out ${
             menuOpen ? "translate-y-0" : "translate-y-full"
           }`}
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
-          <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <div className="flex items-center justify-between border-b border-line px-4 py-3">
             <div>
-              <p className="text-sm font-black text-slate-900">All sections</p>
-              <p className="text-xs font-medium text-slate-500">
-                {session ? roleLabels[session.role] : "Dashboard"} · {isLive ? "Live" : "Demo"}
-              </p>
+              <p className="text-base font-semibold text-ink">All sections</p>
+              <p className="text-xs text-ink-2">{session ? `${roleLabels[session.role]} · ${session.name}` : "Dashboard"}</p>
             </div>
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-600 hover:bg-slate-100"
+              className="grid h-10 w-10 place-items-center rounded-control text-ink-2 hover:bg-surface-2"
               aria-label="Close menu"
               onClick={() => setMenuOpen(false)}
             >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
-                <path d="M6 6l12 12M18 6L6 18" />
-              </svg>
+              <Icon name="x" />
             </button>
           </div>
 
-          <nav className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3">
+          <nav aria-label="Sections" className="grid grid-cols-2 gap-2 p-4 sm:grid-cols-3">
             {tabs.map((item) => {
               const active = activeTab === item.id;
               return (
@@ -112,129 +123,143 @@ export function DashboardShell({
                   key={item.id}
                   type="button"
                   onClick={() => selectTab(item.id)}
-                  className={`flex items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors ${
-                    active
-                      ? "border-orange-500 bg-orange-500 text-slate-950"
-                      : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                  aria-current={active ? "page" : undefined}
+                  className={`flex min-h-12 items-center gap-3 rounded-row border px-3 py-2.5 text-left transition-colors ${
+                    active ? "border-accent bg-accent-tint text-ink" : "border-line bg-surface text-ink hover:bg-surface-2"
                   }`}
                 >
-                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${active ? "bg-white/20" : "bg-slate-100"}`}>
-                    {item.icon}
-                  </span>
-                  <span className="text-sm font-bold leading-tight">{item.label}</span>
+                  <span className={active ? "text-accent-ink" : "text-ink-2"}>{item.icon}</span>
+                  <span className="text-sm font-medium leading-tight">{item.label}</span>
                 </button>
               );
             })}
           </nav>
+          <div className="flex items-center justify-between border-t border-line px-4 py-3">
+            <span className="text-sm text-ink-2">Theme</span>
+            <ThemeToggle />
+          </div>
         </div>
       </div>,
       document.body,
     );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white">
-        <div className="mx-auto flex h-14 w-[min(1440px,calc(100%-1rem))] items-center gap-3 px-2 sm:h-16 sm:px-3 lg:px-5">
-          <a href="/" className="flex shrink-0 items-center gap-2">
-            <img
-              src="/brand/sutura-logo.png"
-              alt="Sutura"
-              className="h-8 w-8 object-contain"
-            />
-            <span className="text-base font-black tracking-tight text-[#123c91]">Sutura</span>
+    <div className="min-h-screen bg-canvas text-ink">
+      <a href="#main" className="sr-only-focusable fixed left-2 top-2 z-[100002] rounded-control bg-surface px-3 py-2 text-sm font-semibold shadow-pop">
+        Skip to content
+      </a>
+      <header className="sticky top-0 z-40 border-b border-line bg-surface/95 backdrop-blur supports-[backdrop-filter]:bg-surface/85">
+        <div className="mx-auto flex h-14 w-full max-w-[1440px] items-center gap-3 px-4 sm:px-6 lg:px-8">
+          <a href="/" className="flex shrink-0 items-center gap-2 rounded-control" aria-label="Sutura home">
+            <img src="/brand/sutura-logo.png" alt="" width={28} height={28} className="h-7 w-7 object-contain" />
+            <span className="text-base font-semibold text-ink">Sutura</span>
           </a>
+          {session ? (
+            <span className="hidden rounded-full border border-line px-2 py-0.5 text-xs text-ink-2 sm:inline">{roleLabels[session.role]}</span>
+          ) : null}
 
-          <nav className={`${adminNavigation?"md:hidden":"md:flex"} mx-auto hidden min-w-0 max-w-full items-center gap-1 overflow-x-auto rounded-full bg-slate-100 p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}>
+          <nav
+            aria-label="Sections"
+            className={`${sidebarNavigation ? "md:hidden" : "md:flex"} mx-auto hidden min-w-0 max-w-full items-center gap-0.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
+          >
             {tabs.map((item) => {
               const active = activeTab === item.id;
               return (
                 <button
                   key={item.id}
                   type="button"
-                  aria-label={item.label}
+                  aria-current={active ? "page" : undefined}
                   onClick={() => onTabChange(item.id)}
-                  className={`flex shrink-0 items-center gap-2 rounded-full px-3.5 py-2 text-sm font-bold transition-colors ${
-                    active ? "bg-orange-500 text-slate-950" : "text-slate-600 hover:bg-white hover:text-slate-900"
+                  className={`relative flex h-14 shrink-0 items-center gap-2 px-3 text-sm font-medium transition-colors ${
+                    active ? "text-ink" : "text-ink-2 hover:text-ink"
                   }`}
                 >
-                  {item.icon}
+                  <span className={active ? "text-accent-ink" : ""}>{item.icon}</span>
                   <span>{item.label}</span>
+                  {active ? <span className="absolute inset-x-3 bottom-0 h-0.5 rounded-full bg-accent" aria-hidden="true" /> : null}
                 </button>
               );
             })}
           </nav>
 
           <div className="ml-auto flex shrink-0 items-center gap-2">
-            {session ? (
-              <span className="hidden rounded-full bg-blue-100 px-3 py-1 text-xs font-bold capitalize text-[#123c91] lg:inline">
-                {roleLabels[session.role]}
-              </span>
-            ) : null}
-            <span
-              className={`hidden rounded-full px-3 py-1 text-xs font-bold lg:inline ${
-                isLive ? "bg-emerald-100 text-emerald-900" : "bg-orange-100 text-orange-900"
-              }`}
-            >
-              {isLive ? "Live" : "Demo"}
-            </span>
+            <ThemeToggle className="hidden md:inline-flex" />
             <div
-              className="grid h-9 w-9 place-items-center rounded-full bg-orange-500 text-[11px] font-black text-slate-950"
+              className="grid h-8 w-8 place-items-center rounded-full bg-surface-2 text-xs font-semibold text-ink"
               title={session?.name}
+              aria-hidden="true"
             >
-              {initials ?? "PF"}
+              {initials ?? "?"}
             </div>
             <button
               type="button"
               onClick={handleLogout}
-              aria-label="Log out"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900"
+              className="inline-flex h-9 items-center gap-1.5 rounded-control px-2 text-sm font-medium text-ink-2 transition-colors hover:bg-surface-2 hover:text-ink"
             >
-              <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-                <path d="M10 7V6a2 2 0 0 1 2-2h7v16h-7a2 2 0 0 1-2-2v-1" />
-                <path d="M15 12H3m0 0 3-3m-3 3 3 3" />
-              </svg>
+              <Icon name="logout" size={18} />
+              <span className="hidden sm:inline">Log out</span>
+              <span className="sr-only sm:hidden">Log out</span>
             </button>
           </div>
         </div>
       </header>
 
-      {/* Mobile bottom bar: current section + open full menu */}
+      {/* Mobile bottom bar: current section + full menu */}
       <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white md:hidden"
+        aria-label="Section menu"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface md:hidden"
         style={{ paddingBottom: "max(0.5rem, env(safe-area-inset-bottom))" }}
       >
-        <div className="flex items-center gap-2 px-3 py-2">
+        <div className="px-3 py-2">
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
-            className="flex min-w-0 flex-1 items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-left"
+            className="flex w-full min-w-0 items-center gap-3 rounded-row border border-line bg-surface-2 px-3 py-2 text-left"
             aria-expanded={menuOpen}
+            aria-haspopup="dialog"
           >
-            <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-white text-[#123c91]">
-              {tabs.find((t) => t.id === activeTab)?.icon}
-            </span>
+            <span className="text-accent-ink">{tabs.find((t) => t.id === activeTab)?.icon}</span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-black text-slate-900">{activeLabel}</span>
-              <span className="block text-[11px] font-semibold text-slate-500">Tap for all sections</span>
+              <span className="block truncate text-sm font-semibold text-ink">{activeLabel}</span>
+              <span className="block text-xs text-ink-2">All sections</span>
             </span>
-            <svg viewBox="0 0 20 20" className="h-5 w-5 shrink-0 text-slate-400" fill="currentColor" aria-hidden="true">
-              <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.17l3.71-3.94a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" />
-            </svg>
+            <Icon name="chevron-up" size={18} className="text-ink-3" />
           </button>
         </div>
       </nav>
 
       {mobileMenu}
 
-      {adminNavigation&&<aside aria-label="Admin navigation" className="fixed bottom-0 left-0 top-16 hidden w-56 overflow-y-auto border-r border-slate-200 bg-white p-4 md:block"><p className="mb-3 px-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Workspace</p>{tabs.map(item=><button key={item.id} type="button" aria-label={item.label} aria-current={activeTab===item.id?"page":undefined} onClick={()=>onTabChange(item.id)} className={`mb-1 flex w-full items-center gap-2 rounded-xl px-3 py-2 text-left text-sm font-semibold ${activeTab===item.id?"bg-amber-100 text-slate-950":"text-slate-600 hover:bg-slate-50"}`}>{item.icon}{item.label}</button>)}</aside>}
-      <main className={`${adminNavigation?"md:ml-56 md:w-[calc(100%-14rem)]":"mx-auto w-[min(1440px,calc(100%-1rem))]"} overflow-x-clip px-4 pb-[5.5rem] pt-4 sm:px-6 sm:pt-5 md:pb-6 lg:px-8 lg:pt-6`}>
+      {sidebarNavigation ? (
+        <aside aria-label="Admin navigation" className="fixed bottom-0 left-0 top-14 hidden w-56 overflow-y-auto border-r border-line bg-surface p-3 md:block">
+          <nav aria-label="Sections" className="space-y-0.5">
+            {tabs.map((item) => {
+              const active = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => onTabChange(item.id)}
+                  className={`flex h-9 w-full items-center gap-2.5 rounded-control px-2.5 text-left text-sm transition-colors ${
+                    active ? "bg-accent-tint font-semibold text-ink" : "text-ink-2 hover:bg-surface-2 hover:text-ink"
+                  }`}
+                >
+                  <span className={active ? "text-accent-ink" : ""}>{item.icon}</span>
+                  {item.label}
+                </button>
+              );
+            })}
+          </nav>
+        </aside>
+      ) : null}
+      <main
+        id="main"
+        className={`${sidebarNavigation ? "md:ml-56 md:w-[calc(100%-14rem)]" : "mx-auto w-full max-w-[1440px]"} overflow-x-clip px-4 pb-24 pt-5 sm:px-6 md:pb-10 lg:px-8 lg:pt-6`}
+      >
         {message ? (
-          <div
-            className={`mb-5 rounded-2xl px-4 py-3 text-sm font-semibold ${
-              message.type === "success" ? "bg-emerald-200 text-emerald-950" : "bg-rose-200 text-rose-950"
-            }`}
-          >
-            {message.text}
+          <div className="mb-5">
+            <InlineAlert tone={message.type === "success" ? "success" : "error"}>{message.text}</InlineAlert>
           </div>
         ) : null}
         {children}
@@ -250,33 +275,28 @@ export function PanelCard({
   children,
   className = "",
   variant = "default",
+  headingLevel = "h2",
 }: {
   title?: string;
   subtitle?: string;
   action?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  /** @deprecated the gradient hero was removed; "hero" renders as a default panel. */
   variant?: "default" | "hero";
+  headingLevel?: "h1" | "h2";
 }) {
-  if (variant === "hero") {
-    return (
-      <section
-        className={`overflow-hidden rounded-[1.5rem] bg-gradient-to-br from-[#123c91] via-[#1649a8] to-[#1e5bb8] p-5 text-white sm:rounded-[2rem] sm:p-6 ${className}`}
-      >
-        {children}
-      </section>
-    );
-  }
-
+  void variant;
+  const H = headingLevel;
   return (
-    <section className={`rounded-[1.5rem] border border-slate-200 bg-white p-4 sm:rounded-[2rem] sm:p-5 md:p-6 ${className}`}>
+    <section className={`rounded-card border border-line bg-surface p-4 shadow-card sm:p-5 ${className}`}>
       {(title || action) && (
-        <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            {title ? <h2 className="text-lg font-black text-slate-950">{title}</h2> : null}
-            {subtitle ? <p className="mt-1 text-xs font-medium text-slate-500">{subtitle}</p> : null}
+            {title ? <H className="text-base font-semibold text-ink">{title}</H> : null}
+            {subtitle ? <p className="mt-0.5 text-sm text-ink-2">{subtitle}</p> : null}
           </div>
-          {action}
+          {action ? <div className="flex shrink-0 flex-wrap gap-2">{action}</div> : null}
         </div>
       )}
       {children}
@@ -284,11 +304,13 @@ export function PanelCard({
   );
 }
 
-export function PrimaryButton({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) {
+export function PrimaryButton({ children, busy, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement> & { busy?: boolean }) {
   return (
     <button
       {...props}
-      className={`h-12 w-full rounded-full bg-orange-500 text-sm font-black text-slate-950 transition-colors hover:bg-orange-600 disabled:cursor-not-allowed disabled:bg-slate-400 ${props.className ?? ""}`}
+      disabled={props.disabled || busy}
+      aria-busy={busy || undefined}
+      className={`inline-flex h-11 w-full items-center justify-center gap-2 rounded-control bg-accent text-sm font-semibold text-accent-on transition-colors hover:bg-accent-hover disabled:cursor-not-allowed disabled:opacity-50 ${props.className ?? ""}`}
     >
       {children}
     </button>
@@ -299,7 +321,7 @@ export function SecondaryButton({ children, ...props }: React.ButtonHTMLAttribut
   return (
     <button
       {...props}
-      className={`h-11 rounded-full bg-slate-200 px-5 text-sm font-bold text-slate-800 transition-colors hover:bg-slate-300 ${props.className ?? ""}`}
+      className={`inline-flex h-10 items-center justify-center gap-2 rounded-control border border-line-strong bg-surface px-4 text-sm font-semibold text-ink transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-50 ${props.className ?? ""}`}
     >
       {children}
     </button>
@@ -307,15 +329,17 @@ export function SecondaryButton({ children, ...props }: React.ButtonHTMLAttribut
 }
 
 export const inputClass =
-  "h-11 w-full rounded-2xl bg-slate-200 px-4 text-sm font-semibold text-slate-900 outline-none transition-colors focus:bg-white focus:ring-4 focus:ring-blue-200";
+  "h-11 w-full rounded-control border border-line-strong bg-surface px-3 text-sm text-ink placeholder:text-ink-3 transition-colors focus:border-accent-ink disabled:opacity-60 aria-[invalid=true]:border-status-failed-fg";
 
 export const selectClass =
-  "h-11 w-full rounded-2xl bg-slate-200 px-4 text-sm font-semibold text-slate-800 outline-none focus:bg-white focus:ring-4 focus:ring-blue-200 sm:w-auto";
+  "h-11 w-full rounded-control border border-line-strong bg-surface px-3 text-sm text-ink transition-colors focus:border-accent-ink sm:w-auto";
 
-export const tableClass = "min-w-full text-left text-sm";
-export const tableHeadClass = "bg-slate-200 text-slate-700";
-export const tableRowClass = "odd:bg-white even:bg-slate-100";
+export const tableClass = "min-w-full text-left text-[13px] tabular-nums";
+export const tableHeadClass = "border-y border-line bg-surface-2/60 text-xs text-ink-2";
+export const tableRowClass = "border-b border-line";
 
 export function formatTimestamp(value: string) {
-  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(new Date(value));
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" }).format(d);
 }

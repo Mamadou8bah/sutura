@@ -1,63 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { authApi } from "../lib/auth-api";
-import { clearAuthSession, getDashboardPath, mapBackendRole, saveAuthSession } from "../lib/auth-session";
+import { getDashboardPath, mapBackendRole, saveAuthSession } from "../lib/auth-session";
 import { toE164Phone } from "../lib/merchant-registration";
-import { AuthField, AuthShell, DividerText, SocialButton } from "./auth-shell";
+import { AuthField, AuthShell, authInputClass } from "./auth-shell";
+import { Button, friendlyError, Icon, InlineAlert } from "./components/ui";
 
-
-function MailIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M4 6.75h16v10.5H4V6.75Z" />
-      <path d="m4.5 7.5 7.5 5.25 7.5-5.25" />
-    </svg>
-  );
+/** Shows "still connecting" copy when a request runs long (free-host cold starts). */
+function useSlowFlag(active: boolean, afterMs = 8000) {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    if (!active) {
+      setSlow(false);
+      return;
+    }
+    const t = window.setTimeout(() => setSlow(true), afterMs);
+    return () => window.clearTimeout(t);
+  }, [active, afterMs]);
+  return slow;
 }
 
-function EyeOffIcon() {
+function SlowNotice() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="m3 3 18 18" />
-      <path d="M10.7 10.7a2 2 0 0 0 2.6 2.6" />
-      <path d="M7.4 7.7C5.6 8.8 4.1 10.3 3 12c2.2 3.4 5.2 5.1 9 5.1 1.4 0 2.7-.2 3.8-.7" />
-      <path d="M10.8 6.9c.4 0 .8-.1 1.2-.1 3.8 0 6.8 1.7 9 5.2-.5.8-1.1 1.5-1.8 2.1" />
-    </svg>
+    <p role="status" className="text-sm text-ink-2">
+      Still connecting. The server may be starting up, which can take up to a minute.
+    </p>
   );
 }
-
-function GoogleIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path fill="#4285F4" d="M21.6 12.23c0-.78-.07-1.53-.2-2.23H12v4.22h5.38a4.6 4.6 0 0 1-1.99 3.02v2.74h3.22c1.89-1.74 2.99-4.3 2.99-7.75Z" />
-      <path fill="#34A853" d="M12 22c2.7 0 4.96-.9 6.61-2.42l-3.22-2.74c-.9.6-2.04.95-3.39.95-2.6 0-4.81-1.76-5.6-4.12H3.07v2.83A10 10 0 0 0 12 22Z" />
-      <path fill="#FBBC05" d="M6.4 13.67A6 6 0 0 1 6.08 12c0-.58.1-1.14.31-1.67V7.5H3.07A10 10 0 0 0 2 12c0 1.61.39 3.14 1.07 4.5l3.33-2.83Z" />
-      <path fill="#EA4335" d="M12 6.21c1.47 0 2.79.51 3.83 1.5l2.86-2.86C16.96 3.24 14.7 2.25 12 2.25A10 10 0 0 0 3.07 7.5l3.33 2.83C7.19 7.97 9.4 6.21 12 6.21Z" />
-    </svg>
-  );
-}
-
-function FacebookIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 text-[#1877F2]" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-      <path d="M22 12a10 10 0 1 0-11.56 9.88v-6.99H7.9V12h2.54V9.8c0-2.5 1.49-3.89 3.77-3.89 1.09 0 2.23.2 2.23.2v2.45h-1.26c-1.24 0-1.63.77-1.63 1.56V12h2.78l-.44 2.89h-2.34v6.99A10 10 0 0 0 22 12Z" />
-    </svg>
-  );
-}
-
-const inputClass =
-  "h-12 w-full rounded-2xl border border-slate-300 bg-white px-4 text-sm font-semibold text-slate-900 outline-none placeholder:text-slate-500 focus:border-orange-500 focus:ring-4 focus:ring-orange-100";
 
 export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "login" | "signup" }) {
   const [mode, setMode] = useState<"login" | "signup">(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [challengeId,setChallengeId]=useState("");
-  const [verificationCode,setVerificationCode]=useState("");
-  const [finishingSignup,setFinishingSignup]=useState(false);
+  const [challengeId, setChallengeId] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [finishingSignup, setFinishingSignup] = useState(false);
   const [loading, setLoading] = useState(false);
   const [signup, setSignup] = useState({
     firstName: "",
@@ -68,20 +48,34 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
     confirmPassword: "",
   });
   const isLogin = mode === "login";
+  const slow = useSlowFlag(loading);
+  const otpId = useId();
+  const phoneId = useId();
+
+  useEffect(() => {
+    document.title = challengeId ? "Verify it's you · Sutura" : isLogin ? "Log in · Sutura" : "Create a developer account · Sutura";
+  }, [challengeId, isLogin]);
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading) return;
     setError("");
     setLoading(true);
 
     try {
-      if(challengeId&&!/^[0-9]{6}$/.test(verificationCode))throw new Error("Enter the six-digit verification code.");
-      const auth = await authApi.login(email.trim(), password,challengeId?{challengeId,code:verificationCode}:undefined);
-      if(auth.twoFactorRequired&&auth.twoFactorChallengeId){setChallengeId(auth.twoFactorChallengeId);setVerificationCode("");return;}
-      if(!auth.accessToken||!auth.refreshToken)throw new Error("Sign-in did not return a verified session.");
+      if (challengeId && !/^[0-9]{6}$/.test(verificationCode)) throw new Error("Enter the six-digit verification code.");
+      const auth = await authApi.login(email.trim(), password, challengeId ? { challengeId, code: verificationCode } : undefined);
+      if (auth.twoFactorRequired && auth.twoFactorChallengeId) {
+        setChallengeId(auth.twoFactorChallengeId);
+        setVerificationCode("");
+        return;
+      }
+      if (!auth.accessToken || !auth.refreshToken) throw new Error("Sign-in did not return a verified session.");
       const role = mapBackendRole(auth.role);
       if (role !== "admin" && role !== "developer") {
-        setError("Web login is for developer and admin accounts. Use the mobile apps for customer or merchant access.");
+        setError(
+          "Customer and merchant accounts can't log in on the web yet. Use the Sutura app on your phone, or contact support if you need web access.",
+        );
         return;
       }
       saveAuthSession({
@@ -93,7 +87,7 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
       });
       window.location.href = finishingSignup && role === "developer" ? "/app/verification" : getDashboardPath(role);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      setError(friendlyError(err instanceof Error ? err.message : "Login failed"));
     } finally {
       setLoading(false);
     }
@@ -101,10 +95,11 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
 
   async function handleSignup(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (loading) return;
     setError("");
 
     if (signup.password !== signup.confirmPassword) {
-      setError("Passwords do not match");
+      setError("The two passwords don't match. Type the same password in both fields.");
       return;
     }
 
@@ -118,7 +113,15 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
         password: signup.password,
         role: "DEVELOPER",
       });
-      if(auth.twoFactorRequired&&auth.twoFactorChallengeId){setFinishingSignup(true);setEmail(signup.email.trim());setPassword(signup.password);setChallengeId(auth.twoFactorChallengeId);setVerificationCode("");setMode("login");return;}
+      if (auth.twoFactorRequired && auth.twoFactorChallengeId) {
+        setFinishingSignup(true);
+        setEmail(signup.email.trim());
+        setPassword(signup.password);
+        setChallengeId(auth.twoFactorChallengeId);
+        setVerificationCode("");
+        setMode("login");
+        return;
+      }
       saveAuthSession({
         username: signup.email.trim(),
         role: auth.role,
@@ -130,134 +133,212 @@ export function CombinedAuthPage({ initialMode = "login" }: { initialMode?: "log
       });
       window.location.href = "/app/verification";
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Registration failed");
+      setError(friendlyError(err instanceof Error ? err.message : "Registration failed"));
     } finally {
       setLoading(false);
     }
   }
 
-  if (challengeId) return <AuthShell heading="Verify it's you">
-    <form className="mt-5 space-y-4" onSubmit={handleLogin}>
-      <button type="button" disabled={loading} onClick={() => { setChallengeId(""); setVerificationCode(""); setError(""); }} className="min-h-11 text-sm font-semibold text-orange-600">← Back to sign in</button>
-      <h1 className="text-2xl font-bold text-slate-900">Enter verification code</h1>
-      <p className="text-sm leading-6 text-slate-500">Enter the six-digit code sent to your email. It expires in five minutes.</p>
-      <label className="block text-sm font-semibold text-slate-900">Verification code
-        <input aria-label="Verification code" className={inputClass + " mt-2 text-center tracking-[0.5em]"} inputMode="numeric" autoComplete="one-time-code"
-          autoFocus maxLength={6} pattern="[0-9]{6}" required disabled={loading} value={verificationCode}
-          onChange={e => setVerificationCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))} />
-      </label>
-      {!!error && <p role="alert" className="text-sm text-red-600">{error}</p>}
-      <button type="submit" disabled={loading || !/^[0-9]{6}$/.test(verificationCode)} className="h-12 w-full rounded-2xl bg-orange-500 font-bold text-slate-950 disabled:opacity-50">{loading ? "Verifying…" : "Verify and continue"}</button>
-    </form>
-  </AuthShell>;
+  if (challengeId) {
+    return (
+      <AuthShell heading="Verify it's you" description="Enter the six-digit code we sent to your email. It expires in five minutes.">
+        <form className="mt-6 space-y-4" onSubmit={handleLogin} noValidate>
+          <div className="space-y-1.5">
+            <label htmlFor={otpId} className="block text-sm font-medium text-ink">
+              Verification code
+            </label>
+            <input
+              id={otpId}
+              className={`${authInputClass} text-center font-mono text-lg tracking-[0.3em]`}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              maxLength={6}
+              pattern="[0-9]{6}"
+              required
+              disabled={loading}
+              value={verificationCode}
+              onChange={(e) => setVerificationCode(e.target.value.replace(/[^0-9]/g, "").slice(0, 6))}
+            />
+          </div>
+          {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+          {slow ? <SlowNotice /> : null}
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full"
+            busy={loading}
+            busyLabel="Verifying"
+            disabled={!/^[0-9]{6}$/.test(verificationCode)}
+          >
+            Verify and continue
+          </Button>
+          <button
+            type="button"
+            disabled={loading}
+            onClick={() => {
+              setChallengeId("");
+              setVerificationCode("");
+              setError("");
+            }}
+            className="inline-flex min-h-11 items-center gap-1 rounded-control text-sm font-semibold text-accent-ink"
+          >
+            <Icon name="chevron-left" size={16} />
+            Back to log in
+          </button>
+        </form>
+      </AuthShell>
+    );
+  }
 
   return (
-    <AuthShell heading={isLogin ? "Welcome back!" : "Create developer account"}>
-      <div className="mt-5 sm:mt-6">
+    <AuthShell
+      heading={isLogin ? "Log in to Sutura" : "Create a developer account"}
+      description={
+        isLogin
+          ? "For developer and admin accounts. Customers and merchants use the Sutura app."
+          : "Get API keys, take payments from your backend and manage webhooks."
+      }
+    >
+      <div className="mt-6">
         {isLogin ? (
-          <form className="space-y-3.5 sm:space-y-4" onSubmit={handleLogin}>
-
+          <form className="space-y-4" onSubmit={handleLogin}>
             <AuthField
+              label="Email or phone number"
               type="text"
-              name="email"
-              placeholder="Email or phone number"
-              icon={<MailIcon />}
+              name="username"
+              autoComplete="username"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
+              disabled={loading}
             />
             <AuthField
+              label="Password"
               type="password"
               name="password"
-              placeholder="Enter your password"
-              icon={<EyeOffIcon />}
+              autoComplete="current-password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
+              disabled={loading}
             />
 
-            {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
+            {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+            {slow ? <SlowNotice /> : null}
 
-            <p className="text-xs text-slate-500">For account recovery, contact your Sutura administrator. Temporary login locks expire after 15 minutes.</p>
+            <Button type="submit" size="lg" className="w-full" busy={loading} busyLabel="Logging in">
+              Log in
+            </Button>
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="h-12 w-full rounded-2xl bg-orange-500 text-base font-bold text-slate-950 transition-colors hover:bg-orange-600 disabled:opacity-60 sm:h-12 sm:rounded-2xl"
-            >
-              {loading ? "Signing in…" : "Login"}
-            </button>
-
+            <p className="text-xs leading-5 text-ink-3">
+              Forgot your password? Contact your Sutura administrator. After too many attempts, login is locked for 15 minutes.
+            </p>
           </form>
         ) : (
-          <form className="space-y-3.5 sm:space-y-4" onSubmit={handleSignup}>
-            <p className="text-sm leading-relaxed text-slate-600">
-              Web signup is for developers. Create an account to get API keys, accept payments from your backend, and manage webhooks.
-            </p>
-
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <input className={inputClass} placeholder="First name" value={signup.firstName} onChange={(e) => setSignup({ ...signup, firstName: e.target.value })} required />
-              <input className={inputClass} placeholder="Last name" value={signup.lastName} onChange={(e) => setSignup({ ...signup, lastName: e.target.value })} required />
-            </div>
-
-            <div className="flex overflow-hidden rounded-2xl border border-slate-300 bg-white">
-              <span className="flex items-center bg-slate-100 px-3 text-sm font-bold text-slate-600 sm:px-4">+220</span>
-              <input
-                className="h-12 min-w-0 flex-1 px-3 text-base font-semibold outline-none sm:px-4 sm:text-sm"
-                placeholder="712 3456"
-                inputMode="numeric"
-                value={signup.phoneLocal}
-                onChange={(e) => setSignup({ ...signup, phoneLocal: e.target.value.replace(/\D/g, "").slice(0, 7) })}
-                required
+          <form className="space-y-4" onSubmit={handleSignup}>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <AuthField
+                label="First name"
+                type="text"
+                name="given-name"
+                autoComplete="given-name"
+                value={signup.firstName}
+                onChange={(e) => setSignup({ ...signup, firstName: e.target.value })}
+                disabled={loading}
+              />
+              <AuthField
+                label="Last name"
+                type="text"
+                name="family-name"
+                autoComplete="family-name"
+                value={signup.lastName}
+                onChange={(e) => setSignup({ ...signup, lastName: e.target.value })}
+                disabled={loading}
               />
             </div>
 
+            <div className="space-y-1.5">
+              <label htmlFor={phoneId} className="block text-sm font-medium text-ink">
+                Phone number
+              </label>
+              <div className="flex overflow-hidden rounded-control border border-line-strong bg-surface focus-within:border-accent-ink">
+                <span className="flex items-center border-r border-line bg-surface-2 px-3 text-sm text-ink-2" aria-hidden="true">
+                  +220
+                </span>
+                <input
+                  id={phoneId}
+                  className="h-12 min-w-0 flex-1 bg-transparent px-3 text-base text-ink placeholder:text-ink-3 sm:text-sm"
+                  placeholder="7123456"
+                  inputMode="numeric"
+                  autoComplete="tel-national"
+                  aria-describedby={`${phoneId}-hint`}
+                  value={signup.phoneLocal}
+                  onChange={(e) => setSignup({ ...signup, phoneLocal: e.target.value.replace(/\D/g, "").slice(0, 7) })}
+                  disabled={loading}
+                  required
+                />
+              </div>
+              <p id={`${phoneId}-hint`} className="text-xs text-ink-3">
+                Seven digits, Gambian number (+220).
+              </p>
+            </div>
+
             <AuthField
+              label="Email"
               type="email"
-              name="signup-email"
-              placeholder="Email address"
-              icon={<MailIcon />}
+              name="email"
+              autoComplete="email"
               value={signup.email}
               onChange={(event) => setSignup({ ...signup, email: event.target.value })}
+              disabled={loading}
             />
             <AuthField
+              label="Password"
               type="password"
-              name="signup-password"
-              placeholder="Password (min 8 characters)"
-              icon={<EyeOffIcon />}
+              name="new-password"
+              autoComplete="new-password"
+              hint="At least 8 characters."
               value={signup.password}
               onChange={(event) => setSignup({ ...signup, password: event.target.value })}
+              disabled={loading}
             />
             <AuthField
+              label="Confirm password"
               type="password"
-              name="signup-confirm"
-              placeholder="Confirm password"
-              icon={<EyeOffIcon />}
+              name="confirm-password"
+              autoComplete="new-password"
               value={signup.confirmPassword}
               onChange={(event) => setSignup({ ...signup, confirmPassword: event.target.value })}
+              disabled={loading}
             />
 
-            {error ? <p className="text-sm font-semibold text-rose-600">{error}</p> : null}
+            {error ? <InlineAlert tone="error">{error}</InlineAlert> : null}
+            {slow ? <SlowNotice /> : null}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="h-12 w-full rounded-2xl bg-orange-500 text-base font-bold text-slate-950 transition-colors hover:bg-orange-600 disabled:opacity-60 sm:h-12 sm:rounded-2xl"
-            >
-              {loading ? "Creating account…" : "Create developer account"}
-            </button>
+            <Button type="submit" size="lg" className="w-full" busy={loading} busyLabel="Creating account">
+              Create developer account
+            </Button>
 
-            <p className="text-center text-xs leading-relaxed text-slate-500">
-              Customers and merchants register in the Sutura mobile apps.{" "}
-              <Link href="/merchants/register" className="font-bold text-[#123c91]">
-                Merchant app info
+            <p className="text-xs leading-5 text-ink-3">
+              Customers register in the Sutura app. Businesses can{" "}
+              <Link href="/merchants/register" className="font-semibold text-accent-ink underline underline-offset-2">
+                register as a merchant
               </Link>
+              .
             </p>
           </form>
         )}
 
-        <p className="mt-5 text-center text-sm text-slate-700 sm:mt-4 sm:text-base">
+        <p className="mt-6 text-sm text-ink-2">
           {isLogin ? "Need a developer account?" : "Already have an account?"}{" "}
-          <button type="button" onClick={() => setMode(isLogin ? "signup" : "login")} className="font-black text-[#123c91]">
-            {isLogin ? "Sign up" : "Login"}
+          <button
+            type="button"
+            onClick={() => {
+              setError("");
+              setMode(isLogin ? "signup" : "login");
+            }}
+            className="font-semibold text-accent-ink underline underline-offset-2"
+          >
+            {isLogin ? "Create one" : "Log in"}
           </button>
         </p>
       </div>

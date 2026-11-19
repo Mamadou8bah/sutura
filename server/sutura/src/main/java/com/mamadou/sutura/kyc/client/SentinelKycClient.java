@@ -5,17 +5,22 @@ import com.mamadou.sutura.kyc.dto.SentinelKycResponse;
 import java.net.URI;
 import java.util.Map;
 import java.util.Set;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 @Component
-@RequiredArgsConstructor
 public class SentinelKycClient {
     private final FraudDetectionProperties properties;
     private final RestTemplate fraudDetectionRestTemplate;
+
+    public SentinelKycClient(FraudDetectionProperties properties,
+            @Qualifier("sentinelKycRestTemplate") RestTemplate restTemplate) {
+        this.properties = properties;
+        this.fraudDetectionRestTemplate = restTemplate;
+    }
 
     public SentinelKycResponse start(String customerId) {
         requireConnected();

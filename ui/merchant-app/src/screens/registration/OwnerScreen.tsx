@@ -62,7 +62,7 @@ export function OwnerScreen() {
         <AppInput accessibilityLabel="ID number" maxLength={80} editable={!loading} value={owner.ownerIdNumber} onChangeText={(v) => updateReg({ owner: { ...owner, ownerIdNumber: v } })} />
       </Field>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
 
       <PrimaryButton loading={loading} label={loading ? "Saving…" : "Continue"} onPress={handleSubmit} disabled={loading} />
       <LinkButton label="Back" onPress={() => setScreen("reg-business")} />
@@ -71,7 +71,7 @@ export function OwnerScreen() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  title: {fontFamily: appFonts.bold, fontSize: 34, fontWeight: "700", color: colors.slate900 },
+  title: {fontFamily: appFonts.bold, fontSize: 28, lineHeight: 34, fontWeight: "600", color: colors.slate900 },
   error: { color: colors.rose800, fontWeight: "600" },
   options: { gap: 8 },
   option: { borderWidth: 1, borderColor: colors.border, borderRadius: radii.md, padding: 12, backgroundColor: colors.surface },

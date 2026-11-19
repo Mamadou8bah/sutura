@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { ContentBlock, SitePage } from "../../site-page";
+
+export const metadata: Metadata = {
+  title: "Cookie policy",
+  description: "How Sutura uses cookies and similar technologies on the web.",
+};
 
 export default function CookiePolicyPage() {
   return (
@@ -28,7 +34,7 @@ export default function CookiePolicyPage() {
         </p>
       </ContentBlock>
 
-      <p className="text-sm text-slate-500">Last updated: August 23, 2026</p>
+      <p className="text-sm text-ink-3">Last updated: August 23, 2026</p>
     </SitePage>
   );
 }

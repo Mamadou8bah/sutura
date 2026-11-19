@@ -10,24 +10,9 @@ import { brand } from "../constants/brand";
 import { colors, fonts, radii, shadow } from "../theme";
 import { formatMoney, formatTimestamp } from "../utils/format";
 import { shareTransactionReceiptPdf } from "../utils/receiptPdf";
-import {
-  isCreditTransaction,
-  transactionStatusLabel,
-  transactionTypeLabel,
-} from "../utils/transactionDetails";
-
-function statusStyle(status: string, colors: ThemeColors) {
-  switch (status) {
-    case "COMPLETED":
-      return { bg: colors.emerald100, text: colors.emerald700 };
-    case "PENDING":
-      return { bg: colors.orangeLight, text: colors.orange };
-    case "FAILED":
-      return { bg: colors.rose100, text: colors.rose800 };
-    default:
-      return { bg: colors.blue100, text: colors.primary };
-  }
-}
+import { isCreditTransaction, transactionTypeLabel } from "../utils/transactionDetails";
+import { StatusPill, statusLabel } from "./StatusPill";
+import { Money } from "./Money";
 
 function DetailRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
   const { colors } = useTheme();
@@ -73,17 +58,16 @@ export function TransactionDetailSheet() {
 
   const credit = isCreditTransaction(txn);
   const sign = credit ? "+" : "−";
-  const status = statusStyle(txn.status, colors);
 
   return (
     <Modal visible animationType="slide" onRequestClose={closeTransaction}>
       <SafeAreaProvider><SafeAreaView style={styles.screen}>
         <View style={styles.topBar}>
-          <Pressable onPress={closeTransaction} style={styles.iconBtn} hitSlop={8}>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close" onPress={closeTransaction} style={styles.iconBtn}>
             <Ionicons name="close" size={22} color={colors.slate700} />
           </Pressable>
-          <Text style={styles.topTitle}>Transaction details</Text>
-          <Pressable onPress={shareReceipt} style={styles.iconBtn} hitSlop={8} disabled={sharing}>
+          <Text accessibilityRole="header" style={styles.topTitle}>Transaction details</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Share receipt" accessibilityState={{ busy: sharing }} onPress={shareReceipt} style={styles.iconBtn} disabled={sharing}>
             {sharing ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
@@ -95,25 +79,21 @@ export function TransactionDetailSheet() {
         <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
           <View style={[styles.hero, shadow.card]}>
             <Text style={styles.heroType}>{transactionTypeLabel(txn.type)}</Text>
-            <Text style={styles.heroAmount}>
-              {sign}
-              {formatMoney(txn.amount, txn.currency)}
-            </Text>
+            <Money amount={txn.amount} currency={txn.currency} sign={sign} style={styles.heroAmount} />
             <Text style={styles.heroCounterparty}>{txn.counterparty}</Text>
-            <View style={[styles.statusBadge, { backgroundColor: status.bg }]}>
-              <Text style={[styles.statusText, { color: status.text }]}>{transactionStatusLabel(txn.status)}</Text>
-            </View>
+            <View style={styles.statusBadge}><StatusPill status={txn.status} /></View>
           </View>
 
           <View style={[styles.detailsCard, shadow.card]}>
             <DetailRow label="Reference" value={txn.id} />
             <DetailRow label="Date & time" value={formatTimestamp(txn.time)} />
             <DetailRow label="Method" value={txn.method} />
-            {txn.category ? <DetailRow label="Category" value={txn.category} /> : null}
+            {txn.category ? <DetailRow label="Type" value={statusLabel(txn.category)} /> : null}
             <DetailRow label="Direction" value={credit ? "Money in" : "Money out"} last />
           </View>
 
           <Pressable
+            accessibilityRole="button" accessibilityLabel="Share PDF receipt" accessibilityState={{ busy: sharing, disabled: sharing }}
             onPress={shareReceipt}
             disabled={sharing}
             style={({ pressed }) => [styles.shareBtn, (pressed || sharing) && styles.shareBtnPressed]}
@@ -127,7 +107,7 @@ export function TransactionDetailSheet() {
               </>
             )}
           </Pressable>
-          {shareError ? <Text style={styles.shareError}>{shareError}</Text> : null}
+          {shareError ? <Text accessibilityRole="alert" style={styles.shareError}>{shareError}</Text> : null}
         </ScrollView>
       </SafeAreaView></SafeAreaProvider>
     </Modal>
@@ -145,8 +125,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingBottom: 12,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: radii.md,
     backgroundColor: colors.surface,
     alignItems: "center",
@@ -154,7 +134,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
   },
-  topTitle: { fontSize: 16, fontFamily: fonts.bold, color: colors.slate900 },
+  topTitle: { fontSize: 17, fontFamily: fonts.bold, color: colors.slate900 },
   content: { padding: 20, paddingBottom: 40, gap: 16 },
   hero: {
     backgroundColor: colors.surface,
@@ -168,13 +148,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 13,
     fontFamily: fonts.bold,
     color: colors.slate500,
-    textTransform: "uppercase",
-    letterSpacing: 0.8,
   },
-  heroAmount: { fontSize: 36, fontFamily: fonts.black, color: colors.slate900, marginTop: 8 },
+  heroAmount: { fontSize: 36, lineHeight: 44, textAlign: "center", fontFamily: fonts.semibold, fontWeight: "600", color: colors.slate900, marginTop: 8 },
   heroCounterparty: { fontSize: 16, fontFamily: fonts.medium, color: colors.slate700, marginTop: 6 },
-  statusBadge: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 6, borderRadius: radii.pill },
-  statusText: { fontSize: 13, fontFamily: fonts.bold },
+  statusBadge: { marginTop: 14 },
   detailsCard: {
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
@@ -200,8 +177,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
-    height: 52,
-    borderRadius: radii.pill,
+    minHeight: 52,
+    borderRadius: radii.md,
     backgroundColor: brand.orange,
     marginTop: 4,
   },

@@ -33,14 +33,13 @@ function load(platform, device = false) {
   return { api: exports, get sheet() { return sheet; } };
 }
 
-test('mobile typography uses system families and preserves weights, sizes and icon fonts', () => {
+test('mobile typography uses bundled Poppins weights consistently without replacing icon fonts', () => {
   const { api } = load('ios');
   const apple = api.platformTextStyle({ fontFamily: 'Inter_700Bold', fontSize: 24 }, 'ios');
-  assert.equal(apple.fontFamily, 'System'); assert.equal(apple.fontWeight, '700'); assert.equal(apple.fontSize, 24);
-  assert.equal(api.platformTextStyle({ fontFamily: 'Inter_400Regular', fontWeight: '600' }, 'android').fontWeight, '600');
+  assert.equal(apple.fontFamily, 'Poppins_700Bold'); assert.equal(apple.fontWeight, 'normal'); assert.equal(apple.fontSize, 24);
+  assert.equal(api.platformTextStyle({ fontFamily: 'Poppins_400Regular', fontWeight: '600' }, 'android').fontFamily, 'Poppins_600SemiBold');
   assert.equal(api.platformTextStyle({ fontFamily: 'Ionicons' }, 'ios').fontFamily, 'Ionicons');
-  const original = { fontFamily: 'Inter_500Medium' };
-  assert.equal(api.platformTextStyle(original, 'web'), original);
+  assert.equal(api.platformTextStyle({ fontFamily: 'Poppins_500Medium' }, 'web').fontFamily, 'Poppins_500Medium');
 });
 
 test('older mobile runtimes retain the fallback button and its disabled state', () => {

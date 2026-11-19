@@ -36,18 +36,18 @@ export function MoreScreen() {
       <View style={styles.profileCard}>
         <View style={styles.profileInfo}>
           <Text style={styles.name}>{session.name}</Text>
-          <Text style={styles.meta}>
-            {session.agentCode} · {session.location}
-          </Text>
-          <Text style={styles.phone}>{session.phone}</Text>
+          {[session.agentCode, session.location].filter(Boolean).length > 0 ? <Text style={styles.meta}>
+            {[session.agentCode, session.location].filter(Boolean).join(" · ")}
+          </Text> : null}
+          {session.phone ? <Text style={styles.phone}>{session.phone}</Text> : null}
         </View>
-        <Pressable onPress={() => setTab("profile")}>
+        <Pressable accessibilityRole="button" accessibilityLabel="View agent profile" onPress={() => setTab("profile")} style={{ minHeight: 44, minWidth: 44, justifyContent: "center", alignItems: "center" }}>
           <Text style={styles.editLink}>View</Text>
         </Pressable>
       </View>
 
       {menuItems.map((item) => (
-        <Pressable accessibilityRole="button" accessibilityLabel={item.label} key={item.label} onPress={() => setTab(item.tab)} style={styles.menuRow}>
+        <Pressable accessibilityRole="button" accessibilityLabel={item.label} accessibilityHint={item.subtitle} key={item.label} onPress={() => setTab(item.tab)} style={styles.menuRow}>
           <View style={styles.menuIcon}>
             <Ionicons name={item.icon} size={22} color={colors.primary} />
           </View>
@@ -63,7 +63,7 @@ export function MoreScreen() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { padding: spacing.screen, paddingBottom: 24 },
+  content: { padding: spacing.screen, paddingBottom: 24, gap: 12 },
   profileCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -71,7 +71,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 8,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -79,7 +79,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   name: { fontSize: 17, fontFamily: fonts.bold, color: colors.slate900 },
   meta: { fontSize: 13, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
   phone: { fontSize: 13, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
-  editLink: { fontSize: 14, fontFamily: fonts.bold, color: colors.primary },
+  editLink: { fontSize: 15, fontFamily: fonts.medium, color: colors.accentText },
   menuRow: {
     flexDirection: "row",
     alignItems: "center",
@@ -99,5 +99,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   menuBody: { flex: 1 },
   menuLabel: { fontSize: 15, fontFamily: fonts.bold, color: colors.slate900 },
-  menuSub: { fontSize: 12, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
+  menuSub: { fontSize: 13, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
 });

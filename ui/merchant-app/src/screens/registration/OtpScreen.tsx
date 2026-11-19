@@ -41,7 +41,7 @@ export function OtpScreen() {
         <AppInput keyboardType="number-pad" maxLength={6} value={reg.otp} onChangeText={(v) => updateReg({ otp: v.replace(/\D/g, "").slice(0, 6) })} placeholder="123456" />
       </Field>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
 
       <PrimaryButton loading={loading} label={loading ? "Verifying…" : "Continue"} onPress={handleSubmit} disabled={loading || reg.otp.length !== 6} />
       <LinkButton label="Back" onPress={() => setScreen("reg-phone")} />
@@ -50,6 +50,6 @@ export function OtpScreen() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  title: {fontFamily: appFonts.bold, fontSize: 34, fontWeight: "700", color: colors.slate900 },
+  title: {fontFamily: appFonts.bold, fontSize: 28, lineHeight: 34, fontWeight: "600", color: colors.slate900 },
   error: { color: colors.rose800, fontWeight: "600" },
 });

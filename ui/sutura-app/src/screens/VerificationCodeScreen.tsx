@@ -17,21 +17,21 @@ export function VerificationCodeScreen({ value, onChange, onSubmit, onBack, busy
     </Pressable>
     <View style={{ gap: 12, marginBottom: 12 }}>
       <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: colors.orangeLight, alignItems: "center", justifyContent: "center" }}>
-        <Ionicons name="shield-checkmark-outline" size={28} color={colors.orange} />
+        <Ionicons name="shield-checkmark-outline" size={28} color={colors.primary} />
       </View>
-      <Text accessibilityRole="header" style={{ fontSize: 30, lineHeight: 36, letterSpacing: -0.5, fontWeight: "700", color: colors.primary }}>Enter verification code</Text>
+      <Text accessibilityRole="header" style={{ fontSize: 30, lineHeight: 36, fontWeight: "600", color: colors.primary }}>Enter verification code</Text>
       <Text style={{ color: colors.slate500, fontSize: 14, lineHeight: 21 }}>Enter the six-digit code sent to your email. It expires in five minutes.</Text>
     </View>
     <Field label="Verification code"><AppInput accessibilityLabel="Verification code" autoFocus
       value={value} onChangeText={next => onChange(next.replace(/[^0-9]/g, "").slice(0, 6))}
       keyboardType="number-pad" inputMode="numeric" autoComplete="sms-otp" textContentType="oneTimeCode"
       autoCorrect={false} maxLength={6} editable={!busy} placeholder="000000"
-      style={{ textAlign: "center", fontSize: 28, letterSpacing: 8, minHeight: 64 }}
+      style={{ textAlign: "center", fontSize: 28, minHeight: 64 }}
       onSubmitEditing={() => { if (valid && !busy) onSubmit(); }} returnKeyType="done" /></Field>
     {!!error && <Text accessibilityRole="alert" style={{ color: colors.rose800, lineHeight: 20 }}>{error}</Text>}
     <PrimaryButton loading={busy} label={busy ? "Verifying…" : "Verify and continue"} disabled={busy || !valid} onPress={onSubmit} />
     <Pressable accessibilityRole="button" disabled={busy} onPress={onBack} style={{ minHeight: 48, justifyContent: "center" }}>
-      <Text style={{ color: colors.orangeDark }}>Start sign-in again</Text>
+      <Text style={{ color: colors.accentText }}>Start sign-in again</Text>
     </Pressable>
   </Screen>;
 }

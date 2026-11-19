@@ -52,10 +52,80 @@ export type AuditPage = {
   totalPages: number;
 };
 
+export type AdminPayment = {
+  id: number;
+  reference: string;
+  type?: string;
+  status: string;
+  amount: number;
+  currency: string;
+  description?: string | null;
+  sourceWalletId: number | null;
+  destinationWalletId: number | null;
+  createdAt: string;
+};
+
+export type ReconciliationReportDto = {
+  id: number;
+  reconciliationType: string;
+  status: string;
+  startedAt: string | null;
+  completedAt: string | null;
+  totalRecordsChecked: number;
+  mismatchesFound: number;
+  mismatchesResolved: number;
+  summary: string | null;
+  errorDetails?: string | null;
+  triggeredBy: string | null;
+  automated: boolean;
+};
+
+export type ReconciliationMismatchDto = {
+  id: number;
+  reportId: number;
+  mismatchType: string;
+  entityId: number;
+  entityType: string;
+  expectedValue: string | null;
+  actualValue: string | null;
+  variance: number | string | null;
+  description: string | null;
+  resolved: boolean;
+  resolutionAction: string | null;
+  resolvedAt: string | null;
+  resolvedBy: string | null;
+  createdAt: string | null;
+};
+
+export type ReconciliationStatusDto = {
+  unresolvedMismatchCount: number;
+  reportsWithMismatches: number;
+  recentReports: ReconciliationReportDto[];
+};
+
 export const adminApi = {
-  replayWebhook:(id:number,reason:string)=>rawRequest<{accepted:boolean;status:string;message:string}>("/api/v1/webhooks/replay",{method:"POST",body:JSON.stringify({webhookEventId:id,reason})}),
-  listPayments:()=>rawRequest<{content:{id:number;reference:string;status:string;amount:number;currency:string;sourceWalletId:number|null;destinationWalletId:number|null;createdAt:string}[]}>("/api/v1/admin/operations/payments"),
-  resolveMismatch:(id:number,reason:string)=>rawRequest(`/api/v1/reconciliation/mismatches/${id}/resolve?resolutionAction=${encodeURIComponent(reason)}`,{method:"PUT"}),
+  replayWebhook: (id: number, reason: string) =>
+    rawRequest<{ accepted: boolean; status: string; message: string }>("/api/v1/webhooks/replay", {
+      method: "POST",
+      body: JSON.stringify({ webhookEventId: id, reason }),
+    }),
+
+  listPayments: (page = 0) =>
+    rawRequest<{ content: AdminPayment[]; totalPages?: number; totalElements?: number }>(
+      `/api/v1/admin/operations/payments?page=${page}`,
+    ),
+
+  resolveMismatch: (id: number, reason: string) =>
+    rawRequest<ReconciliationMismatchDto>(
+      `/api/v1/reconciliation/mismatches/${id}/resolve?resolutionAction=${encodeURIComponent(reason)}`,
+      { method: "PUT" },
+    ),
+
+  /** Unresolved mismatches across all reports. */
+  listMismatches: () => rawRequest<ReconciliationMismatchDto[]>("/api/v1/reconciliation/mismatches"),
+
+  getReconciliationStatus: () => rawRequest<ReconciliationStatusDto>("/api/v1/reconciliation/status"),
+
   getDashboard: () => rawRequest<AdminDashboard>("/api/v1/admin/dashboard"),
 
   listWallets: () => rawRequest<AdminWallet[]>("/api/v1/admin/wallets"),
@@ -82,10 +152,10 @@ export const adminApi = {
     }),
 
   triggerWalletReconciliation: () =>
-    rawRequest<unknown>("/api/v1/admin/reconciliation/wallet-ledger", { method: "POST" }),
+    rawRequest<ReconciliationReportDto>("/api/v1/admin/reconciliation/wallet-ledger", { method: "POST" }),
 
   triggerWebhookReconciliation: () =>
-    rawRequest<unknown>("/api/v1/admin/reconciliation/webhook-deposit", { method: "POST" }),
+    rawRequest<ReconciliationReportDto>("/api/v1/admin/reconciliation/webhook-deposit", { method: "POST" }),
 
   getAuditTrail: (page = 0, size = 50) =>
     rawRequest<AuditPage>(`/api/v1/admin/audit-trail?page=${page}&size=${size}`),

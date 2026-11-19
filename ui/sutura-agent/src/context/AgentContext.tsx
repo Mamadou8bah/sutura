@@ -1,9 +1,11 @@
+import { loadSnapshot, saveSnapshot, sameSnapshot } from "../storage/deviceVault";
+import type { WalletDepositQr } from "../utils/walletDepositQr";
 import { useBackNavigation } from "../hooks/useBackNavigation";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {useAutoRefresh} from "../hooks/useAutoRefresh";
 import {normalizePhone} from "../utils/inputValidation";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { agentApi } from "../api/client";
+import { agentApi, type DepositWalletTarget } from "../api/client";
 import { useAuth } from "./AuthContext";
 import type {
   AgentOperation,
@@ -32,6 +34,8 @@ type AgentContextValue = {
   activeOperation: AgentOperation | null;
   lookupReference: (reference: string) => Promise<OpResult>;
   lookupQr: (payload: AgentQrPayload) => Promise<OpResult>;
+  depositTarget: DepositWalletTarget | null;
+  prepareDepositQr: (payload: WalletDepositQr) => Promise<OpResult>;
   completeActive: () => Promise<OpResult>;
   clearActive: () => void;
   openOperation: (operation: AgentOperation) => void;
@@ -41,11 +45,16 @@ type AgentContextValue = {
     amount: string,
     currency: string,
     idempotencyKey: string,
+    walletId?: number,
   ) => Promise<OpResult>;
   recentCompleted: AgentOperation[];
   refreshHistory: () => Promise<void>;
   historyError: string;
   historyLoading: boolean;
+  /** Time of the last successful history refresh; null until the first one. */
+  lastUpdated: Date | null;
+  /** Read-only lookup for the review step; never creates anything. */
+  findCustomer: (phone: string) => Promise<{ ok: true; name: string; phone: string } | { ok: false; error: string }>;
 };
 
 const AgentContext = createContext<AgentContextValue | null>(null);
@@ -53,24 +62,38 @@ const AgentContext = createContext<AgentContextValue | null>(null);
 export function AgentProvider({ children }: { children: ReactNode }) {
   const { session: authSession } = useAuth();
   const [tab, setTab] = useBackNavigation<TabId>("home");
+  const [depositTarget, setDepositTarget] = useState<DepositWalletTarget | null>(null);
+  useEffect(() => { if (tab !== "new-deposit") setDepositTarget(null); }, [tab]);
   const [pending, setPending] = useState<AgentOperation[]>([]);
   const pendingRef=useRef<AgentOperation[]>([]);pendingRef.current=pending;
   const [completed, setCompleted] = useState<AgentOperation[]>([]);
   const [historyError,setHistoryError]=useState("");
   const [historyLoading,setHistoryLoading]=useState(false);
+  const [lastUpdated,setLastUpdated]=useState<Date|null>(null);
   const generation=useRef(0);
-  const refreshHistory=useCallback(async()=>{
-    if(!authSession?.accessToken)return;const request=++generation.current;setHistoryLoading(true);setHistoryError("");
+  const freshData=useRef(false);
+  useEffect(() => {
+    let cancelled=false; freshData.current=false;
+    if (authSession?.username) void loadSnapshot<{pending:AgentOperation[];completed:AgentOperation[]}>(`agent:${authSession.username}`).then(saved=>{
+      if(cancelled||freshData.current||!saved||!Array.isArray(saved.data?.pending)||!Array.isArray(saved.data?.completed))return;
+      setPending(saved.data.pending);setCompleted(saved.data.completed);setLastUpdated(new Date(saved.savedAt));
+      setHistoryError("Showing saved operations. Reconnect before completing a cash operation.");
+    }).catch(()=>undefined);
+    return()=>{cancelled=true;};
+  },[authSession?.username]);
+  const refreshHistory=useCallback(async(silent=false)=>{
+    if(!authSession?.accessToken)return;const request=++generation.current;if(!silent)setHistoryLoading(true);
     try{const assigned=await agentApi.history();
       const known=new Set(assigned.map(op=>op.reference));
       const lookups=await Promise.allSettled(pendingRef.current.filter(op=>!known.has(op.reference)).map(op=>agentApi.lookup(op.reference)));
       const extra=lookups.flatMap(result=>result.status==="fulfilled"?[result.value]:[]);
       const rows=[...assigned,...extra].map(op=>({...op,amount:Number(op.amount)}) as AgentOperation);if(request!==generation.current)return;
-      setActiveOperation(current=>current?rows.find(op=>op.reference===current.reference)??current:current);
-      setCompleted(rows.filter(op=>op.status==="COMPLETED"));
-      setPending(prev=>{const merged=new Map(prev.map(op=>[op.reference,op]));rows.forEach(op=>{if(["AWAITING_AGENT","PENDING","PENDING_REVIEW","APPROVED"].includes(op.status))merged.set(op.reference,op);else merged.delete(op.reference);});return [...merged.values()];});
+      setActiveOperation(current=>{if(!current)return current;const next=rows.find(op=>op.reference===current.reference)??current;return sameSnapshot(current,next)?current:next;});
+      freshData.current=true;setHistoryError("");
+      setCompleted(current=>{const next=rows.filter(op=>op.status==="COMPLETED");return sameSnapshot(current,next)?current:next;});
+      setLastUpdated(new Date());setPending(prev=>{const merged=new Map(prev.map(op=>[op.reference,op]));rows.forEach(op=>{if(["AWAITING_AGENT","PENDING","PENDING_REVIEW","APPROVED"].includes(op.status))merged.set(op.reference,op);else merged.delete(op.reference);});const next=[...merged.values()];return sameSnapshot(prev,next)?prev:next;});
     }catch(err){if(request===generation.current)setHistoryError(err instanceof Error?err.message:"Could not load activity.");}finally{if(request===generation.current)setHistoryLoading(false);}
-  },[authSession?.accessToken]);
+  },[authSession?.username]);
   const stats=useMemo(()=>{const today=new Date().toDateString();const rows=completed.filter(op=>new Date(op.completedAt??op.createdAt).toDateString()===today);return {...EMPTY_STATS,completedToday:rows.length,todayDeposits:rows.filter(op=>op.operation==="DEPOSIT").length,todayWithdrawals:rows.filter(op=>op.operation==="WITHDRAWAL").length};},[completed]);
   const [activeOperation, setActiveOperation] = useState<AgentOperation | null>(null);
   const completionInFlight = useRef(false);
@@ -105,7 +128,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     return ()=>{generation.current++;};
   }, [authSession?.username,refreshHistory]);
 
-  useAutoRefresh(refreshHistory,!!authSession?.accessToken);
+  useEffect(()=>{
+    if(freshData.current&&authSession?.username&&lastUpdated)void saveSnapshot(`agent:${authSession.username}`,{pending:pending.slice(0,100),completed:completed.slice(0,200)},lastUpdated.getTime()).catch(()=>undefined);
+  },[pending,completed,lastUpdated,authSession?.username]);
+  useAutoRefresh(()=>refreshHistory(true),!!authSession?.accessToken);
 
   const agentSession = useMemo<AgentSession>(
     () => ({
@@ -127,6 +153,24 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     }
     return null;
   }, [authSession]);
+
+  const prepareDepositQr = useCallback(async (payload: WalletDepositQr): Promise<OpResult> => {
+    const authError = requireAuth();
+    if (authError) return authError;
+    try {
+      const target = await agentApi.depositWallet(payload.walletId);
+      if (target.walletId !== payload.walletId || !Number.isSafeInteger(target.userId) || target.userId <= 0
+          || !normalizePhone(target.phone) || !/^[A-Z]{3}$/.test(target.currency)
+          || typeof target.name !== "string" || typeof target.walletName !== "string") {
+        return { ok: false, error: "The deposit wallet response was invalid. Scan again." };
+      }
+      setDepositTarget(target);
+      setTab("new-deposit");
+      return { ok: true };
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : "Could not load the deposit wallet." };
+    }
+  }, [requireAuth, setTab]);
 
   const lookupReference = useCallback(
     async (reference: string): Promise<OpResult> => {
@@ -220,7 +264,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const createOnBehalf = useCallback(
-    async (type: "DEPOSIT" | "WITHDRAWAL", phone: string, amount: string, currency: string, idempotencyKey: string): Promise<OpResult> => {
+    async (type: "DEPOSIT" | "WITHDRAWAL", phone: string, amount: string, currency: string, idempotencyKey: string, walletId?: number): Promise<OpResult> => {
       const authError = requireAuth();
       if (authError) return authError;
       const normalizedPhone=normalizePhone(phone);
@@ -230,7 +274,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       }
       try {
         const customer = await agentApi.customer(normalizedPhone);
-        const operation = await agentApi.createCash(type, customer.id, amount, currency, idempotencyKey);
+        const operation = await agentApi.createCash(type, customer.id, amount, currency, idempotencyKey, walletId);
         return await lookupReference(operation.reference);
       } catch (err) {
         return { ok: false, error: err instanceof Error ? err.message : "Could not create the operation." };
@@ -238,6 +282,19 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     },
     [requireAuth, lookupReference],
   );
+
+  const findCustomer = useCallback(async (phone: string) => {
+    const authError = requireAuth();
+    if (authError && !authError.ok) return { ok: false as const, error: authError.error };
+    const normalizedPhone = normalizePhone(phone);
+    if (!normalizedPhone) return { ok: false as const, error: "Enter the customer's registered phone number." };
+    try {
+      const customer = await agentApi.customer(normalizedPhone);
+      return { ok: true as const, name: customer.name, phone: normalizedPhone };
+    } catch (err) {
+      return { ok: false as const, error: err instanceof Error ? err.message : "Could not find this customer." };
+    }
+  }, [requireAuth]);
 
   const recentCompleted = useMemo(() => completed.slice(0, 5), [completed]);
 
@@ -252,12 +309,13 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       activeOperation,
       lookupReference,
       lookupQr,
+      depositTarget, prepareDepositQr,
       completeActive,
       clearActive,
       openOperation,
       createOnBehalf,
       recentCompleted,
-      refreshHistory,historyError,historyLoading,
+      refreshHistory,historyError,historyLoading,lastUpdated,findCustomer,
     }),
     [
       agentSession,
@@ -268,12 +326,13 @@ export function AgentProvider({ children }: { children: ReactNode }) {
       activeOperation,
       lookupReference,
       lookupQr,
+      depositTarget, prepareDepositQr,
       completeActive,
       clearActive,
       openOperation,
       createOnBehalf,
       recentCompleted,
-      refreshHistory,historyError,historyLoading,
+      refreshHistory,historyError,historyLoading,lastUpdated,findCustomer,
     ],
   );
 

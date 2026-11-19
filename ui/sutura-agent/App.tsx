@@ -1,3 +1,5 @@
+import { DeviceLockProvider } from "./src/context/DeviceLockContext";
+import { FirstLaunchGate } from "./src/components/FirstLaunchGate";
 import { useAppFonts } from "./src/hooks/useAppFonts";
 import { SafeAreaProvider, SafeAreaView as PlatformSafeAreaView } from "react-native-safe-area-context";
 import { NativeNavigator } from "./src/components/NativeNavigator";
@@ -67,7 +69,7 @@ function Root() {
  const {colors,mode}=useTheme();
  const styles=useThemedStyles(createStyles);
 
-  const { session, loading } = useAuth();
+  const { session, loading, signOut } = useAuth();
   if (loading) {
     return (
       <View style={styles.loading}>
@@ -76,12 +78,12 @@ function Root() {
     );
   }
   if (!session) {
-    return <PlatformSafeAreaView edges={["top"]} style={{flex:1}}><LoginScreen /></PlatformSafeAreaView>;
+    return <FirstLaunchGate app="agent"><PlatformSafeAreaView edges={["top"]} style={{flex:1}}><LoginScreen /></PlatformSafeAreaView></FirstLaunchGate>;
   }
   return (
-    <AgentProvider key={session.username}>
+    <FirstLaunchGate app="agent" authenticated><DeviceLockProvider scope={`agent:${session.username}`} onSignOut={signOut}><AgentProvider key={session.username}>
       <MainApp />
-    </AgentProvider>
+    </AgentProvider></DeviceLockProvider></FirstLaunchGate>
   );
 }
 

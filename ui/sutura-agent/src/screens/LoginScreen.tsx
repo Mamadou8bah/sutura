@@ -1,9 +1,11 @@
+import { CountryPhoneInput } from "../components/CountryPhoneInput";
+import { normalizeCountryPhone as normalizePhone } from "../utils/countryPhone";
 import { LoginMethodPicker } from "../components/LoginMethodPicker";
 import { VerificationCodeScreen } from "./VerificationCodeScreen";
 import { useHardwareBack } from "../hooks/useBackNavigation";
 import { PasswordRecoveryScreen } from "./PasswordRecoveryScreen";
 import {TwoFactorRequiredError} from "../api/twoFactor";
-import {isPhoneDraft,normalizePhone,isValidEmail} from "../utils/inputValidation";
+import {isValidEmail} from "../utils/inputValidation";
 import {fonts as appFonts} from "../theme";
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
@@ -41,7 +43,7 @@ export function LoginScreen() {
     if(submitting.current)return;
     const username=method==="email"?email.trim():normalizePhone(phone);
     if(method==="email"&&!isValidEmail(email.trim())){setError("Enter a valid email address.");return;}
-    if(!username||!password){setError("Enter your phone number and password.");return;}
+    if(!username||!password){setError(method==="email"?"Enter your email and password.":"Enter your phone number and password.");return;}
     if(challengeId&&!/^[0-9]{6}$/.test(verificationCode)){setError("Enter the six-digit verification code.");return;}
     submitting.current=true;
     setError("");
@@ -64,11 +66,11 @@ export function LoginScreen() {
   return (
     <Screen>
       <View style={{marginBottom:24}}><SuturaLogo size={64} /></View>
-      <Text style={styles.title}>Log in</Text>
+      <Text accessibilityRole="header" style={styles.title}>Log in</Text>
       <Text style={styles.subtitle}>Log in to your Sutura agent account.</Text>
 
       <LoginMethodPicker value={method} disabled={loading} onChange={value => { setChallengeId(""); setVerificationCode(""); setMethod(value); setError(""); }} />
-      {method==="email"?<Field label="Email"><AppInput accessibilityLabel="Email" inputMode="email" keyboardType="email-address" autoComplete="email" autoCapitalize="none" autoCorrect={false} value={email} onChangeText={v=>{if(!/\s/.test(v))setEmail(v);}} maxLength={254} editable={!loading} placeholder="name@example.com"/></Field>:<Field label="Phone number"><AppInput accessibilityLabel="Phone number" inputMode="tel" keyboardType="phone-pad" autoComplete="tel" value={phone} onChangeText={v=>{if(isPhoneDraft(v))setPhone(v);}} maxLength={40} editable={!loading} placeholder="+220 700 0001"/></Field>}
+      {method==="email"?<Field label="Email"><AppInput accessibilityLabel="Email" inputMode="email" keyboardType="email-address" autoComplete="email" autoCapitalize="none" autoCorrect={false} value={email} onChangeText={v=>{if(!/\s/.test(v))setEmail(v);}} maxLength={254} editable={!loading} placeholder="name@example.com"/></Field>:<Field label="Phone number"><CountryPhoneInput value={phone} onChangeText={setPhone} disabled={loading} /></Field>}
       <Field label="Password"><PasswordInput
         placeholder="Password"
         accessibilityLabel="Password"
@@ -79,10 +81,10 @@ export function LoginScreen() {
         onChangeText={setPassword}
       /></Field>
 
-      <Pressable accessibilityRole="button" disabled={loading} onPress={()=>setRecovering(true)}><Text style={{color:colors.orangeDark,paddingVertical:12}}>Forgot password?</Text></Pressable>
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      <Pressable accessibilityRole="link" accessibilityLabel="Forgot password?" disabled={loading} onPress={()=>setRecovering(true)} style={{minHeight:44,justifyContent:"center",alignSelf:"flex-start"}}><Text style={{color:colors.accentText,fontSize:15}}>Forgot password?</Text></Pressable>
+      {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{error}</Text> : null}
 
-      <Text style={{fontFamily:appFonts.regular,color:colors.slate500,fontSize:12,lineHeight:19}}>Agent accounts are provided by Sutura. Use your assigned account to log in.</Text>
+      <Text style={{fontFamily:appFonts.regular,color:colors.slate500,fontSize:13,lineHeight:19}}>Agent accounts are provided by Sutura. Use your assigned account to log in.</Text>
       <PrimaryButton loading={loading} label={loading ? "Please wait…" : "Log in"} disabled={loading} onPress={handleLogin} />
     </Screen>
   );
@@ -90,7 +92,7 @@ export function LoginScreen() {
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: colors.background },
-  title: {fontFamily: appFonts.bold, fontSize: 34, lineHeight: 41, letterSpacing: -0.7, fontWeight: "800", color: colors.slate900 },
+  title: {fontFamily: appFonts.bold, fontSize: 28, lineHeight: 34, fontWeight: "600", color: colors.slate900 },
   subtitle: {fontFamily: appFonts.regular, lineHeight:21, marginBottom:8, fontSize: 14, color: colors.slate500 },
   input: {fontFamily: appFonts.regular,
     marginBottom: 12,
@@ -102,5 +104,5 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     fontSize: 15,
     backgroundColor: colors.surface,
   },
-  error: {fontFamily: appFonts.medium, marginBottom: 12, color: colors.rose500, fontSize: 13, fontWeight: "600" },
+  error: {fontFamily: appFonts.medium, marginBottom: 12, color: colors.dangerFg, fontSize: 15, fontWeight: "600" },
 });

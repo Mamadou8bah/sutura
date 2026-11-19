@@ -1,6 +1,6 @@
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Share, ScrollView, StyleSheet, View } from "react-native";
 import { NativeText as Text } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
@@ -8,8 +8,11 @@ import { BackHeader } from "../components/AppHeader";
 import { Card, FormError, PrimaryButton } from "../components/ui";
 import { useAgent } from "../context/AgentContext";
 import { brand } from "../constants/brand";
-import { colors, fonts, radii, spacing } from "../theme";
-import { formatMoney, formatTimestamp, operationLabel, statusLabel } from "../utils/format";
+import { HoldToConfirm } from "../components/HoldToConfirm";
+import { Money } from "../components/Money";
+import { StatusPill } from "../components/StatusPill";
+import { fonts, radii, spacing, tabular, type } from "../theme";
+import { formatMoney, formatTimestamp, operationLabel } from "../utils/format";
 
 function DetailRow({ label, value }: { label: string; value: string }) {
  const {colors}=useTheme();
@@ -31,6 +34,7 @@ export function ConfirmScreen() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
   const [busy, setBusy] = useState(false);
+  const inFlight = useRef(false);
 
   useEffect(() => {
     setDone(false);
@@ -51,10 +55,12 @@ export function ConfirmScreen() {
   const isDeposit = op.operation === "DEPOSIT";
 
   async function handleComplete() {
-    if (busy) return;
+    if (busy || inFlight.current) return;
+    inFlight.current = true;
     setBusy(true);
     setError(null);
     const result = await completeActive();
+    inFlight.current = false;
     setBusy(false);
     if (!result.ok) {
       setError(result.error ?? null);
@@ -74,16 +80,13 @@ export function ConfirmScreen() {
 
       <View style={[styles.hero, isDeposit ? styles.heroDeposit : styles.heroWithdraw]}>
         <Text style={styles.heroType}>{operationLabel(op.operation)}</Text>
-        <Text style={styles.heroAmount}>{formatMoney(op.amount, op.currency)}</Text>
-        <Text style={styles.heroCustomer}>{op.merchantName}</Text>
-        <View style={[styles.statusBadge, isCompleted ? styles.statusDone : styles.statusPending]}>
-          <Text style={[styles.statusText, isCompleted ? styles.statusDoneText : styles.statusPendingText]}>
-            {statusLabel(isCompleted ? "COMPLETED" : op.status)}
-          </Text>
-        </View>
+        <Money amount={op.amount} currency={op.currency} maxFractionDigits={4} style={styles.heroAmount} />
+        <Text style={styles.heroCustomer}>{op.merchantName || op.walletName}</Text>
+        <View style={styles.statusBadge}><StatusPill status={isCompleted ? "COMPLETED" : op.status} /></View>
       </View>
 
       <Card style={styles.details}>
+        <DetailRow label="Customer" value={op.merchantName || "Registered customer"} />
         <DetailRow label="Reference" value={op.reference} />
         <DetailRow label="Wallet" value={`${op.walletName} (#${op.walletId})`} />
         <DetailRow label="Date" value={formatTimestamp(op.createdAt)} />
@@ -101,13 +104,14 @@ export function ConfirmScreen() {
             </Text>
           </View>
           <FormError message={error} />
+          <HoldToConfirm label={`Complete ${operationLabel(op.operation).toLowerCase()} · ${formatMoney(op.amount, op.currency, 4)}`}
+            loading={busy} loadingLabel="Completing…" disabled={busy||!["AWAITING_AGENT","PENDING","APPROVED"].includes(op.status)} onConfirm={handleComplete} />
           <PrimaryButton loading={historyLoading} label={historyLoading ? "Checking status…" : "Check operation status"} disabled={busy||historyLoading} onPress={()=>void refreshHistory()} color={colors.surfaceMuted}/>
-          <PrimaryButton loading={busy} label={busy ? "Confirming..." : "Complete operation"} disabled={busy||!["AWAITING_AGENT","PENDING","APPROVED"].includes(op.status)} onPress={handleComplete} color={brand.orange} />
         </>
       ) : (
         <>
           <View style={styles.success}>
-            <Ionicons name="checkmark-circle" size={48} color={colors.emerald700} />
+            <Ionicons name="checkmark-circle" size={48} color={colors.successFg} />
             <Text style={styles.successTitle}>Operation completed</Text>
             <Text style={styles.successSub}>Wallet updated and receipt recorded.</Text>
           </View>
@@ -123,7 +127,7 @@ export function ConfirmScreen() {
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: { padding: spacing.screen, paddingBottom: 32, gap: spacing.gap },
   emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.screen, gap: 16 },
-  emptyText: { fontSize: 16, fontFamily: fonts.medium, color: colors.slate500 },
+  emptyText: { fontSize: type.headline, fontFamily: fonts.medium, color: colors.slate500 },
   hero: {
     borderRadius: radii.lg,
     padding: 24,
@@ -133,21 +137,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   },
   heroDeposit: { backgroundColor: colors.surfaceMuted },
   heroWithdraw: { backgroundColor: colors.surfaceMuted },
-  heroType: {
-    fontSize: 12,
-    fontFamily: fonts.bold,
-    color: colors.slate700,
-    textTransform: "uppercase",
-    letterSpacing: 1,
-  },
-  heroAmount: { fontSize: 32, fontFamily: fonts.bold, color: colors.slate900, marginTop: 8 },
-  heroCustomer: { fontSize: 16, fontFamily: fonts.medium, color: colors.slate700, marginTop: 6 },
-  statusBadge: { marginTop: 14, paddingHorizontal: 14, paddingVertical: 6, borderRadius: radii.pill },
-  statusPending: { backgroundColor: colors.amber100 },
-  statusDone: { backgroundColor: colors.emerald100 },
-  statusText: { fontSize: 12, fontFamily: fonts.bold },
-  statusPendingText: { color: colors.amber700 },
-  statusDoneText: { color: colors.emerald700 },
+  heroType: { fontSize: type.body, fontFamily: fonts.medium, fontWeight: "500", color: colors.slate500 },
+  heroAmount: { fontSize: type.display, lineHeight: 44, fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary, marginTop: 8, textAlign: "center", ...tabular },
+  heroCustomer: { fontSize: type.headline, fontFamily: fonts.medium, color: colors.slate700, marginTop: 6, textAlign: "center" },
+  statusBadge: { marginTop: 14, alignItems: "center" },
   details: { gap: 0, padding: 0, overflow: "hidden" },
   detailRow: {
     flexDirection: "row",
@@ -155,27 +148,28 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     gap: 16,
     paddingHorizontal: 16,
     paddingVertical: 14,
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },
-  detailLabel: { fontSize: 14, fontFamily: fonts.regular, color: colors.slate500, flex: 1 },
+  detailLabel: { fontSize: type.body, fontFamily: fonts.regular, color: colors.slate500, flex: 1 },
   detailValue: {
-    fontSize: 14,
-    fontFamily: fonts.bold,
-    color: colors.slate900,
+    fontSize: type.body,
+    fontFamily: fonts.medium,
+    fontWeight: "500",
+    color: colors.primary,
     flex: 1.2,
     textAlign: "right",
   },
   note: {
     flexDirection: "row",
     gap: 10,
-    backgroundColor: colors.blue100,
+    backgroundColor: colors.surfaceMuted,
     padding: 14,
     borderRadius: radii.md,
     alignItems: "flex-start",
   },
-  noteText: { flex: 1, fontSize: 13, fontFamily: fonts.regular, color: colors.slate700, lineHeight: 20 },
+  noteText: { flex: 1, fontSize: type.body, fontFamily: fonts.regular, color: colors.slate700, lineHeight: 21 },
   success: { alignItems: "center", gap: 8, paddingVertical: 16 },
-  successTitle: { fontSize: 20, fontFamily: fonts.bold, color: colors.slate900 },
-  successSub: { fontSize: 14, fontFamily: fonts.regular, color: colors.slate500 },
+  successTitle: { fontSize: type.section, fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary },
+  successSub: { fontSize: type.body, fontFamily: fonts.regular, color: colors.slate500 },
 });

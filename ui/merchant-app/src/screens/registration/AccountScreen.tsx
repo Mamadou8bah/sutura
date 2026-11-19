@@ -5,6 +5,7 @@ import type {ThemeColors} from "../../theme";
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "../../components/NativeControls";
+import { Ionicons } from "@expo/vector-icons";
 import { merchantRegistrationApi } from "../../api/merchantRegistration";
 import { saveSession } from "../../storage/session";
 import { SuturaLogo, PasswordInput, AppInput, Field, LinkButton, PrimaryButton, Screen } from "../../components/ui";
@@ -69,12 +70,14 @@ export function AccountScreen() {
         <PasswordInput accessibilityLabel="Confirm password" autoComplete="new-password" autoCapitalize="none" maxLength={72} editable={!loading} secureTextEntry value={account.confirmPassword} onChangeText={(v) => updateReg({ account: { ...account, confirmPassword: v } })} />
       </Field>
 
-      <Pressable accessibilityRole="checkbox" accessibilityLabel="Accept merchant terms" accessibilityState={{checked:account.acceptedTerms}} disabled={loading} onPress={() => updateReg({ account: { ...account, acceptedTerms: !account.acceptedTerms } })} style={styles.termsRow}>
-        <Text style={styles.checkbox}>{account.acceptedTerms ? "☑" : "☐"}</Text>
+      <Pressable accessibilityRole="checkbox" accessibilityLabel="I agree to Sutura merchant terms and confirm the information provided is accurate" accessibilityState={{checked:account.acceptedTerms, disabled: loading}} disabled={loading} onPress={() => updateReg({ account: { ...account, acceptedTerms: !account.acceptedTerms } })} style={styles.termsRow}>
+        <View style={[styles.box, account.acceptedTerms && styles.boxChecked]}>
+          {account.acceptedTerms ? <Ionicons name="checkmark" size={18} color={colors.onAccent} /> : null}
+        </View>
         <Text style={styles.termsText}>I agree to Sutura merchant terms and confirm the information provided is accurate.</Text>
       </Pressable>
 
-      {error ? <Text style={styles.error}>{error}</Text> : null}
+      {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
 
       <PrimaryButton loading={loading} label={loading ? "Submitting…" : "Submit application"} onPress={handleSubmit} disabled={loading} />
       <LinkButton label="Back" onPress={() => setScreen("reg-owner")} />
@@ -83,9 +86,10 @@ export function AccountScreen() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  title: {fontFamily: appFonts.bold, fontSize: 34, fontWeight: "700", color: colors.slate900 },
+  title: {fontFamily: appFonts.bold, fontSize: 28, lineHeight: 34, fontWeight: "600", color: colors.slate900 },
   error: { color: colors.rose800, fontWeight: "600" },
-  termsRow: { flexDirection: "row", gap: 10, alignItems: "flex-start" },
-  checkbox: {fontFamily: appFonts.regular, fontSize: 18, color: colors.primary },
-  termsText: {fontFamily: appFonts.regular, flex: 1, fontSize: 13, lineHeight: 20, color: colors.slate700 },
+  termsRow: { flexDirection: "row", gap: 12, alignItems: "center", minHeight: 44, paddingVertical: 4 },
+  box: { width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: colors.slate500, alignItems: "center", justifyContent: "center", backgroundColor: colors.surface },
+  boxChecked: { backgroundColor: colors.orange, borderColor: colors.orange },
+  termsText: {fontFamily: appFonts.regular, flex: 1, fontSize: 15, lineHeight: 21, color: colors.slate700 },
 });

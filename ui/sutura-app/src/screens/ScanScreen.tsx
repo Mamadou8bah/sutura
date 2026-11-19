@@ -1,3 +1,5 @@
+import { Money } from "../components/Money";
+import { statusLabel } from "../components/StatusPill";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Keyboard, View } from "react-native";
 import { NativeText as Text } from "../components/NativeControls";
@@ -26,7 +28,7 @@ export function ScanScreen() {
    const found=await api.lookupMerchantPayment(reference);
    if(!mounted.current)return;
    if(found.reference!==reference||!Number.isFinite(Number(found.amount))||Number(found.amount)<0.01||!(/^[A-Z]{3}$/.test(found.currency)))throw new Error("Invalid merchant payment details.");
-   if(found.status!=="ACTIVE")throw new Error(`This payment is ${found.status.toLowerCase()}. Ask the merchant for a new QR code.`);
+   if(found.status!=="ACTIVE")throw new Error(`This payment is ${statusLabel(found.status).toLowerCase()}. Ask the merchant for a new QR code.`);
    if(found.expiresAt&&Date.parse(found.expiresAt)<=Date.now())throw new Error("This payment has expired. Ask the merchant for a new QR code.");
    setPayment(found);
    const wallet=data.wallets.find(w=>w.status==="ACTIVE"&&w.currency===found.currency);
@@ -50,14 +52,14 @@ export function ScanScreen() {
  function reset(){lastScan.current="";setPayment(null);setResult(null);setError("");}
  if(result)return <OperationScreen title={result.status==="PAID"?"Payment complete":result.status==="REVIEW"?"Payment under review":"Payment status"}>
   <Ionicons name={result.status==="PAID"?"checkmark-circle-outline":"time-outline"} size={64} color={result.status==="PAID"?colors.emerald700:colors.orange}/>
-  <Text style={{fontSize:32,fontWeight:"700",color:colors.primary}}>{formatMoney(Number(result.amount),result.currency,4)}</Text>
+  <Money amount={Number(result.amount)} currency={result.currency} maxFractionDigits={4} style={{fontSize:32,fontWeight:"600",color:colors.primary}}/>
   <Text style={{color:colors.primary,fontSize:17}}>{result.merchantName}</Text>
   <Text style={{color:colors.slate500,lineHeight:21}}>{result.status==="PAID"?"Your merchant payment is complete.":result.status==="REVIEW"?"Your payment is pending review. It has not completed. Check Activity for updates.":`Payment status: ${result.status}. Check Activity before paying again.`}</Text>
   <Text selectable style={{color:colors.slate500,fontSize:12}}>{result.transactionReference||result.reference}</Text>
   <PrimaryButton label="Scan another code" onPress={reset}/>
  </OperationScreen>;
  if(payment)return <OperationScreen title="Review payment" subtitle="Check the merchant and amount before confirming.">
-  <View style={{alignItems:"center",paddingVertical:24,gap:12,backgroundColor:colors.surfaceMuted,borderRadius:16}}><Ionicons name="storefront-outline" color={colors.orange} size={36}/><Text style={{color:colors.primary,fontSize:19,fontWeight:"600"}}>{payment.merchantName}</Text><Text style={{color:colors.primary,fontSize:30,fontWeight:"700"}}>{formatMoney(Number(payment.amount),payment.currency,4)}</Text>{!!payment.description&&<Text style={{color:colors.slate500,textAlign:"center",paddingHorizontal:16}}>{payment.description}</Text>}</View>
+  <View style={{alignItems:"center",paddingVertical:24,gap:12,backgroundColor:colors.surfaceMuted,borderRadius:16}}><Ionicons name="storefront-outline" color={colors.primary} size={36}/><Text style={{color:colors.primary,fontSize:19,fontWeight:"600"}}>{payment.merchantName}</Text><Money amount={Number(payment.amount)} currency={payment.currency} maxFractionDigits={4} style={{color:colors.primary,fontSize:30,fontWeight:"600"}}/>{!!payment.description&&<Text style={{color:colors.slate500,textAlign:"center",paddingHorizontal:16}}>{payment.description}</Text>}</View>
   <WalletPicker wallets={data.wallets.filter(w=>w.currency===payment.currency)} selectedId={selectedWalletId} onSelect={setSelectedWalletId} hidden={balanceHidden}/>
   {!data.wallets.some(w=>w.currency===payment.currency&&w.status==="ACTIVE")&&<Text style={{color:colors.rose800}}>You need an active {payment.currency} wallet to pay this merchant.</Text>}
   <FormError message={error}/><SubmitButton label="Confirm payment" loading={busy} disabled={busy||!selectedWallet.id||selectedWallet.currency!==payment.currency||selectedWallet.status!=="ACTIVE"} onPress={()=>void pay()}/>
@@ -65,7 +67,7 @@ export function ScanScreen() {
  </OperationScreen>;
  return <OperationScreen title="Scan & pay" subtitle="Scan the merchant’s Sutura QR code.">
   {!busy&&<MerchantScanner onCode={value=>{if(value!==lastScan.current){lastScan.current=value;void lookup(value);}}}/>}
-  {busy&&<ActivityIndicator accessibilityLabel="Looking up merchant" color={colors.orange}/>}
+  {busy&&<ActivityIndicator accessibilityLabel="Looking up merchant" color={colors.slate500}/>}
   <FormError message={error}/>{!!error&&<PrimaryButton label="Scan again" color={colors.surfaceMuted} textColor={colors.primary} onPress={()=>{lastScan.current="";setError("");}}/>}
   <Text style={{color:colors.slate500,fontSize:12,lineHeight:19}}>You’ll review the merchant, amount and wallet before any payment is made.</Text>
  </OperationScreen>;

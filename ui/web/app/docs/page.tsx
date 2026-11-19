@@ -14,20 +14,20 @@ export default function DocsPage() {
     <DocsShell>
       <div className="mx-auto max-w-4xl space-y-16">
         <section id="introduction" className="scroll-mt-24">
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <div className="border-b border-slate-200 bg-gradient-to-br from-[#123c91] to-[#0a2558] px-8 py-10 text-white lg:px-10">
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-blue-200">Developer docs</p>
-              <h1 className="mt-3 max-w-2xl text-4xl font-black leading-tight tracking-tight lg:text-5xl">
+          <div className="overflow-hidden rounded-card border border-slate-200 bg-white">
+            <div className="border-b border-line px-6 py-10 lg:px-10">
+              <p className="text-sm text-ink-2">Developer docs</p>
+              <h1 className="mt-2 max-w-2xl text-[36px] font-medium leading-10 tracking-[-0.03em] text-ink lg:text-5xl lg:leading-[52px]">
                 Accept payments with an API key
               </h1>
-              <p className="mt-4 max-w-2xl text-base leading-relaxed text-blue-100">
-                Integrate Sutura into your app in three steps: create a key, create a payment from your backend, and confirm with webhooks.
+              <p className="mt-4 max-w-2xl text-lg leading-7 text-ink-2">
+                Integrate Sutura in three steps: create a key, create a payment from your backend, and confirm with webhooks.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <a href="#quickstart" className="rounded-lg bg-white px-5 py-2.5 text-sm font-bold text-[#123c91] transition-colors hover:bg-blue-50">
+                <a href="#quickstart" className="inline-flex h-11 items-center rounded-control bg-accent px-5 text-sm font-semibold text-accent-on transition-colors hover:bg-accent-hover">
                   Quickstart
                 </a>
-                <a href="/dashboard" className="rounded-lg border border-white/30 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-white/10">
+                <a href="/dashboard" className="inline-flex h-11 items-center rounded-control border border-line-strong px-5 text-sm font-semibold text-ink transition-colors hover:bg-surface-2">
                   Open dashboard
                 </a>
               </div>
@@ -40,22 +40,22 @@ export default function DocsPage() {
                 ["Events", "payment.paid webhooks"],
               ].map(([label, value]) => (
                 <div key={label} className="bg-white px-5 py-4">
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">{label}</p>
+                  <p className="text-xs font-bold text-slate-500">{label}</p>
                   <p className="mt-1 text-sm font-bold text-slate-900">{value}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          <div className="mt-8 rounded-2xl border border-slate-200 bg-white p-8">
+          <div className="mt-8 rounded-card border border-slate-200 bg-white p-8">
             <SectionHeading
               title="How it works"
               description="Your server talks to Sutura. Your customer pays on our checkout page. Your server gets notified when money arrives."
             />
             <ol className="grid gap-4 lg:grid-cols-3">
               {quickstartSteps.map((item) => (
-                <li key={item.step} className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[#123c91] text-sm font-black text-white">{item.step}</span>
+                <li key={item.step} className="rounded-card border border-slate-200 bg-slate-50 p-5">
+                  <span className="inline-flex h-8 w-8 tabular-nums items-center justify-center rounded-full bg-surface-2 text-sm font-semibold text-ink">{item.step}</span>
                   <h3 className="mt-3 font-bold text-slate-950">{item.title}</h3>
                   <p className="mt-2 text-sm leading-relaxed text-slate-600">{item.body}</p>
                 </li>
@@ -64,7 +64,7 @@ export default function DocsPage() {
           </div>
         </section>
 
-        <section id="api-keys" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-8 lg:p-10">
+        <section id="api-keys" className="scroll-mt-24 rounded-card border border-slate-200 bg-white p-8 lg:p-10">
           <SectionHeading
             eyebrow="Authentication"
             title="API keys"
@@ -92,7 +92,7 @@ Content-Type: application/json`}
           </div>
         </section>
 
-        <section id="quickstart" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-8 lg:p-10">
+        <section id="quickstart" className="scroll-mt-24 rounded-card border border-slate-200 bg-white p-8 lg:p-10">
           <SectionHeading
             eyebrow="Quickstart"
             title="Create your first payment"
@@ -113,19 +113,19 @@ Content-Type: application/json`}
           </div>
         </section>
 
-        <section id="webhooks" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-8 lg:p-10">
+        <section id="webhooks" className="scroll-mt-24 rounded-card border border-slate-200 bg-white p-8 lg:p-10">
           <SectionHeading
             title="Webhooks"
             description="Register an endpoint in the developer dashboard. Sutura POSTs events when payment status changes."
           />
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-              <p className="font-mono text-sm font-bold text-[#123c91]">payment.paid</p>
+            <div className="rounded-card border border-slate-200 bg-slate-50 p-5">
+              <p className="font-mono text-sm font-bold text-accent-ink">payment.paid</p>
               <p className="mt-2 text-sm text-slate-600">Customer completed checkout. Fulfil the order in your system.</p>
             </div>
-            <div className="rounded-xl border border-slate-200 bg-slate-50 p-5">
-              <p className="font-mono text-sm font-bold text-[#123c91]">payment.failed</p>
+            <div className="rounded-card border border-slate-200 bg-slate-50 p-5">
+              <p className="font-mono text-sm font-bold text-accent-ink">payment.failed</p>
               <p className="mt-2 text-sm text-slate-600">Payment did not succeed. Show an error or retry in your app.</p>
             </div>
           </div>
@@ -141,12 +141,12 @@ Content-Type: application/json`}
           </div>
         </section>
 
-        <section id="errors" className="scroll-mt-24 rounded-2xl border border-slate-200 bg-white p-8 lg:p-10">
+        <section id="errors" className="scroll-mt-24 rounded-card border border-slate-200 bg-white p-8 lg:p-10">
           <SectionHeading title="Errors" description="Common responses when integrating payments." />
 
-          <div className="overflow-hidden rounded-xl border border-slate-200">
+          <div className="overflow-hidden rounded-card border border-slate-200">
             <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs font-bold uppercase tracking-wide text-slate-500">
+              <thead className="bg-slate-50 text-xs font-bold text-slate-500">
                 <tr>
                   <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3">Meaning</th>
@@ -169,11 +169,11 @@ Content-Type: application/json`}
         <footer className="border-t border-slate-200 pt-8 text-center text-sm text-slate-500">
           <p>
             Full OpenAPI reference:{" "}
-            <a href={`${BASE_URL}/swagger-ui.html`} className="font-semibold text-[#123c91] hover:underline">
+            <a href={`${BASE_URL}/swagger-ui.html`} className="font-semibold text-accent-ink hover:underline">
               Swagger UI
             </a>
             {" · "}
-            <a href="/dashboard" className="font-semibold text-[#123c91] hover:underline">
+            <a href="/dashboard" className="font-semibold text-accent-ink hover:underline">
               Developer dashboard
             </a>
           </p>

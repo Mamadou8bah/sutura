@@ -19,7 +19,7 @@ export function VerificationCodeScreen({ value, onChange, onSubmit, onBack, busy
       <View style={{ width: 56, height: 56, borderRadius: 16, backgroundColor: colors.orangeLight, alignItems: "center", justifyContent: "center" }}>
         <Ionicons name="shield-checkmark-outline" size={28} color={colors.orange} />
       </View>
-      <Text accessibilityRole="header" style={{ fontSize: 30, lineHeight: 36, letterSpacing: -0.5, fontWeight: "700", color: colors.primary }}>Enter verification code</Text>
+      <Text accessibilityRole="header" style={{ fontSize: 28, lineHeight: 34, fontWeight: "600", color: colors.primary }}>Enter verification code</Text>
       <Text style={{ color: colors.slate500, fontSize: 14, lineHeight: 21 }}>Enter the six-digit code sent to your email. It expires in five minutes.</Text>
     </View>
     <Field label="Verification code"><AppInput accessibilityLabel="Verification code" autoFocus

@@ -1,43 +1,40 @@
+import type { Metadata } from "next";
 import { ContentBlock, SitePage } from "../../site-page";
+
+export const metadata: Metadata = {
+  title: "Reconciliation",
+  description: "How Sutura checks wallet balances and provider deposits against its double-entry ledger.",
+};
 
 export default function ReconciliationPage() {
   return (
     <SitePage
       title="Reconciliation"
-      description="How operators review mismatches, reports, and ledger alignment in Sutura."
+      description="How Sutura checks that wallet balances and provider deposits agree with the ledger."
     >
-      <ContentBlock title="What reconciliation covers">
-        <p>
-          Reconciliation helps admins compare expected payment activity with recorded wallet and ledger outcomes. It
-          supports investigation when reports show gaps or unresolved mismatches.
-        </p>
-      </ContentBlock>
-
-      <ContentBlock title="Admin workflow">
+      <ContentBlock title="What gets checked">
         <ul className="list-disc space-y-2 pl-5">
-          <li>Review unmatched or delayed items</li>
-          <li>Inspect related transactions and wallet state</li>
-          <li>Resolve mismatches with a clear audit trail</li>
-          <li>Keep operational reports current for finance and risk teams</li>
+          <li>Wallet-ledger: each wallet&apos;s balance against the sum of its ledger postings.</li>
+          <li>Webhook-deposit: provider deposit callbacks against the wallet credits they should have produced.</li>
         </ul>
       </ContentBlock>
 
-      <ContentBlock title="Get access">
+      <ContentBlock title="When something doesn't match">
         <p>
-          Reconciliation tools are available to admin accounts in the{" "}
-          <a href="/dashboard" className="font-bold text-[#123c91]">
-            dashboard
-          </a>
-          . Developers building payment flows should also review the{" "}
-          <a href="/company/security" className="font-bold text-[#123c91]">
-            security
-          </a>{" "}
-          and{" "}
-          <a href="/company/compliance" className="font-bold text-[#123c91]">
-            compliance
-          </a>{" "}
-          pages.
+          A run records each mismatch with the expected value, the actual value and the difference. Sutura staff review
+          it, make any correction, and resolve it with a written reason that is kept in the audit trail. Resolving a
+          mismatch never edits the ledger by itself.
         </p>
+      </ContentBlock>
+
+      <ContentBlock title="Access">
+        <div className="prose-links">
+          <p>
+            Reconciliation is available to Sutura admin accounts at{" "}
+            <a href="/dashboard/reconciliation">Dashboard → Reconciliation</a>. For how data is protected, see{" "}
+            <a href="/company/security">Security</a> and <a href="/company/compliance">Compliance</a>.
+          </p>
+        </div>
       </ContentBlock>
     </SitePage>
   );

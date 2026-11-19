@@ -6,14 +6,14 @@ async function getSecureStore() {
   try {
     return await import("expo-secure-store");
   } catch {
-    return null;
+    throw new Error("Secure device storage is unavailable. Install the latest app build.");
   }
 }
 
 export async function saveSession(key: string, value: string): Promise<void> {
   const secureStore = await getSecureStore();
   if (secureStore) {
-    await secureStore.setItemAsync(key, value);
+    await secureStore.setItemAsync(key, value, { keychainAccessible: secureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY });
     return;
   }
   await AsyncStorage.setItem(key, value);

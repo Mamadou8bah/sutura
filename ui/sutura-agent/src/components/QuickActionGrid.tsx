@@ -1,32 +1,27 @@
-import {fonts as appFonts} from "../theme";
-import {useTheme,useThemedStyles} from "../context/ThemeContext";
-import type {ThemeColors} from "../theme";
+import { useThemedStyles } from "../context/ThemeContext";
 import { StyleSheet, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
-import { Ionicons } from "@expo/vector-icons";
-import { colors, fonts, radii } from "../theme";
+import { ActionIcon, type ActionIconName } from "./ActionIcon";
+import { fonts, type, type ThemeColors } from "../theme";
 
 type Action = {
   label: string;
   hint?: string;
-  icon: keyof typeof Ionicons.glyphMap;
-  color: string;
+  artwork: ActionIconName;
   onPress: () => void;
 };
 
+/** Labelled flat shortcuts with room for large text. */
 export function QuickActionGrid({ actions }: { actions: Action[] }) {
- const {colors}=useTheme();
- const styles=useThemedStyles(createStyles);
-
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.grid}>
-      {actions.map((action) => (
-        <Pressable accessibilityRole="button" accessibilityLabel={action.label} key={action.label} onPress={action.onPress} style={styles.item}>
-          <View style={styles.circle}>
-            <Ionicons name={action.icon} size={22} color="#181a20" />
-          </View>
+      {actions.map(action => (
+        <Pressable accessibilityRole="button" accessibilityLabel={action.label} accessibilityHint={action.hint}
+          key={action.label} onPress={action.onPress} style={styles.item}>
+          <ActionIcon name={action.artwork} />
           <Text style={styles.label}>{action.label}</Text>
-          {!!action.hint&&<Text style={styles.hint}>{action.hint}</Text>}
+
         </Pressable>
       ))}
     </View>
@@ -34,17 +29,7 @@ export function QuickActionGrid({ actions }: { actions: Action[] }) {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  grid: { flexDirection: "row", gap:12 },
-  item: { flex:1, minWidth:0, padding:14, borderWidth:1, borderColor:colors.orange, backgroundColor:colors.orange, borderRadius:12, gap:8 },
-  circle: {
-    width: 36,
-    height: 36,
-    borderRadius: 12,
-    backgroundColor: colors.orangeLight,
-    alignItems: "center",
-    justifyContent: "center",
-
-  },
-  label: { fontSize:16, fontFamily:fonts.bold, color:"#181a20" },
-  hint:{fontFamily: appFonts.regular,fontSize:11,lineHeight:16,color:"#38291d"},
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
+  item: { flexGrow: 1, flexBasis: 128, minWidth: 0, minHeight: 104, paddingVertical: 12, paddingHorizontal: 8, alignItems: "center", gap: 8 },
+  label: { fontSize: type.body, textAlign: "center", alignSelf: "stretch", fontFamily: fonts.medium, fontWeight: "500", color: colors.primary },
 });

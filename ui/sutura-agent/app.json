@@ -12,13 +12,17 @@
     ],
     "ios": {
       "bundleIdentifier": "gm.sutura.agent",
-      "supportsTablet": false
+      "supportsTablet": false,
+      "icon": "./assets/app-icon.png"
     },
     "android": {
       "package": "gm.sutura.agent",
       "adaptiveIcon": {
-        "backgroundColor": "#0a0a0a"
-      }
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#f97316",
+        "monochromeImage": "./assets/monochrome-icon.png"
+      },
+      "icon": "./assets/app-icon.png"
     },
     "plugins": [
       "expo-font",
@@ -29,6 +33,12 @@
         {
           "cameraPermission": "Allow Sutura Agent to scan customer QR codes."
         }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Allow Sutura to use Face ID to unlock your saved session on this device."
+        }
       ]
     ],
     "extra": {
@@ -37,6 +47,6 @@
       }
     },
     "owner": "mamadou8bah",
-    "icon": "./assets/sutura-logo.png"
+    "icon": "./assets/app-icon.png"
   }
 }

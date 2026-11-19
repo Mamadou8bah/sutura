@@ -57,16 +57,19 @@ async function authRequest<T>(path: string, init?: RequestInit): Promise<T> {
   return readAuthJson<T>(response);
 }
 
+export type DepositWalletTarget = { walletId: number; walletName: string; currency: string; userId: number; name: string; phone: string };
+
 export const agentApi = {
+  depositWallet: (walletId: number) => authRequest<DepositWalletTarget>(`/api/v1/agent/deposit-wallets/${walletId}`),
   history: () => authRequest<AgentOperation[]>("/api/v1/agent/operations"),
   customer: (phone: string) =>
     authRequest<{ id: number; name: string }>(`/api/v1/agent/operations/customer?phone=${encodeURIComponent(phone)}`),
 
-  createCash: (type: "DEPOSIT" | "WITHDRAWAL", userId: number, amount: string, currency: string, idempotencyKey: string) =>
+  createCash: (type: "DEPOSIT" | "WITHDRAWAL", userId: number, amount: string, currency: string, idempotencyKey: string, walletId?: number) =>
     authRequest<{ reference: string }>(`/api/v1/${type === "DEPOSIT" ? "deposits" : "withdrawals"}`, {
       method: "POST",
       body: JSON.stringify({ userId, amount, currency, idempotencyKey,
-        ...(type === "DEPOSIT" ? { paymentMethod: "agent" } : { withdrawalMethod: "agent" }) }),
+        ...(type === "DEPOSIT" ? { paymentMethod: "agent", ...(walletId ? { walletId } : {}) } : { withdrawalMethod: "agent" }) }),
     }),
   login: (email: string, password: string, verification?: VerificationCode) =>
     envelopeRequest<AuthSession>("/api/auth/login", {

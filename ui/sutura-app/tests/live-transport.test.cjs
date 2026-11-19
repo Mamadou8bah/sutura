@@ -33,12 +33,50 @@ test('authentication failures remain failures and server errors cannot fabricate
 test('refresh network failures preserve the current authenticated session', async () => {
   let cleared = 0;
   const session = { accessToken: 'live-token', refreshToken: 'live-refresh' };
-  const api = load('../src/api/sessionAuth.ts', name => name === './config' ? { API_BASE: 'https://test.invalid' } : {
+  const api = load('../src/api/sessionAuth.ts', name => name === '../storage/deviceAccess' ? {deviceIsUnlocked:()=>true} : name === './config' ? { API_BASE: 'https://test.invalid' } : {
     availabilityFetch: async url => { if (url.endsWith('/refresh')) throw new Error('offline'); return new Response('', { status: 401 }); },
   });
   api.bindTokenSession({ getSession: () => session, updateSession: async () => {}, clearSession: async () => { cleared++; } });
   await assert.rejects(api.authFetch('/wallets'), /offline/);
   assert.equal(cleared, 0);
+});
+
+test('refresh service outages and malformed responses keep the session; only rejected credentials clear it', async () => {
+  for (const [status, body, expires] of [[503, '{}', false], [200, '<html>upstream error</html>', false], [200, '{"success":false}', false], [401, '{}', true], [403, '{}', true]]) {
+    let cleared = 0; const session = { accessToken: 'access', refreshToken: 'refresh' };
+    const api = load('../src/api/sessionAuth.ts', name => name === '../storage/deviceAccess' ? { deviceIsUnlocked: () => true } : name === './config' ? { API_BASE: 'https://test.invalid' } : { availabilityFetch: async url => new Response(url.endsWith('/refresh') ? body : '', { status: url.endsWith('/refresh') ? status : 401 }) });
+    api.bindTokenSession({ getSession: () => session, updateSession: async () => {}, clearSession: async () => { cleared++; } });
+    await assert.rejects(api.authFetch('/wallets'));
+    assert.equal(cleared, expires ? 1 : 0, `refresh status ${status}`);
+  }
+});
+
+test('parallel unauthorized reads share one refresh, and an account switch cannot inherit an old refresh', async () => {
+  let session = { accessToken: 'old-access', refreshToken: 'old-refresh' }, refreshes = 0;
+  let release; const response = new Promise(resolve => release = resolve);
+  const api = load('../src/api/sessionAuth.ts', name => name === '../storage/deviceAccess' ? { deviceIsUnlocked: () => true } : name === './config' ? { API_BASE: 'https://test.invalid' } : { availabilityFetch: async (url, init) => {
+    if (url.endsWith('/refresh')) { refreshes++; return response; }
+    return new Response('[]', { status: init.headers.Authorization === 'Bearer fresh-access' ? 200 : 401 });
+  } });
+  let cleared = 0; api.bindTokenSession({ getSession: () => session, updateSession: async value => session = value, clearSession: async () => { cleared++; } });
+  const first = api.authFetch('/wallets'), second = api.authFetch('/transactions');
+  await new Promise(resolve => setImmediate(resolve)); assert.equal(refreshes, 1);
+  session = { accessToken: 'other-access', refreshToken: 'other-refresh' };
+  release(new Response('{"success":true,"data":{"accessToken":"fresh-access","refreshToken":"fresh-refresh"}}'));
+  await assert.rejects(first, /Account changed/); await assert.rejects(second, /Account changed/);
+  assert.equal(session.accessToken, 'other-access'); assert.equal(cleared, 0);
+});
+
+test('locked devices cannot start writes, and refresh success retains account metadata', async () => {
+  let unlocked = false, calls = 0; let session = { accessToken: 'old', refreshToken: 'refresh', firstName: 'Kept', role: 'USER' };
+  const api = load('../src/api/sessionAuth.ts', name => name === '../storage/deviceAccess' ? { deviceIsUnlocked: () => unlocked } : name === './config' ? { API_BASE: 'https://test.invalid' } : { availabilityFetch: async (url, init) => {
+    calls++; if (url.endsWith('/refresh')) return new Response('{"success":true,"data":{"accessToken":"new","refreshToken":"rotated"}}');
+    return new Response('[]', { status: init.headers.Authorization === 'Bearer new' ? 200 : 401 });
+  } });
+  api.bindTokenSession({ getSession: () => session, updateSession: async value => session = value, clearSession: async () => assert.fail('No logout expected') });
+  await assert.rejects(api.authFetch('/transfers', { method: 'POST' }), /Unlock/); assert.equal(calls, 0);
+  unlocked = true; assert.equal((await api.authFetch('/wallets')).status, 200);
+  assert.equal(session.firstName, 'Kept'); assert.equal(session.role, 'USER'); assert.equal(session.refreshToken, 'rotated');
 });
 test('all mobile apps use the same live transport implementation', () => {
   for (const file of ['transport.ts']) {

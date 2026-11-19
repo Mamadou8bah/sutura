@@ -20,7 +20,7 @@ export function SelectionSheet({ visible, title, onClose, children }: {
       <Pressable accessibilityRole="button" accessibilityLabel="Dismiss selection" onPress={onClose} style={StyleSheet.absoluteFill} />
       <SafeAreaView edges={["bottom", "left", "right"]} accessibilityViewIsModal style={[styles.sheet, { backgroundColor: "transparent", overflow: "hidden" }]}>
         <GlassBackdrop />
-        <View style={styles.header}><Text accessibilityRole="header" style={{ flex: 1, fontSize: 22, lineHeight: 28, letterSpacing: -0.3, fontWeight: "600", color: colors.primary }}>{title}</Text>
+        <View style={styles.header}><Text accessibilityRole="header" style={{ flex: 1, fontSize: 22, lineHeight: 28, fontWeight: "600", color: colors.primary }}>{title}</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Close selection" onPress={onClose} style={[styles.close, { backgroundColor: colors.surfaceMuted }]}>
             <Ionicons name="close" size={18} color={colors.primary} />
           </Pressable>

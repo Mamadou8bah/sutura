@@ -33,12 +33,8 @@ export function GlassBackdrop() {
   if (solid) return <View pointerEvents="none" style={[StyleSheet.absoluteFill, { backgroundColor: colors.surface }]} />;
   return <View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
     style={[StyleSheet.absoluteFill, { overflow: "hidden" }]}>
-    <BlurTargetView ref={target} style={[StyleSheet.absoluteFill, { backgroundColor: colors.surfaceMuted }]}>
-      <View style={{ position: "absolute", width: 180, height: 120, right: -35, top: -65,
-        borderRadius: 90, backgroundColor: colors.orange, opacity: mode === "dark" ? 0.22 : 0.14 }} />
-      <View style={{ position: "absolute", width: 160, height: 100, left: -50, bottom: -65,
-        borderRadius: 80, backgroundColor: colors.surface, opacity: 0.8 }} />
-    </BlurTargetView>
+    {/* Neutral material only: no tint or shapes as decoration (zender glass rules). */}
+    <BlurTargetView ref={target} style={[StyleSheet.absoluteFill, { backgroundColor: colors.surface }]} />
     {nativeGlass ? <GlassView colorScheme={mode} glassEffectStyle="regular" style={StyleSheet.absoluteFill} />
       : <BlurView blurTarget={target} blurMethod="dimezisBlurViewSdk31Plus" intensity={65}
           tint={mode === "dark" ? "dark" : "light"} style={StyleSheet.absoluteFill} />}

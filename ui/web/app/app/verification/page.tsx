@@ -1,19 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { KycConnectionPending } from "../../../lib/kyc-warmup";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { getAuthSession } from "../../../lib/auth-session";
 import { getMerchantTokenSession } from "../../../lib/merchant-api";
 import { kycApi, type KycStatus } from "../../../lib/kyc-api";
+import { Button, ErrorState, Icon, Skeleton, StatusBadge, type StatusTone } from "../../components/ui";
 
 const descriptions: Record<KycStatus["status"], string> = {
   NOT_STARTED: "Verify your identity with an identity document and a face and liveness check.",
-  PENDING: "Your verification is in progress. Complete the steps in the verification page, then refresh your status.",
+  PENDING: "Your verification is in progress. Finish the steps on the verification page, then come back here.",
   EXPIRED: "Your verification link has expired. Start again to get a new link.",
   VERIFIED: "Your identity has been verified.",
-  FLAGGED: "Your verification needs review. You can return later to check the result.",
-  REJECTED: "Your identity could not be verified. You can try again with clear, valid evidence.",
+  FLAGGED: "Your verification needs a manual review. Check back later for the result.",
+  REJECTED: "We couldn't verify your identity. Try again with a clear photo of a valid document.",
+};
+
+const kycBadge: Record<KycStatus["status"], { label: string; tone: StatusTone }> = {
+  NOT_STARTED: { label: "Not started", tone: "muted" },
+  PENDING: { label: "In progress", tone: "pending" },
+  EXPIRED: { label: "Expired", tone: "muted" },
+  VERIFIED: { label: "Verified", tone: "posted" },
+  FLAGGED: { label: "Under review", tone: "review" },
+  REJECTED: { label: "Not verified", tone: "failed" },
 };
 
 export default function VerificationPage() {
@@ -21,9 +32,13 @@ export default function VerificationPage() {
   const [record, setRecord] = useState<KycStatus | null>(null);
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [connecting, setConnecting] = useState(false);
+  const [connectionNotice, setConnectionNotice] = useState("");
+  const request = useRef<AbortController | null>(null);
   const [back, setBack] = useState("/app");
 
   useEffect(() => {
+    document.title = "Verify your identity · Sutura";
     const auth = getAuthSession();
     const merchant = getMerchantTokenSession();
     if (!auth?.accessToken && !merchant) {
@@ -34,63 +49,139 @@ export default function VerificationPage() {
       router.replace("/dashboard");
       return;
     }
-    setBack(auth?.role === "customer" ? "/app" : "/dashboard");
+    setBack(auth?.role === "customer" ? "/app?view=profile" : "/dashboard");
     let active = true;
-    kycApi.status()
+    const controller = new AbortController(); request.current = controller;
+    const options = { signal: controller.signal, deadline: Date.now() + 180000, onRetry: () => { if (active) setConnecting(true); } };
+    kycApi
+      .status(options)
       .then(async (local) => {
         if (active) setRecord(local);
-        return local.sessionId ? await kycApi.refresh() : local.status === "NOT_STARTED" ? await kycApi.start() : local;
+        return local.status === "PENDING" && local.sessionId && local.sessionId > 0 ? await kycApi.refresh(options) : local.status === "NOT_STARTED" ? await kycApi.start(options) : local;
       })
-      .then((value) => { if (active) setRecord(value); })
-      .catch((err) => { if (active) setError(err instanceof Error ? err.message : "Could not load verification"); })
-      .finally(() => { if (active) setBusy(false); });
-    return () => { active = false; };
+      .then((value) => {
+        if (active) setRecord(value);
+      })
+      .catch((err) => {
+        if (active) { if (err instanceof KycConnectionPending) setConnectionNotice(err.message); else setError(err instanceof Error ? err.message : "Could not load verification"); }
+      })
+      .finally(() => {
+        if (active) { setBusy(false); setConnecting(false); }
+      });
+    return () => {
+      active = false; request.current?.abort();
+    };
   }, [router]);
 
-  useEffect(()=>{
-    if(record?.status!=="PENDING"||busy)return;
-    let running=false;let stopped=false;
-    const refresh=async()=>{if(running||stopped||document.visibilityState!=="visible")return;running=true;try{const value=await kycApi.refresh();if(!stopped){setRecord(value);setError(null);}}catch(err){if(!stopped)setError(err instanceof Error?err.message:"Could not refresh identity");}finally{running=false;}};
-    const timer=setInterval(()=>void refresh(),30000);window.addEventListener("focus",refresh);
-    return()=>{stopped=true;clearInterval(timer);window.removeEventListener("focus",refresh);};
-  },[record?.status,busy]);
+  // While pending, re-check every 30s when the tab is visible, and on focus.
+  useEffect(() => {
+    if (record?.status !== "PENDING" || busy || connectionNotice) return;
+    let running = false;
+    let stopped = false;
+    const pollController = new AbortController();
+    const refresh = async () => {
+      if (running || stopped || document.visibilityState !== "visible") return;
+      running = true;
+      try {
+        const value = await kycApi.refresh({ signal: pollController.signal, onRetry: () => { if (!stopped) setConnecting(true); } });
+        if (!stopped) {
+          setRecord(value);
+          setError(null);
+        }
+      } catch (err) {
+        if (!stopped) { if (err instanceof KycConnectionPending) setConnectionNotice(err.message); else setError(err instanceof Error ? err.message : "Could not refresh verification"); }
+      } finally {
+        running = false; if (!stopped) setConnecting(false);
+      }
+    };
+    const timer = setInterval(() => void refresh(), 30000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      stopped = true; pollController.abort();
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [record?.status, busy, connectionNotice]);
 
-  async function run(action: "start" | "refresh") {
-    setBusy(true);
-    setError(null);
+  async function run(action: "start" | "refresh" | "status") {
+    if (busy) return;
+    request.current?.abort();
+    setBusy(true); setError(null); setConnectionNotice(""); setConnecting(false);
+    const controller = new AbortController(); request.current = controller;
+    const current = () => request.current === controller && !controller.signal.aborted;
     try {
-      setRecord(await kycApi[action]());
+      const value = await kycApi[action]({ signal: controller.signal, deadline: Date.now() + 180000, onRetry: () => { if (current()) setConnecting(true); } });
+      if (current()) setRecord(value);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Verification is unavailable");
+      if (current()) { if (err instanceof KycConnectionPending) setConnectionNotice(err.message); else setError(err instanceof Error ? err.message : "Verification is unavailable"); }
     } finally {
-      setBusy(false);
+      if (current()) { setBusy(false); setConnecting(false); }
     }
   }
 
   const canStart = record && ["NOT_STARTED", "EXPIRED", "REJECTED"].includes(record.status);
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-12">
-      <div className="mx-auto max-w-lg rounded-3xl border border-slate-200 bg-white p-7 shadow-sm">
-        <Link href={back} className="text-sm font-bold text-[#123c91]">← Back to your account</Link>
-        <h1 className="mt-6 text-2xl font-black text-slate-900">Verify your identity</h1>
-        {record && (
-          <div className="mt-5" aria-live="polite">
-            <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-bold text-[#123c91]">
-              {record.status.replaceAll("_", " ")}
-            </span>
-            <p className="mt-4 text-sm leading-6 text-slate-600">{descriptions[record.status]}</p>
-          </div>
-        )}
-        {busy && <p className="mt-4 text-sm text-slate-600" role="status">Updating verification…</p>}
-        {error && <p className="mt-4 rounded-xl bg-rose-50 p-3 text-sm text-rose-800" role="alert">{error}</p>}
-        <div className="mt-6 flex flex-col gap-3">
-          {canStart && <button disabled={busy} onClick={() => run("start")} className="rounded-xl bg-[#123c91] px-4 py-3 font-bold text-white disabled:opacity-50">Start verification</button>}
-          {record?.status === "PENDING" && record.hostedUrl && (
-            <a href={record.hostedUrl} target="_blank" rel="noopener noreferrer" className="rounded-xl bg-[#123c91] px-4 py-3 text-center font-bold text-white">Continue verification</a>
-          )}
-          {record?.sessionId && <button disabled={busy} onClick={() => run("refresh")} className="rounded-xl border border-slate-200 px-4 py-3 font-bold text-slate-800 disabled:opacity-50">Refresh status</button>}
-          {!record && !busy && <button onClick={() => { setBusy(true); kycApi.status().then(setRecord).catch((err) => setError(err.message)).finally(() => setBusy(false)); }} className="rounded-xl border border-slate-200 px-4 py-3 font-bold">Try again</button>}
-        </div>
+    <main className="min-h-screen bg-canvas px-4 py-10 text-ink sm:py-16">
+      <div className="mx-auto max-w-md">
+        <Link
+          href={back}
+          className="-ml-2 inline-flex h-9 items-center gap-1 rounded-control px-2 text-sm font-medium text-ink-2 hover:bg-surface-2 hover:text-ink"
+        >
+          <Icon name="chevron-left" size={18} />
+          Back to your account
+        </Link>
+        <section className="mt-4 rounded-panel border border-line bg-surface p-5 shadow-card sm:p-6">
+          <h1 className="text-2xl font-semibold leading-8">Verify your identity</h1>
+          {!record && busy ? (
+            <div role="status" aria-label="Loading verification" className="mt-5 space-y-3">
+              <Skeleton className="h-5 w-24 rounded-full" />
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+            </div>
+          ) : null}
+          {record ? (
+            <div className="mt-5" aria-live="polite">
+              <StatusBadge label={kycBadge[record.status].label} tone={kycBadge[record.status].tone} />
+              <p className="mt-3 text-sm leading-6 text-ink-2">{descriptions[record.status]}</p>
+              {record.explanation ? <p className="mt-2 text-sm text-ink-2">{record.explanation}</p> : null}
+            </div>
+          ) : null}
+          {(connecting || connectionNotice) && <p role="status" className="mt-4 text-sm leading-6 text-ink-2">{connecting ? "Connecting to verification. This can take about a minute. Your status has not changed." : connectionNotice}</p>}
+          {!record && connectionNotice && <Button onClick={() => void run("status")} busy={busy}>Try again</Button>}
+          {error && !record ? (
+            <ErrorState title="We couldn't load your verification" error={error} onRetry={() => void run("status")} retrying={busy} />
+          ) : error ? (
+            <p className="mt-4 text-sm text-status-failed-fg" role="alert">
+              {error}
+            </p>
+          ) : null}
+          {record ? (
+            <div className="mt-6 flex flex-col gap-2">
+              {canStart ? (
+                <Button size="lg" busy={busy} busyLabel="Starting" onClick={() => run("start")}>
+                  {record.status === "NOT_STARTED" ? "Start verification" : "Start again"}
+                </Button>
+              ) : null}
+              {record.status === "PENDING" && record.hostedUrl ? (
+                <a
+                  href={record.hostedUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex h-[52px] items-center justify-center gap-2 rounded-control bg-accent px-5 font-semibold text-accent-on hover:bg-accent-hover"
+                >
+                  Continue verification
+                  <Icon name="external" size={18} />
+                  <span className="sr-only">(opens in a new tab)</span>
+                </a>
+              ) : null}
+              {record.sessionId ? (
+                <Button variant="secondary" size="lg" icon="refresh" busy={busy} busyLabel="Checking" onClick={() => run("refresh")}>
+                  Check status
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+        </section>
       </div>
     </main>
   );

@@ -1,3 +1,4 @@
+import { clearDeviceData } from "../storage/deviceVault";
 import { useBackNavigation } from "../hooks/useBackNavigation";
 import { applicationApi, type MerchantApplication } from "../api/application";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
@@ -99,6 +100,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<MerchantSession | null>(null);
   const [screen, setScreen, resetHistory] = useBackNavigation<Screen>("welcome", session ? session.userStatus === "PENDING_REVIEW" ? "pending" : "home" : "welcome");
   useEffect(() => resetHistory(), [session?.email, resetHistory]);
+  const sessionEpoch = useRef(0);
   const sessionRef = useRef(session);
   sessionRef.current = session;
   const [loading, setLoading] = useState(true);
@@ -118,15 +120,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    sessionEpoch.current++;
+    const owner = sessionRef.current?.email;
     await clearSession();
     sessionRef.current=null;
+    if (owner) await clearDeviceData(`merchant:${owner}`).catch(() => undefined);
     setApplication(null);
     setSession(null);
     setScreen("welcome");
   }, []);
 
   const persistSession = useCallback(async (stored: MerchantSession) => {
+    const epoch = sessionEpoch.current;
     await updateStoredSession(stored);
+    if (epoch !== sessionEpoch.current) return;
     sessionRef.current=stored;
     setSession(stored);
   }, []);
@@ -145,12 +152,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refreshApplication=useCallback(async()=>{
     if(!sessionRef.current)return;
+    const epoch=sessionEpoch.current;
     const email=sessionRef.current.email;
     const value=await applicationApi.status();
     // Ignore a response belonging to a previous sign-in.
-    const current=sessionRef.current;if(!current||current.email!==email)return;
+    const current=sessionRef.current;if(!current||current.email!==email||epoch!==sessionEpoch.current)return;
     const updated={...current,businessName:value.businessName,userStatus:value.userStatus};
-    sessionRef.current=updated;await updateStoredSession(updated);setSession(updated);setApplication(value);
+    sessionRef.current=updated;await updateStoredSession(updated);if(epoch!==sessionEpoch.current)return;setSession(updated);setApplication(value);
     if(value.userStatus==="ACTIVE")setScreen(current=>current==="pending"?"home":current);
   },[]);
   useEffect(()=>{if(session)void refreshApplication().catch(err=>setError(err instanceof Error?err.message:"Could not refresh application"));},[session?.email,refreshApplication]);

@@ -1,3 +1,4 @@
+import { useDeviceLock } from "../context/DeviceLockContext";
 import { useIsFocused } from "@react-navigation/native";
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
@@ -8,11 +9,12 @@ import { PrimaryButton } from "./ui";
 import { colors } from "../theme";
 export default function NativeCamera({ onCode, onManual }: { onCode: (code: string) => void; onManual: () => void }) {
  const focused = useIsFocused();
+ const { unlocked } = useDeviceLock();
  const {colors}=useTheme();
  const styles=useThemedStyles(createStyles);
 
   const [permission, requestPermission] = useCameraPermissions();
-  if (!focused) return null;
+  if (!focused || !unlocked) return null;
   return <View style={{ gap: 12 }}>
     {permission?.granted ? <CameraView style={styles.camera} facing="back" barcodeScannerSettings={{ barcodeTypes: ["qr"] }} onBarcodeScanned={({ data }) => onCode(data)} /> : <View style={styles.placeholder}>
       <Text style={styles.text}>Allow camera access to scan a customer QR code, or enter the reference below.</Text>

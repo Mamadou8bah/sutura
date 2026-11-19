@@ -1,3 +1,4 @@
+import { loadSnapshot, saveSnapshot, sameSnapshot } from "../storage/deviceVault";
 import { useBackNavigation } from "../hooks/useBackNavigation";
 import {useAutoRefresh} from "../hooks/useAutoRefresh";
 import { normalizePhone } from "../utils/inputValidation";
@@ -52,6 +53,11 @@ type WalletContextValue = {
   topUp: (amount: number, method: "mobile_money" | "agent", phone: string, walletId?: number) => Promise<OpResult>;
   withdraw: (amount: number, walletId?: number) => Promise<OpResult>;
   refreshData: () => Promise<void>;
+  /** Set when the last read failed; the data shown is from `lastUpdated`. */
+  refreshError: string | null;
+  lastUpdated: Date | null;
+  /** True once the first read finished (success or failure). */
+  loaded: boolean;
   recentTransactions: CustomerTransaction[];
   balanceHidden: boolean;
   toggleBalanceHidden: () => void;
@@ -69,6 +75,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const { session, newlyRegistered } = useAuth();
   const [data, setData] = useState(EMPTY_DASHBOARD);
   const [loading, setLoading] = useState(false);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useBackNavigation<TabId>("home");
   useEffect(() => { if (newlyRegistered) setTab("verification"); }, [newlyRegistered]);
   const [profileSection, setProfileSection] = useState<ProfileSection>("profile");
@@ -83,17 +92,30 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setData(EMPTY_DASHBOARD);
     setDepositQr(null); setWithdrawalQr(null); setSelectedTransactionId(null);
     setSelectedWalletId(0); setTab("home");
+    setRefreshError(null); setLastUpdated(null); setLoaded(false);
   }, [session?.username]);
 
+  const freshData = useRef(false);
+  useEffect(() => {
+    let cancelled = false; freshData.current = false;
+    const scope = session?.username ? `customer:${session.username}` : null;
+    if (scope) void loadSnapshot<CustomerDashboardData>(scope).then(saved => {
+      if (cancelled || freshData.current || !saved || !Array.isArray(saved.data?.wallets) || !Array.isArray(saved.data?.transactions)) return;
+      setData(saved.data); setLoaded(true); setLastUpdated(new Date(saved.savedAt));
+      setRefreshError("Showing saved data. Reconnect to confirm current balances.");
+      setSelectedWalletId(saved.data.wallets[0]?.id ?? 0);
+    }).catch(() => undefined);
+    return () => { cancelled = true; };
+  }, [session?.username]);
   const refreshGeneration=useRef(0);
-  useEffect(()=>()=>{refreshGeneration.current++;},[session]);
-  const refreshData = useCallback(async () => {
+  useEffect(()=>()=>{refreshGeneration.current++;},[session?.username]);
+  const refreshData = useCallback(async (silent = false) => {
     if (!session?.accessToken) {
       setData(EMPTY_DASHBOARD);
       return;
     }
     const request=++refreshGeneration.current;
-    setLoading(true);
+    if (!silent) setLoading(true);
     try {
       const wallets = await api.listWallets();
       const [balances, transactions] = await Promise.all([
@@ -101,7 +123,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         api.listTransactions(),
       ]);
       if(request!==refreshGeneration.current)return;
-      setData({
+      const next: CustomerDashboardData = {
         session: {
           name:
             session.firstName && session.lastName
@@ -140,24 +162,33 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         })),
         pendingCount: transactions.filter((t) => t.status === "PENDING").length,
         contacts: [],
-      });
+      };
+      freshData.current = true;
+      setData(current => sameSnapshot(current, next) ? current : next);
+      void saveSnapshot(`customer:${session.username}`, { ...next, transactions: next.transactions.slice(0, 200) }).catch(() => undefined);
       if (wallets.length > 0) {
         setSelectedWalletId((prev) =>
           wallets.some((w) => w.id === prev) ? prev : wallets[0].id,
         );
       }
-    } catch {
-      // Keep existing data on failure; screens can pull-to-refresh.
+      setRefreshError(null);
+      setLastUpdated(new Date());
+    } catch (err) {
+      // Keep the last good data but mark it stale; never show it as current.
+      if (request === refreshGeneration.current) {
+        const reason = err instanceof Error && /timed? ?out|timeout/i.test(err.message) ? "The connection timed out." : "Couldn't refresh.";
+        setRefreshError(reason);
+      }
     } finally {
-      if(request===refreshGeneration.current)setLoading(false);
+      if(request===refreshGeneration.current){setLoading(false);setLoaded(true);}
     }
-  }, [session]);
+  }, [session?.username, session?.firstName, session?.lastName]);
 
   useEffect(() => {
     void refreshData();
   }, [refreshData]);
 
-  useAutoRefresh(refreshData,!!session?.accessToken);
+  useAutoRefresh(() => refreshData(true),!!session?.accessToken);
 
   const toggleBalanceHidden = useCallback(() => {
     setBalanceHidden((prev) => !prev);
@@ -332,6 +363,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       topUp,
       withdraw,
       refreshData,
+      refreshError,
+      lastUpdated,
+      loaded,
       recentTransactions,
       balanceHidden,
       toggleBalanceHidden,
@@ -355,6 +389,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       topUp,
       withdraw,
       refreshData,
+      refreshError,
+      lastUpdated,
+      loaded,
       recentTransactions,
       balanceHidden,
       toggleBalanceHidden,

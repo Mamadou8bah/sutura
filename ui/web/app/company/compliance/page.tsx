@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { ContentBlock, SitePage } from "../../site-page";
+
+export const metadata: Metadata = {
+  title: "Compliance",
+  description: "Sutura’s approach to accountable money movement, auditability, and operational controls.",
+};
 
 export default function CompliancePage() {
   return (

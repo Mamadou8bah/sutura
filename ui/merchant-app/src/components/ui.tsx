@@ -59,17 +59,18 @@ export function LinkButton({ label, onPress }: { label: string; onPress: () => v
  const styles=useThemedStyles(createStyles);
 
   return (
-    <Pressable onPress={onPress}>
+    <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={{ minHeight: 44, justifyContent: "center" }}>
       <Text style={styles.link}>{label}</Text>
     </Pressable>
   );
 }
 
 export function SuturaLogo({ size = 40 }: { size?: number }) {
+  const { mode } = useTheme();
   return (
     <Image
       source={SUTURA_LOGO}
-      style={{ width: size, height: size, backgroundColor:"#ffffff", borderRadius:8 }}
+      style={{ width: size, height: size, backgroundColor: mode === "dark" ? "transparent" : "#ffffff", borderRadius:8 }}
       accessibilityLabel="Sutura"
       resizeMode="contain"
     />
@@ -77,10 +78,10 @@ export function SuturaLogo({ size = 40 }: { size?: number }) {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  screen: { padding: 20, paddingBottom: 32, gap: 16 },
+  screen: { padding: 16, paddingBottom: 32, gap: 16 },
   field: { gap: 8 },
-  fieldLabel: {fontFamily: appFonts.bold, fontSize: 12, fontWeight: "700", color: colors.slate500,  letterSpacing: 0.1 },
-  fieldHint: {fontFamily: appFonts.regular, fontSize: 12, color: colors.slate500 },
+  fieldLabel: {fontFamily: appFonts.medium, fontSize: 13, fontWeight: "500", color: colors.slate500 },
+  fieldHint: {fontFamily: appFonts.regular, fontSize: 13, color: colors.slate500 },
   input: {fontFamily: appFonts.regular,
     minHeight: 52,
     paddingVertical: 12,
@@ -100,7 +101,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryButtonText: {fontFamily: appFonts.bold, fontSize: 16, fontWeight: "800", color: colors.white },
+  primaryButtonText: {fontFamily: appFonts.semibold, fontSize: 17, fontWeight: "600", color: colors.white },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
@@ -108,7 +109,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  link: {fontFamily: appFonts.medium, textAlign: "left", color: colors.orangeDark, fontWeight: "500", fontSize: 14, paddingVertical:12 },
+  link: {fontFamily: appFonts.medium, textAlign: "left", color: colors.accentText, fontWeight: "500", fontSize: 15, paddingVertical:12 },
 });
 
 export function PasswordInput(props:TextInputProps){

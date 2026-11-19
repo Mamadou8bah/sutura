@@ -1,4 +1,10 @@
+import type { Metadata } from "next";
 import { ContentBlock, SitePage } from "../../site-page";
+
+export const metadata: Metadata = {
+  title: "About Sutura",
+  description: "Sutura is a payments platform for wallets, merchants, developers, and operators.",
+};
 
 export default function AboutPage() {
   return (
@@ -25,7 +31,7 @@ export default function AboutPage() {
 
       <ContentBlock title="Where we focus">
         <p>
-          Sutura is built for serious payment operations, with emphasis on reliability, role-based access, and tools
+          Sutura is built for payment operations where every balance must reconcile, with emphasis on reliability, role-based access, and tools
           that keep money movement understandable for both product teams and operators.
         </p>
       </ContentBlock>

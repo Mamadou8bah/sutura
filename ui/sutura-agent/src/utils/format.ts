@@ -1,43 +1,28 @@
 import type { OperationType } from "../types";
+import { statusLabel as toneLabel } from "../components/StatusPill";
 
-export function formatMoney(amount: number, currency: string): string {
+/** One money format in all three apps: en-GB grouping, 2 dp (up to 4 when asked), currency code first. */
+export function formatMoney(amount: number, currency: string, maximumFractionDigits = 2): string {
   return `${currency} ${amount.toLocaleString("en-GB", {
     minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: Math.max(2, maximumFractionDigits),
   })}`;
 }
 
-export function getGreeting(): string {
-  const hour = new Date().getHours();
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
-}
-
 export function formatTimestamp(value: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
     timeStyle: "short",
-  }).format(new Date(value));
+  }).format(date);
 }
 
 export function operationLabel(type: OperationType): string {
   return type === "DEPOSIT" ? "Cash-in" : "Cash-out";
 }
 
+/** Human status label; never a raw enum. See StatusPill for tones. */
 export function statusLabel(status: string): string {
-  switch (status) {
-    case "AWAITING_AGENT":
-      return "Awaiting agent";
-    case "PENDING":
-      return "Pending";
-    case "APPROVED":
-      return "Approved";
-    case "COMPLETED":
-      return "Completed";
-    case "FAILED":
-      return "Failed";
-    default:
-      return status;
-  }
+  return toneLabel(status);
 }

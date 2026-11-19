@@ -1,39 +1,500 @@
 "use client";
 
-import {usePathname,useRouter} from "next/navigation";
-import {useCallback,useEffect,useRef,useState} from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { authenticatedFetch, readAuthenticatedJson } from "../../../lib/authenticated-fetch";
+import {
+  Button,
+  DetailList,
+  ErrorState,
+  Field,
+  InlineAlert,
+  Money,
+  PageHeading,
+  Panel,
+  Skeleton,
+  StatusBadge,
+  UpdatedAgo,
+  fieldClass,
+  formatAmount,
+  formatDateTime,
+  statusLabel,
+  useToast,
+} from "../../components/ui";
+import { DataTable } from "../../dashboard/data-table";
+import { ConfirmActionDrawer, humanize } from "./admin-shared";
 
-import {getAuthSession} from "../../../lib/auth-session";
+type Entry = {
+  accountStatus?: string;
+  id: number;
+  reference: string | null;
+  name: string;
+  kind: string;
+  status: string;
+  amount: number | null;
+  currency: string | null;
+  accountId: number;
+  agentId: number | null;
+  detail: string | null;
+  createdAt: string | null;
+};
+type Row = Entry & Record<string, unknown>;
 
-import {getDemoSession} from "../../../lib/demo-auth";
+export type OperationsKind = "customers" | "merchants" | "agents" | "deposits" | "withdrawals" | "collections" | "identity";
 
-import {authenticatedFetch,readAuthenticatedJson} from "../../../lib/authenticated-fetch";
+const titles: Record<OperationsKind, { title: string; description: string }> = {
+  customers: { title: "Customers", description: "Customer accounts and their access status." },
+  merchants: { title: "Merchants", description: "Business applications and approved merchants." },
+  agents: { title: "Agents", description: "Cash agents and their accounts." },
+  deposits: { title: "Cash-in", description: "Agent cash-ins and provider deposits." },
+  withdrawals: { title: "Cash-out", description: "Agent cash-outs and provider payouts." },
+  collections: { title: "Collections", description: "Merchant QR and payment-link collections." },
+  identity: { title: "Identity", description: "Identity verification results from Sentinel." },
+};
 
-import {PanelCard,SecondaryButton,inputClass} from "../../dashboard/dashboard-shell";
+const POLL_MS = 30000;
 
-type Entry={accountStatus?:string;id:number;reference:string|null;name:string;kind:string;status:string;amount:number|null;currency:string|null;accountId:number;agentId:number|null;detail:string|null;createdAt:string|null};
+export function OperationsWorkspace({ kind }: { kind: OperationsKind }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const record = pathname.split("/")[3];
+  const creating = record === "new";
+  const detailScreen = Boolean(record) && !creating;
+  const back = useCallback(() => router.push(`/dashboard/${kind}`), [router, kind]);
 
-export type OperationsKind="customers"|"merchants"|"agents"|"deposits"|"withdrawals"|"collections"|"identity";
+  if (creating && kind === "agents") return <CreateAgent onDone={back} />;
+  if (detailScreen) return <OperationDetail kind={kind} id={record} onBack={back} />;
+  return <OperationsList kind={kind} />;
+}
 
-const demoRecords:Partial<Record<OperationsKind,Entry[]>>={};
+function OperationsList({ kind }: { kind: OperationsKind }) {
+  const router = useRouter();
+  const [rows, setRows] = useState<Entry[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [page, setPage] = useState(0);
+  const [pages, setPages] = useState(1);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [status, setStatus] = useState("All");
+  const [loadedAt, setLoadedAt] = useState<number | null>(null);
+  const generation = useRef(0);
+  const statusId = useId();
 
-const titles:Record<OperationsKind,string>={customers:"Customer accounts",merchants:"Merchant onboarding",agents:"Agent accounts",deposits:"Cash-in & deposits",withdrawals:"Cash-out & payouts",collections:"Merchant collections",identity:"Identity verification"};
+  const load = useCallback(async () => {
+    const request = ++generation.current;
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await readAuthenticatedJson<{ content: Entry[]; totalPages: number }>(
+        await authenticatedFetch(`/api/v1/admin/operations/${kind}?page=${page}`),
+      );
+      if (request !== generation.current) return;
+      setRows(result.content);
+      setPages(result.totalPages);
+      setLoaded(true);
+      setLoadedAt(Date.now());
+    } catch (e) {
+      if (request === generation.current) setError(e instanceof Error ? e.message : "Could not load operations.");
+    } finally {
+      if (request === generation.current) setBusy(false);
+    }
+  }, [kind, page]);
 
-function samples(kind:OperationsKind):Entry[]{const base={id:12,reference:null,name:"Fatou Jallow",kind:kind.toUpperCase(),status:"ACTIVE",amount:null,currency:null,accountId:12,agentId:null,detail:null,createdAt:new Date().toISOString()};switch(kind){case "customers":return [{...base,reference:"+2207000001",detail:"fatou@example.invalid"},{...base,id:19,name:"Sample customer",accountId:19,status:"PENDING_REVIEW",reference:"+2207000002"}];case "merchants":return [{...base,id:21,name:"Bakau Market",accountId:21,status:"PENDING_REVIEW",detail:"Bakau · Retail shop"},{...base,id:22,name:"Serekunda Store",accountId:22,status:"APPROVED",detail:"Serekunda · Retail shop"}];case "agents":return [{...base,id:31,name:"Demo Agent",accountId:31,reference:"+2207000003",detail:"agent@example.invalid"}];case "identity":return [{...base,name:"Account #12",status:"VERIFIED",reference:"DEMO-KYC-12",detail:"Sample identity result"},{...base,id:19,name:"Account #19",accountId:19,status:"FLAGGED",reference:"DEMO-KYC-19",detail:"Sample evidence requires review"}];case "collections":return [{...base,id:41,name:"Bakau Market",accountId:21,status:"PAID",amount:250,currency:"GMD",reference:"DEMO-COLLECTION-41",detail:"Order 1042"},{...base,id:42,name:"Serekunda Store",accountId:22,status:"ACTIVE",amount:500,currency:"GMD",reference:"DEMO-COLLECTION-42",detail:"Order 1043"}];default:return [{...base,id:51,status:"AWAITING_AGENT",kind:"AGENT",agentId:31,amount:250,currency:"GMD",reference:kind==="deposits"?"DEMO-CASH-IN-51":"DEMO-CASH-OUT-51"},{...base,id:52,status:"PENDING_REVIEW",kind:"SELF",amount:1500,currency:"GMD",reference:"DEMO-PROVIDER-52",detail:"Sample payment is under risk review"}];}}
+  // Refresh every 30s while the tab is visible; "Updated Xs ago" shows freshness.
+  useEffect(() => {
+    let active = true;
+    void load();
+    const timer = window.setInterval(() => {
+      if (active && document.visibilityState === "visible") void load();
+    }, POLL_MS);
+    return () => {
+      active = false;
+      generation.current++;
+      window.clearInterval(timer);
+    };
+  }, [load]);
 
-export function OperationsWorkspace({kind}:{kind:OperationsKind}){const router=useRouter();const pathname=usePathname();const record=pathname.split("/")[3];const creating=record==="new";const detailScreen=!!record&&!creating;const back=()=>router.push(`/dashboard/${kind}`);const [rows,setRows]=useState<Entry[]>([]);const generation=useRef(0);const [page,setPage]=useState(0);const [pages,setPages]=useState(1);const [busy,setBusy]=useState(false);const [error,setError]=useState("");const [query,setQuery]=useState("");const [status,setStatus]=useState("All");const [selected,setSelected]=useState<Entry|null>(null);const [accountStatus,setAccountStatus]=useState<string|null>(null);const [reason,setReason]=useState("");const [decision,setDecision]=useState("APPROVED");const [saving,setSaving]=useState(false);const [agent,setAgent]=useState({firstName:"",lastName:"",phoneNumber:"",email:"",password:"",reason:""});
+  const statuses = useMemo(() => [...new Set(rows.map((r) => r.status))], [rows]);
+  const visible = useMemo(() => (status === "All" ? rows : rows.filter((r) => r.status === status)) as Row[], [rows, status]);
+  const hasMoney = kind === "deposits" || kind === "withdrawals" || kind === "collections";
+  const meta = titles[kind];
 
- const load=useCallback(async()=>{const request=++generation.current;setBusy(true);setError("");try{if(getDemoSession()&&!getAuthSession()){setRows(demoRecords[kind]??(demoRecords[kind]=samples(kind)));setPages(1);return;}const result=await readAuthenticatedJson<{content:Entry[];totalPages:number}>(await authenticatedFetch(`/api/v1/admin/operations/${kind}?page=${page}`));if(request!==generation.current)return;setRows(result.content);setPages(result.totalPages);}catch(e){if(request===generation.current)setError(e instanceof Error?e.message:"Could not load operations.");}finally{if(request===generation.current)setBusy(false);}},[kind,page]);
+  return (
+    <div className="space-y-5">
+      <PageHeading
+        title={meta.title}
+        description={meta.description}
+        action={
+          <>
+            <UpdatedAgo at={loadedAt} />
+            {kind === "agents" ? (
+              <Button icon="plus" onClick={() => router.push("/dashboard/agents/new")}>
+                Create agent
+              </Button>
+            ) : null}
+          </>
+        }
+      />
 
- useEffect(()=>{let active=true;if(record)return;void load();const timer=setInterval(()=>{if(active&&document.visibilityState==="visible")void load();},30000);return()=>{active=false;generation.current++;clearInterval(timer);};},[load,record]);
+      {statuses.length > 1 ? (
+        <div className="flex items-center gap-2">
+          <label htmlFor={statusId} className="text-sm text-ink-2">
+            Status
+          </label>
+          <select id={statusId} className={`${fieldClass} h-9 w-auto`} value={status} onChange={(e) => setStatus(e.target.value)}>
+            <option value="All">All statuses</option>
+            {statuses.map((s) => (
+              <option key={s} value={s}>
+                {statusLabel(s)}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
 
- useEffect(()=>{let active=true;setSelected(null);setAccountStatus(null);setReason("");if(!detailScreen)return;async function read(){setBusy(true);try{let value:Entry|undefined;if(getDemoSession()&&!getAuthSession()){const records=demoRecords[kind]??(demoRecords[kind]=samples(kind));value=records.find(r=>r.id===Number(record));if(!value)throw new Error("Record not found.");}else{value=await readAuthenticatedJson<Entry>(await authenticatedFetch(`/api/v1/admin/operations/records/${kind}/${record}`));}if(active)setSelected(value);
-if(["customers","agents","merchants"].includes(kind)&&value){let accountState:string;if(getDemoSession()&&!getAuthSession()){accountState=value.accountStatus??(kind==="merchants"?(value.status==="APPROVED"?"ACTIVE":"PENDING_REVIEW"):value.status);}else{const account=await readAuthenticatedJson<{status:string}>(await authenticatedFetch(`/api/v1/admin/accounts/${value.accountId}`));accountState=account.status;}if(active)setAccountStatus(accountState);}}catch(e){if(active)setError(e instanceof Error?e.message:"Could not load record.");}finally{if(active)setBusy(false);}}void read();return()=>{active=false;};},[kind,record,detailScreen]);
- async function review(){if(!selected||saving)return;if(!reason.trim()){setError("Enter a review reason.");return;}setSaving(true);setError("");try{if(getDemoSession()&&!getAuthSession()){const updated=(demoRecords[kind]??samples(kind)).map(r=>r.id===selected.id?{...r,status:decision,detail:reason.trim()}:r);demoRecords[kind]=updated;setRows(updated);}else{await readAuthenticatedJson(await authenticatedFetch(`/api/v1/admin/operations/merchants/${selected.id}/decision`,{method:"POST",body:JSON.stringify({decision,reason:reason.trim()})}));await load();}setSelected(null);back();}catch(e){setError(e instanceof Error?e.message:"Could not review application.");}finally{setSaving(false);}}
+      <DataTable<Row>
+        title={meta.title}
+        subtitle={loaded ? `Page ${page + 1} of ${Math.max(1, pages)} · search and filters apply to this page` : undefined}
+        exportFilename={`sutura-admin-${kind}`}
+        searchPlaceholder="Search name, reference or account"
+        rows={visible}
+        rowKey={(r) => String(r.id)}
+        loading={busy && !loaded}
+        error={error}
+        onRefresh={() => void load()}
+        refreshing={busy && loaded}
+        onRowClick={(r) => router.push(`/dashboard/${kind}/${r.id}`)}
+        rowLabel={(r) => `Open ${r.name}`}
+        emptyTitle={status !== "All" ? "No records with this status" : `No ${meta.title.toLowerCase()} yet`}
+        columns={[
+          {
+            key: "name",
+            label: kind === "merchants" ? "Business" : "Account",
+            sortValue: (r) => r.name,
+            searchValue: (r) => `${r.name} ${r.accountId} ${r.agentId ?? ""}`,
+            render: (r) => (
+              <div className="min-w-0">
+                <div className="truncate font-medium text-ink">{r.name}</div>
+                <div className="text-xs text-ink-3">Account #{r.accountId}</div>
+              </div>
+            ),
+          },
+          {
+            key: "reference",
+            label: "Reference",
+            render: (r) => (r.reference ? <span className="font-mono text-xs text-ink-2">{r.reference}</span> : "—"),
+          },
+          { key: "status", label: "Status", sortValue: (r) => r.status, render: (r) => <StatusBadge status={r.status} /> },
+          ...(hasMoney
+            ? [
+                {
+                  key: "amount",
+                  label: "Amount",
+                  align: "right" as const,
+                  sortValue: (r: Row) => Number(r.amount ?? 0),
+                  render: (r: Row) => (r.amount === null ? "—" : <Money amount={r.amount} currency={r.currency ?? undefined} />),
+                  exportValue: (r: Row) => (r.amount === null ? "" : formatAmount(r.amount, r.currency ?? undefined)),
+                },
+                {
+                  key: "agentId",
+                  label: "Agent",
+                  hideOnMobile: true,
+                  render: (r: Row) => (r.agentId ? `#${r.agentId}` : "—"),
+                },
+              ]
+            : [
+                {
+                  key: "detail",
+                  label: "Details",
+                  hideOnMobile: true,
+                  render: (r: Row) => <span className="line-clamp-1 max-w-xs text-ink-2">{r.detail || "—"}</span>,
+                },
+              ]),
+          {
+            key: "createdAt",
+            label: "Created",
+            hideOnMobile: true,
+            sortValue: (r) => r.createdAt ?? "",
+            render: (r) => <span className="whitespace-nowrap text-ink-2">{formatDateTime(r.createdAt)}</span>,
+            exportValue: (r) => formatDateTime(r.createdAt),
+          },
+        ]}
+      />
 
- async function changeAccount(){if(!selected||saving)return;if(!reason.trim()){setError("Enter a reason for this account change.");return;}const next=accountStatus==="ACTIVE"?"SUSPENDED":"ACTIVE";setSaving(true);setError("");try{if(getDemoSession()&&!getAuthSession()){const updated=(demoRecords[kind]??samples(kind)).map(r=>r.id===selected.id?{...r,status:kind==="merchants"?r.status:next,accountStatus:next}:r);demoRecords[kind]=updated;setRows(updated);}else{await readAuthenticatedJson(await authenticatedFetch(`/api/v1/admin/accounts/${selected.accountId}/status`,{method:"POST",body:JSON.stringify({status:next,reason:reason.trim()})}));await load();}setSelected(null);back();}catch(e){setError(e instanceof Error?e.message:"Could not change account.");}finally{setSaving(false);}}
+      {loaded && pages > 1 ? (
+        <nav aria-label={`${meta.title} pages`} className="flex items-center justify-end gap-2">
+          <Button variant="secondary" size="sm" icon="chevron-left" disabled={page === 0 || busy} onClick={() => setPage((p) => p - 1)}>
+            Previous
+          </Button>
+          <span className="text-sm text-ink-2 tabular-nums">
+            Page {page + 1} of {pages}
+          </span>
+          <Button variant="secondary" size="sm" disabled={busy || page + 1 >= pages} onClick={() => setPage((p) => p + 1)}>
+            Next
+          </Button>
+        </nav>
+      ) : null}
+    </div>
+  );
+}
 
- async function createAgent(){if(saving)return;setSaving(true);setError("");try{if(getDemoSession()&&!getAuthSession()){const agents=demoRecords.agents??samples("agents");if(agents.some(r=>r.reference===agent.phoneNumber||r.detail===agent.email))throw new Error("Phone number or email is already registered");const id=Math.max(31,...agents.map(r=>r.id))+1;const updated=[{id,reference:agent.phoneNumber,name:`${agent.firstName.trim()} ${agent.lastName.trim()}`,kind:"AGENT",status:"ACTIVE",amount:null,currency:null,accountId:id,agentId:null,detail:agent.email,createdAt:new Date().toISOString()},...agents];demoRecords.agents=updated;setRows(updated);}else{await readAuthenticatedJson(await authenticatedFetch("/api/v1/admin/accounts/agents",{method:"POST",body:JSON.stringify(agent)}));await load();}back();setAgent({firstName:"",lastName:"",phoneNumber:"",email:"",password:"",reason:""});}catch(e){setError(e instanceof Error?e.message:"Could not create agent.");}finally{setSaving(false);}}
+function OperationDetail({ kind, id, onBack }: { kind: OperationsKind; id: string; onBack: () => void }) {
+  const [selected, setSelected] = useState<Entry | null>(null);
+  const [accountStatus, setAccountStatus] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  const [decision, setDecision] = useState<"APPROVED" | "MORE_INFO_REQUIRED" | "REJECTED" | null>(null);
+  const [accountChange, setAccountChange] = useState(false);
+  const hasAccount = ["customers", "agents", "merchants"].includes(kind);
 
- const visible=rows.filter(r=>(status==="All"||r.status===status)&&`${r.name} ${r.reference??""} ${r.accountId} ${r.agentId??""}`.toLowerCase().includes(query.toLowerCase()));return <PanelCard title={titles[kind]} subtitle={creating?"Provision a new agent account.":detailScreen?"Review this record and manage its supported actions.":"Trace the accounts and operations behind the mobile apps."}>{(detailScreen||creating)&&<div className="mb-5"><SecondaryButton onClick={back}>Back to {titles[kind].toLowerCase()}</SecondaryButton></div>}{detailScreen&&selected&&error&&<p role="alert" className="mb-4 text-rose-700">{error}</p>}{detailScreen&&!selected&&<p role={error?"alert":undefined} className="py-8 text-slate-500">{error||"Loading record..."}</p>}{!record&&<><div className="mb-5 flex flex-wrap gap-3">{kind==="agents"&&<SecondaryButton onClick={()=>{router.push("/dashboard/agents/new");setError("");}}>Create agent</SecondaryButton>}<input aria-label="Search operations" className={inputClass+" max-w-sm"} placeholder="Search name, reference or account" value={query} onChange={e=>setQuery(e.target.value)}/><select aria-label="Filter operation status" className={inputClass+" max-w-xs"} value={status} onChange={e=>setStatus(e.target.value)}><option>All</option>{[...new Set(rows.map(r=>r.status))].map(s=><option key={s}>{s}</option>)}</select><SecondaryButton disabled={busy} onClick={()=>void load()}>{busy?"Refreshing…":"Refresh"}</SecondaryButton></div>{error&&<p role="alert" className="mb-4 text-rose-700">{error}</p>}<div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="text-slate-500"><tr>{["Account / business","Reference","Status","Amount","Agent","Details"].map(h=><th className="px-3 py-3" key={h}>{h}</th>)}</tr></thead><tbody>{visible.map(row=><tr key={row.id} className="border-t border-slate-100"><td className="px-3 py-4 font-semibold">{row.name}<span className="block text-xs font-normal text-slate-500">Account #{row.accountId}</span></td><td className="px-3 py-4">{row.reference||"—"}</td><td className="px-3 py-4">{row.status.replace(/_/g," ")}</td><td className="px-3 py-4">{row.amount===null?"—":`${row.currency} ${Number(row.amount).toLocaleString(undefined,{maximumFractionDigits:4})}`}</td><td className="px-3 py-4">{row.agentId?`#${row.agentId}`:"—"}</td><td><SecondaryButton onClick={()=>{router.push(`/dashboard/${kind}/${row.id}`);}}>View details</SecondaryButton></td></tr>)}</tbody></table></div>{!visible.length&&!busy&&<p className="py-8 text-slate-500">No matching records on this page.</p>}<div className="mt-5 flex items-center gap-3"><SecondaryButton disabled={page===0||busy} onClick={()=>setPage(p=>p-1)}>Previous</SecondaryButton><span className="text-sm text-slate-500">Page {page+1} of {Math.max(1,pages)} · Filters apply to this page</span><SecondaryButton disabled={busy||page+1>=pages} onClick={()=>setPage(p=>p+1)}>Next</SecondaryButton></div></>}{creating&&<div aria-label="Create agent"><form onSubmit={e=>{e.preventDefault();void createAgent();}} className="w-full max-w-2xl space-y-4 rounded-2xl border border-slate-200 bg-white p-6"><h2 className="text-xl font-bold">Create agent account</h2><p className="text-sm text-slate-500">Provide the sign-in credentials directly to the agent. No message is sent automatically.</p>{(["firstName","lastName","phoneNumber","email","password","reason"] as const).map(field=><label className="block text-sm" key={field}>{({firstName:"First name",lastName:"Last name",phoneNumber:"Phone number",email:"Email",password:"Initial password",reason:"Provisioning reason"})[field]}<input required className={inputClass} type={field==="password"?"password":field==="email"?"email":field==="phoneNumber"?"tel":"text"} autoComplete={field==="password"?"new-password":"off"} minLength={field==="password"?12:undefined} maxLength={field==="password"?72:field==="reason"?1000:field==="phoneNumber"?16:field==="email"?254:100} pattern={field==="phoneNumber"?"\\+[1-9][0-9]{7,14}":undefined} placeholder={field==="phoneNumber"?"+2207000000":undefined} value={agent[field]} onChange={e=>setAgent(a=>({...a,[field]:e.target.value}))}/></label>)}{error&&<p role="alert" className="text-rose-700">{error}</p>}<button type="submit" disabled={saving} className="rounded-xl bg-amber-400 px-4 py-3 font-semibold">{saving?"Creating…":"Create account"}</button><SecondaryButton disabled={saving} onClick={()=>back()}>Cancel</SecondaryButton></form></div>}{detailScreen&&selected&&<div aria-label="Operation details"><section className="w-full max-w-3xl rounded-2xl border border-slate-200 bg-white p-6"><h2 className="mb-5 text-xl font-bold">Operation details</h2><dl className="space-y-4">{Object.entries({Name:selected.name,Reference:selected.reference,Account:selected.accountId,Agent:selected.agentId,Type:selected.kind,Status:selected.status,Amount:selected.amount===null?null:`${selected.currency} ${selected.amount}`,Details:selected.detail,Date:selected.createdAt?new Date(selected.createdAt).toLocaleString():null}).map(([label,value])=><div key={label}><dt className="text-xs text-slate-500">{label}</dt><dd className="break-words">{value??"—"}</dd></div>)}</dl>{kind==="merchants"&&["PENDING_REVIEW","MORE_INFO_REQUIRED"].includes(selected.status)&&<div className="mt-6 space-y-3"><p className="text-sm text-slate-500">Approval requires verified identity. Decisions are recorded in the audit trail for live accounts.</p><select aria-label="Merchant review decision" className={inputClass} value={decision} disabled={saving} onChange={e=>setDecision(e.target.value)}><option value="APPROVED">Approve business</option><option value="MORE_INFO_REQUIRED">Request more information</option><option value="REJECTED">Reject application</option></select><textarea aria-label="Merchant review reason" maxLength={1000} disabled={saving} className={inputClass} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Explain your decision"/>{error&&<p role="alert" className="text-rose-700">{error}</p>}<SecondaryButton disabled={saving} onClick={()=>void review()}>{saving?"Saving…":"Confirm review decision"}</SecondaryButton></div>}{["customers","agents","merchants"].includes(kind)&&accountStatus!==null&&["ACTIVE","SUSPENDED"].includes(accountStatus)&&<div className="mt-6 space-y-3"><h3 className="font-semibold">Account access</h3><p className="text-sm">Account status: {accountStatus}</p><p className="text-sm text-slate-500">Suspension blocks sign-in and API access and revokes refresh sessions. Revoked refresh sessions remain revoked after restoring access.</p><textarea aria-label="Account change reason" required maxLength={1000} className={inputClass} value={reason} onChange={e=>setReason(e.target.value)} placeholder="Reason for this change"/>{error&&<p role="alert" className="text-rose-700">{error}</p>}<SecondaryButton disabled={saving||!reason.trim()} onClick={()=>void changeAccount()}>{saving?"Saving…":accountStatus==="ACTIVE"?"Suspend account":"Restore account"}</SecondaryButton></div>}<div className="mt-6"><SecondaryButton disabled={saving} onClick={()=>setSelected(null)}>Back to list</SecondaryButton></div></section></div>}</PanelCard>;}
+  useEffect(() => {
+    let active = true;
+    async function read() {
+      setLoading(true);
+      setError(null);
+      try {
+        const value = await readAuthenticatedJson<Entry>(await authenticatedFetch(`/api/v1/admin/operations/records/${kind}/${id}`));
+        if (!active) return;
+        setSelected(value);
+        if (hasAccount) {
+          const account = await readAuthenticatedJson<{ status: string }>(await authenticatedFetch(`/api/v1/admin/accounts/${value.accountId}`));
+          if (active) setAccountStatus(account.status);
+        }
+      } catch (e) {
+        if (active) setError(e instanceof Error ? e.message : "Could not load record.");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    void read();
+    return () => {
+      active = false;
+    };
+  }, [kind, id, hasAccount, attempt]);
 
+  const meta = titles[kind];
+  const reviewable = kind === "merchants" && selected && ["PENDING_REVIEW", "MORE_INFO_REQUIRED"].includes(selected.status);
+  const canChangeAccount = hasAccount && accountStatus !== null && ["ACTIVE", "SUSPENDED"].includes(accountStatus);
+  const suspending = accountStatus === "ACTIVE";
+
+  const decisionCopy = {
+    APPROVED: { label: "Approve business", impact: "The merchant can collect payments once approved. Approval requires verified identity.", destructive: false },
+    MORE_INFO_REQUIRED: { label: "Request more information", impact: "The applicant is asked for more information and the application stays open.", destructive: false },
+    REJECTED: { label: "Reject application", impact: "The application is closed. The applicant can't collect payments.", destructive: true },
+  } as const;
+
+  return (
+    <div className="space-y-5">
+      <PageHeading
+        title={selected ? selected.name : `${meta.title} record`}
+        description={selected ? `${humanize(selected.kind)} · account #${selected.accountId}` : undefined}
+        action={
+          <Button variant="secondary" icon="chevron-left" onClick={onBack}>
+            Back to {meta.title.toLowerCase()}
+          </Button>
+        }
+      />
+
+      {error && !selected ? (
+        <Panel>
+          <ErrorState title="Couldn't load this record" error={error} onRetry={() => setAttempt((a) => a + 1)} retrying={loading} />
+        </Panel>
+      ) : !selected ? (
+        <Panel>
+          <div role="status" aria-label="Loading record" className="space-y-3">
+            {Array.from({ length: 5 }, (_, i) => (
+              <Skeleton key={i} className="h-9" />
+            ))}
+          </div>
+        </Panel>
+      ) : (
+        <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+          <Panel title="Details">
+            <DetailList
+              items={[
+                { label: "Status", value: <StatusBadge status={selected.status} /> },
+                ...(selected.amount !== null
+                  ? [{ label: "Amount", value: <Money amount={selected.amount} currency={selected.currency ?? undefined} />, emphasis: true }]
+                  : []),
+                { label: "Reference", value: selected.reference ? <span className="font-mono text-xs">{selected.reference}</span> : "—" },
+                { label: "Account", value: `#${selected.accountId}` },
+                { label: "Agent", value: selected.agentId ? `#${selected.agentId}` : "—" },
+                { label: "Type", value: humanize(selected.kind) },
+                { label: "Details", value: <span className="break-words">{selected.detail || "—"}</span> },
+                { label: "Created", value: formatDateTime(selected.createdAt) },
+              ]}
+            />
+          </Panel>
+
+          <div className="space-y-5">
+            {reviewable ? (
+              <Panel title="Application review" description="Decisions are recorded in the audit trail.">
+                <div className="flex flex-col gap-2">
+                  <Button onClick={() => setDecision("APPROVED")}>Approve business</Button>
+                  <Button variant="secondary" onClick={() => setDecision("MORE_INFO_REQUIRED")}>
+                    Request more information
+                  </Button>
+                  <Button variant="secondary" className="text-status-failed-fg" onClick={() => setDecision("REJECTED")}>
+                    Reject application
+                  </Button>
+                </div>
+              </Panel>
+            ) : null}
+
+            {canChangeAccount ? (
+              <Panel title="Account access">
+                <div className="mb-3 flex items-center gap-2 text-sm text-ink-2">
+                  Account status <StatusBadge status={accountStatus} />
+                </div>
+                <Button variant={suspending ? "danger" : "secondary"} icon={suspending ? "lock" : "unlock"} onClick={() => setAccountChange(true)}>
+                  {suspending ? "Suspend account" : "Restore account"}
+                </Button>
+              </Panel>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {decision && selected ? (
+        <ConfirmActionDrawer
+          open
+          onClose={() => setDecision(null)}
+          title={decisionCopy[decision].label}
+          subtitle={selected.name}
+          impact={decisionCopy[decision].impact}
+          destructive={decisionCopy[decision].destructive}
+          reasonLabel="Explain your decision"
+          reasonHint="The reason is stored with the decision in the audit trail."
+          confirmLabel={decisionCopy[decision].label}
+          busyLabel="Saving decision"
+          successMessage={`Decision saved for ${selected.name}.`}
+          onConfirm={async (reason) => {
+            await readAuthenticatedJson(
+              await authenticatedFetch(`/api/v1/admin/operations/merchants/${selected.id}/decision`, {
+                method: "POST",
+                body: JSON.stringify({ decision, reason }),
+              }),
+            );
+            onBack();
+          }}
+        />
+      ) : null}
+
+      {selected ? (
+        <ConfirmActionDrawer
+          open={accountChange}
+          onClose={() => setAccountChange(false)}
+          title={suspending ? `Suspend ${selected.name}` : `Restore ${selected.name}`}
+          subtitle={`Account #${selected.accountId}`}
+          impact={
+            suspending
+              ? "Suspension blocks sign-in and API access and revokes refresh sessions. Balances are not touched."
+              : "The account can sign in again. Refresh sessions revoked during the suspension stay revoked."
+          }
+          destructive={suspending}
+          confirmLabel={suspending ? "Suspend account" : "Restore account"}
+          busyLabel="Saving"
+          successMessage={suspending ? "Account suspended." : "Account restored."}
+          onConfirm={async (reason) => {
+            const next = suspending ? "SUSPENDED" : "ACTIVE";
+            await readAuthenticatedJson(
+              await authenticatedFetch(`/api/v1/admin/accounts/${selected.accountId}/status`, {
+                method: "POST",
+                body: JSON.stringify({ status: next, reason }),
+              }),
+            );
+            setAccountStatus(next);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+const agentFields = [
+  { key: "firstName", label: "First name", type: "text", autoComplete: "off", max: 100 },
+  { key: "lastName", label: "Last name", type: "text", autoComplete: "off", max: 100 },
+  { key: "phoneNumber", label: "Phone number", type: "tel", autoComplete: "off", max: 16, pattern: "\\+[1-9][0-9]{7,14}", placeholder: "+2207000000", hint: "International format, starting with +" },
+  { key: "email", label: "Email", type: "email", autoComplete: "off", max: 254 },
+  { key: "password", label: "Initial password", type: "password", autoComplete: "new-password", max: 72, min: 12, hint: "At least 12 characters. Give it to the agent directly." },
+  { key: "reason", label: "Why are you creating this agent?", type: "text", autoComplete: "off", max: 1000 },
+] as const;
+
+type AgentForm = Record<(typeof agentFields)[number]["key"], string>;
+
+function CreateAgent({ onDone }: { onDone: () => void }) {
+  const toast = useToast();
+  const baseId = useId();
+  const [agent, setAgent] = useState<AgentForm>({ firstName: "", lastName: "", phoneNumber: "", email: "", password: "", reason: "" });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function createAgent(e: React.FormEvent) {
+    e.preventDefault();
+    if (saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await readAuthenticatedJson(await authenticatedFetch("/api/v1/admin/accounts/agents", { method: "POST", body: JSON.stringify(agent) }));
+      toast(`Agent account created for ${agent.firstName} ${agent.lastName}.`, "success");
+      onDone();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not create agent.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-5">
+      <PageHeading
+        title="Create agent"
+        description="Give the sign-in details to the agent yourself. Sutura doesn't send them automatically."
+        action={
+          <Button variant="secondary" icon="chevron-left" onClick={onDone} disabled={saving}>
+            Back to agents
+          </Button>
+        }
+      />
+      <Panel className="max-w-2xl">
+        <form onSubmit={createAgent} className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-2">
+            {agentFields.map((f) => {
+              const id = `${baseId}-${f.key}`;
+              return (
+                <div key={f.key} className={f.key === "reason" || f.key === "email" ? "sm:col-span-2" : ""}>
+                  <Field label={f.label} htmlFor={id} hint={"hint" in f ? f.hint : undefined}>
+                    <input
+                      id={id}
+                      required
+                      disabled={saving}
+                      className={fieldClass}
+                      type={f.type}
+                      autoComplete={f.autoComplete}
+                      maxLength={f.max}
+                      minLength={"min" in f ? f.min : undefined}
+                      pattern={"pattern" in f ? f.pattern : undefined}
+                      placeholder={"placeholder" in f ? f.placeholder : undefined}
+                      value={agent[f.key]}
+                      onChange={(e) => setAgent((a) => ({ ...a, [f.key]: e.target.value }))}
+                    />
+                  </Field>
+                </div>
+              );
+            })}
+          </div>
+          {error ? <InlineAlert tone="error" title="The agent wasn't created">{error}</InlineAlert> : null}
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" busy={saving} busyLabel="Creating account">
+              Create agent account
+            </Button>
+            <Button variant="secondary" onClick={onDone} disabled={saving}>
+              Cancel
+            </Button>
+          </div>
+        </form>
+      </Panel>
+    </div>
+  );
+}

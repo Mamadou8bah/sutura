@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const ts = require('typescript');
 
-function render(relative, focused) {
+function render(relative, focused, unlocked = true) {
   const exports = {};
   const jsx = (type, props) => ({ type, props });
   const colors = { primary: '#111', surfaceMuted: '#eee', slate700: '#333' };
@@ -19,6 +19,7 @@ function render(relative, focused) {
     if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx };
     if (name === 'expo-camera') return { CameraView: 'CameraView', useCameraPermissions: () => [{ granted: true }, () => {}] };
     if (name === 'react-native') return { View: 'View', Linking: {}, StyleSheet: { create: value => value } };
+    if (name.includes('DeviceLockContext')) return { useDeviceLock: () => ({ unlocked }) };
     if (name.includes('ThemeContext')) return { useTheme: () => ({ colors }), useThemedStyles: fn => fn(colors) };
     if (name === './NativeControls') return { NativeText: 'Text', NativePressable: 'Pressable' };
     if (name === './ui') return { PrimaryButton: 'Button' };
@@ -35,5 +36,9 @@ for (const [name, relative] of [
   test(`${name} unmounts camera preview while its native screen is unfocused`, () => {
     assert.equal(render(relative, false), null);
     assert.notEqual(render(relative, true), null);
+  });
+  test(`${name} stops camera preview while the device gate covers or locks the app`, () => {
+    assert.equal(render(relative, true, false), null);
+    assert.notEqual(render(relative, true, true), null);
   });
 }

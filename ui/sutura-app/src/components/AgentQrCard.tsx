@@ -77,7 +77,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     padding: 16,
     marginTop: 16,
   },
-  title: { fontSize: 14, fontWeight: "700", color: colors.slate900 },
+  title: { fontSize: 14, fontWeight: "600", color: colors.slate900 },
   hint: { fontSize: 12, color: colors.slate500, marginTop: 4 },
   content: { flexDirection: "row", flexWrap: "wrap", gap: 16, marginTop: 16, alignItems: "flex-start" },
   qrBox: {
@@ -97,14 +97,12 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     paddingVertical: 10,
   },
   detailLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 0.6,
-    textTransform: "uppercase",
+    fontSize: 13,
+    fontWeight: "600",
     color: colors.slate500,
   },
-  detailValue: { fontSize: 13, fontWeight: "700", color: colors.slate900, marginTop: 2 },
+  detailValue: { fontSize: 13, fontWeight: "600", color: colors.slate900, marginTop: 2 },
   detailHighlight: { color: colors.primary, fontFamily: "monospace", fontSize: 12 },
-  detailStatus: { color: colors.orange },
+  detailStatus: { color: colors.accentText },
   footer: { fontSize: 12, fontWeight: "600", color: colors.slate500, marginTop: 16, textAlign: "center" },
 });

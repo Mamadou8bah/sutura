@@ -1,1 +1,1 @@
-export { useAppFonts } from "./useAppFonts.web";
+export { useAppFonts } from "./useAppFonts.shared";

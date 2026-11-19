@@ -46,22 +46,22 @@ export function FormError({ message }: { message?: string | null }) {
  const styles=useThemedStyles(createStyles);
 
   if (!message) return null;
-  return <Text style={styles.error}>{message}</Text>;
+  return <Text accessibilityRole="alert" accessibilityLiveRegion="polite" style={styles.error}>{message}</Text>;
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   field: { gap: 8 },
-  fieldLabel: { fontSize: 13, fontFamily: fonts.bold, color: colors.slate700 },
-  fieldHint: { fontSize: 12, fontFamily: fonts.regular, color: colors.slate500 },
+  fieldLabel: { fontSize: 13, fontFamily: fonts.medium, fontWeight: "500", color: colors.slate700 },
+  fieldHint: { fontSize: 13, lineHeight: 18, fontFamily: fonts.regular, color: colors.slate500 },
   input: {
     minHeight: 52,
     paddingVertical: 12,
     borderRadius: radii.md,
     backgroundColor: colors.surfaceMuted,
     paddingHorizontal: 16,
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: fonts.regular,
-    color: colors.slate900,
+    color: colors.primary,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
@@ -72,7 +72,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  primaryButtonText: { fontSize: 16, fontFamily: fonts.bold, color: colors.white },
+  primaryButtonText: { fontSize: 17, fontFamily: fonts.semibold, color: colors.white },
   card: {
     backgroundColor: colors.surface,
     borderRadius: radii.lg,
@@ -80,13 +80,13 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: colors.border,
   },
-  error: { fontSize: 13, fontFamily: fonts.medium, color: colors.rose800, textAlign: "center" },
+  error: { fontSize: 15, lineHeight: 21, fontFamily: fonts.medium, color: colors.dangerFg, textAlign: "center" },
 });
 
 export function Screen({ children }: { children: React.ReactNode }) {
  const {colors}=useTheme();
 
-  return <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}><ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ flexGrow: 1, width: "100%", maxWidth: 560, alignSelf: "center", padding: 20, paddingBottom: 32, gap: 16 }}>{children}</ScrollView></KeyboardAvoidingView>;
+  return <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}><ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ flexGrow: 1, width: "100%", maxWidth: 560, alignSelf: "center", padding: 16, paddingBottom: 32, gap: 16 }}>{children}</ScrollView></KeyboardAvoidingView>;
 }
 
 export function PasswordInput(props:TextInputProps){

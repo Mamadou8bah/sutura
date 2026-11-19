@@ -1,37 +1,31 @@
+import type { Metadata } from "next";
 import { ContentBlock, SitePage } from "../site-page";
+import { ApiHealthCheck } from "./api-check";
+
+export const metadata: Metadata = {
+  title: "Service status",
+  description: "Check whether the Sutura API is reachable from your browser right now.",
+};
 
 export default function StatusPage() {
   return (
     <SitePage
-      title="System status"
-      description="Current operating status for Sutura APIs, dashboards, and payment flows."
+      title="Service status"
+      description="A live check from your browser to the Sutura API. This page does not track history or incidents."
     >
-      <ContentBlock title="Current status">
-        <p className="font-bold text-emerald-700">All systems operational</p>
+      <ContentBlock title="Right now">
+        <ApiHealthCheck />
+      </ContentBlock>
+
+      <ContentBlock title="What this check covers">
         <p>
-          API authentication, wallet transfers, payment links, webhook delivery, and admin dashboards are available.
+          It asks the API&apos;s public health endpoint whether the service is up. It does not test individual payment
+          flows, webhook delivery or the mobile apps, and the result is only what your browser can see.
         </p>
-      </ContentBlock>
-
-      <ContentBlock title="Components">
-        <ul className="space-y-3">
-          {[
-            ["API and authentication", "Operational"],
-            ["Wallet transfers", "Operational"],
-            ["Payment links and checkout", "Operational"],
-            ["Webhook delivery", "Operational"],
-            ["Developer and admin web", "Operational"],
-          ].map(([name, state]) => (
-            <li key={name} className="flex items-center justify-between gap-4 border-b border-slate-100 pb-3 last:border-0 last:pb-0">
-              <span>{name}</span>
-              <span className="text-sm font-bold text-emerald-700">{state}</span>
-            </li>
-          ))}
-        </ul>
-      </ContentBlock>
-
-      <ContentBlock title="Incidents">
-        <p>No active incidents. Past maintenance notes appear in Release notes when relevant.</p>
+        <p>
+          If something isn&apos;t working, read <a href="/help">Help</a> or <a href="/contact">contact us</a> with the time
+          and what you were doing.
+        </p>
       </ContentBlock>
     </SitePage>
   );

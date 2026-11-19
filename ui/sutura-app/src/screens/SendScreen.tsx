@@ -1,5 +1,6 @@
 import { useHardwareBack } from "../hooks/useBackNavigation";
-import { PrimaryButton } from "../components/ui";
+import { ReviewCard, ReviewLayout, ReviewRow, SecondaryButton } from "../components/Review";
+import { SUTURA_FEE } from "../utils/fees";
 import { formatMoney } from "../utils/format";
 import { isValidAmount, isPhoneDraft, normalizePhone } from "../utils/inputValidation";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
@@ -61,16 +62,24 @@ export function SendScreen() {
   const review = () => {
     if (!isValidAmount(amount.trim())) { setError("Enter a valid amount with at most four decimal places."); return; }
     if (!normalizePhone(destination)) { setError("Enter a valid recipient phone number, including its country code."); return; }
-    if (Number(amount) > selectedWallet.balance) { setError("Insufficient balance."); return; }
+    if (Number(amount) + SUTURA_FEE > selectedWallet.balance) { setError(`Insufficient balance. Available: ${formatMoney(selectedWallet.balance, selectedWallet.currency)}.`); return; }
     Keyboard.dismiss(); setError(null); setReviewing(true);
   };
-  if (reviewing) return <OperationScreen title="Review transfer" subtitle="Check the recipient and amount before sending.">
-    <View style={styles.reviewCard}><Text style={styles.reviewLabel}>You send</Text><Text style={styles.reviewAmount}>{formatMoney(Number(amount), selectedWallet.currency, 4)}</Text></View>
-    <View style={styles.reviewCard}><Text style={styles.reviewLabel}>Recipient phone number</Text><Text style={styles.reviewValue}>{normalizePhone(destination)}</Text><Text style={styles.reviewLabel}>From wallet</Text><Text style={styles.reviewValue}>{selectedWallet.name}</Text></View>
-    <FormError message={error} />
-    <SubmitButton label="Confirm transfer" loading={busy} disabled={busy} onPress={submit} />
-    <PrimaryButton label="Edit transfer" color={colors.surfaceMuted} textColor={colors.primary} disabled={busy} onPress={() => {setReviewing(false);setError(null);}} />
-  </OperationScreen>;
+  if (reviewing) return <ReviewLayout title="Review transfer" subtitle="Check the recipient and amount before sending."
+    footer={<>
+      <FormError message={error} />
+      <SubmitButton label={`Send ${formatMoney(Number(amount), selectedWallet.currency, 4)}`} loading={busy} disabled={busy} onPress={submit} />
+      <SecondaryButton label="Edit transfer" disabled={busy} onPress={() => { setReviewing(false); setError(null); }} />
+    </>}>
+    <ReviewCard>
+      <ReviewRow label="You send" value={formatMoney(Number(amount), selectedWallet.currency, 4)} emphasis money />
+      <ReviewRow label="Sutura fee" value={formatMoney(SUTURA_FEE, selectedWallet.currency)} money />
+      <ReviewRow label="Recipient gets" value={formatMoney(Number(amount) - SUTURA_FEE, selectedWallet.currency, 4)} money />
+      <ReviewRow label="To phone number" value={normalizePhone(destination) ?? destination} />
+      <ReviewRow label="From wallet" value={`${selectedWallet.name} · ${selectedWallet.currency}`} last />
+    </ReviewCard>
+    <Text style={styles.note}>Sutura sends to the {selectedWallet.currency} wallet registered to this number. Transfers can't be cancelled once sent.</Text>
+  </ReviewLayout>;
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
@@ -113,8 +122,5 @@ export function SendScreen() {
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   flex: { flex: 1 },
-  reviewCard: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: 20, gap: 12 },
-  reviewLabel: { fontSize: 13, color: colors.slate500 },
-  reviewAmount: { fontSize: 30, fontWeight: "700", color: colors.primary },
-  reviewValue: { fontSize: 18, fontWeight: "600", color: colors.primary },
+  note: { fontSize: 13, lineHeight: 19, color: colors.slate500 },
 });
