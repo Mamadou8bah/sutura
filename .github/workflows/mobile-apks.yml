@@ -50,6 +50,10 @@ jobs:
               if apk.testzip() is not None or not {"AndroidManifest.xml", "classes.dex"}.issubset(apk.namelist()):
                   raise SystemExit("APK is incomplete or corrupt")
           PY
+          signer="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          "$signer" verify --verbose --print-certs "${{ matrix.app }}-latest.apk"
+          "$(dirname "$signer")/aapt" dump badging "${{ matrix.app }}-latest.apk" > apk-metadata.txt
+          grep -E '^(package:|sdkVersion:|targetSdkVersion:|native-code:)' apk-metadata.txt
           sha256sum "${{ matrix.app }}-latest.apk" > "${{ matrix.app }}-latest.apk.sha256"
       - name: Upload APK download
         uses: actions/upload-artifact@v4

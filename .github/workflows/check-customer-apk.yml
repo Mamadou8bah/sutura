@@ -1,0 +1,59 @@
+name: Check customer APK installation
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Download current and previous customer APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          mkdir -p current previous
+          gh release download mobile-apks-44769060473-1 --repo "$GITHUB_REPOSITORY" \
+            --pattern sutura-app-latest.apk --pattern sutura-app-latest.apk.sha256 --dir current
+          gh release download mobile-apks-44764195845-1 --repo "$GITHUB_REPOSITORY" \
+            --pattern sutura-app-latest.apk --pattern sutura-app-latest.apk.sha256 --dir previous
+          (cd current && sha256sum --check sutura-app-latest.apk.sha256)
+          (cd previous && sha256sum --check sutura-app-latest.apk.sha256)
+      - name: Check APK signatures and Android requirements
+        shell: bash
+        run: |
+          tools="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          tools="$(dirname "$tools")"
+          for release in previous current; do
+            echo "Checking $release release"
+            "$tools/apksigner" verify --verbose --print-certs "$release/sutura-app-latest.apk"
+            "$tools/aapt" dump badging "$release/sutura-app-latest.apk" > "$release/metadata.txt"
+            grep -E '^(package:|sdkVersion:|targetSdkVersion:|native-code:)' "$release/metadata.txt"
+          done
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Test fresh installation and upgrade on Android
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: |
+            adb shell getprop ro.build.version.release
+            adb install --no-streaming current/sutura-app-latest.apk
+            adb shell pm path gm.sutura.customer
+            adb uninstall gm.sutura.customer
+            adb install --no-streaming previous/sutura-app-latest.apk
+            adb install -r --no-streaming current/sutura-app-latest.apk
