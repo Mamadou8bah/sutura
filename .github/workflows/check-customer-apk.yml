@@ -11,6 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -31,17 +32,20 @@ jobs:
             --pattern sutura-app-latest.apk --pattern sutura-app-latest.apk.sha256 --dir previous
           (cd current && sha256sum --check sutura-app-latest.apk.sha256)
           (cd previous && sha256sum --check sutura-app-latest.apk.sha256)
+          gh run download 43934200074 --repo "$GITHUB_REPOSITORY" --name sutura-app-apk --dir older
       - name: Check APK signatures and Android requirements
         shell: bash
         run: |
           tools="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
           tools="$(dirname "$tools")"
-          for release in previous current; do
+          for release in older previous current; do
             echo "Checking $release release"
             "$tools/apksigner" verify --verbose --print-certs "$release/sutura-app-latest.apk"
             "$tools/aapt" dump badging "$release/sutura-app-latest.apk" > "$release/metadata.txt"
             grep -E '^(package:|sdkVersion:|targetSdkVersion:|native-code:)' "$release/metadata.txt"
           done
+      - name: Inspect ARM64 native library packaging
+        run: python .github/scripts/inspect-apk-native.py older/sutura-app-latest.apk previous/sutura-app-latest.apk current/sutura-app-latest.apk
       - name: Enable emulator acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
