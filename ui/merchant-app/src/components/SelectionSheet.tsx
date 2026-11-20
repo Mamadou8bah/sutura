@@ -1,4 +1,4 @@
-import { GlassBackdrop } from "./GlassBackdrop";
+import { SurfaceBackdrop } from "./SurfaceBackdrop";
 import { useEffect, useState, type ReactNode } from "react";
 import { AccessibilityInfo, Modal, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
@@ -19,7 +19,7 @@ export function SelectionSheet({ visible, title, onClose, children }: {
     <SafeAreaProvider><KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <Pressable accessibilityRole="button" accessibilityLabel="Dismiss selection" onPress={onClose} style={StyleSheet.absoluteFill} />
       <SafeAreaView edges={["bottom", "left", "right"]} accessibilityViewIsModal style={[styles.sheet, { backgroundColor: "transparent", overflow: "hidden" }]}>
-        <GlassBackdrop />
+        <SurfaceBackdrop />
         <View style={styles.header}><Text accessibilityRole="header" style={{ flex: 1, fontSize: 22, lineHeight: 28, fontWeight: "600", color: colors.primary }}>{title}</Text>
           <Pressable accessibilityRole="button" accessibilityLabel="Close selection" onPress={onClose} style={[styles.close, { backgroundColor: colors.surfaceMuted }]}>
             <Ionicons name="close" size={18} color={colors.primary} />

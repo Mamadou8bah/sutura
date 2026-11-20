@@ -17,30 +17,33 @@ function totalsByCurrency(rows: AgentOperation[]) {
   return [...map.entries()].sort(([a], [b]) => a.localeCompare(b));
 }
 
-export function StatsCarousel({ stats, completed, onOpenQueue }: { stats: AgentStats; completed: AgentOperation[]; onOpenQueue: () => void }) {
+export function StatsCarousel({ stats, completed, onOpenQueue, unavailable = false }: { unavailable?: boolean; stats: AgentStats; completed: AgentOperation[]; onOpenQueue: () => void }) {
   const styles = useThemedStyles(createStyles);
   const today = new Date().toDateString();
   const totals = totalsByCurrency(completed.filter(op => new Date(op.completedAt ?? op.createdAt).toDateString() === today));
-  return <WalletSurface>
-    <View style={{ alignItems: "center", gap: 6 }}><Text style={styles.label}>Today</Text><Text style={styles.count}>{stats.completedToday}</Text><Text style={styles.label}>Completed operations</Text></View>
-    {totals.map(([currency, t]) => <View key={currency} style={styles.metrics}>
+  return <WalletSurface style={{ padding: 16 }}>
+    <View style={styles.content}>
+    <View style={styles.heading}><View style={{ gap: 4 }}><Text style={styles.label}>Today</Text><Text style={styles.caption}>Completed operations</Text></View><Text style={styles.count}>{unavailable ? "—" : stats.completedToday}</Text></View>
+    {!unavailable && totals.map(([currency, t]) => <View key={currency} style={styles.metrics}>
       <View style={styles.metric}><Text style={styles.label}>Cash-in</Text><Money amount={t.cashIn} currency={currency} style={styles.value} /></View>
       <View style={styles.metric}><Text style={styles.label}>Cash-out</Text><Money amount={t.cashOut} currency={currency} style={styles.value} /></View>
     </View>)}
-    {stats.pendingCount > 0 && <NativePressable accessibilityRole="button" accessibilityLabel={`View ${stats.pendingCount} pending operations`}
-      onPress={onOpenQueue} style={{ minHeight: 48, justifyContent: "center" }}>
+    {!unavailable && stats.pendingCount > 0 && <NativePressable accessibilityRole="button" accessibilityLabel={`View ${stats.pendingCount} pending operations`}
+      onPress={onOpenQueue} style={{ minHeight: 44, justifyContent: "center" }}>
       <Text style={styles.pending}>{stats.pendingCount} awaiting action</Text>
     </NativePressable>}
+    </View>
   </WalletSurface>;
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  card: { backgroundColor: colors.surfaceMuted, borderRadius: 24, padding: 20, gap: 16 },
+  content: { gap: 12 },
+  caption: { fontSize: type.body, fontFamily: fonts.medium, color: colors.walletInk },
   heading: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 8 },
   pending: { color: colors.accentText, fontSize: type.body, fontWeight: "600" },
   label: { fontSize: type.caption, color: colors.walletMuted },
   count: { fontSize: 32, fontFamily: fonts.semibold, fontWeight: "600", color: colors.walletInk },
   metrics: { flexDirection: "row", flexWrap: "wrap", gap: 16 },
   metric: { flexGrow: 1, flexBasis: 90, minWidth: 0, gap: 4 },
-  value: { fontSize: type.headline, fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary, fontVariant: ["tabular-nums"] },
+  value: { fontSize: type.headline, fontFamily: fonts.semibold, fontWeight: "600", color: colors.walletInk, fontVariant: ["tabular-nums"] },
 });

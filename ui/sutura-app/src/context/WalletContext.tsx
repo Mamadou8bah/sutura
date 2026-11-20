@@ -117,9 +117,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const request=++refreshGeneration.current;
     if (!silent) setLoading(true);
     try {
-      const wallets = await api.listWallets();
-      const [balances, transactions] = await Promise.all([
-        Promise.all(wallets.map((w) => api.getBalance(w.id))),
+      const [{ wallets, balances }, transactions] = await Promise.all([
+        api.listWallets().then(async wallets => ({
+          wallets,
+          balances: await Promise.all(wallets.map(w => api.getBalance(w.id))),
+        })),
         api.listTransactions(),
       ]);
       if(request!==refreshGeneration.current)return;

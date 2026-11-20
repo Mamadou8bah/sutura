@@ -47,6 +47,8 @@ export type TabId =
   | "support";
 
 export type AgentQrPayload = {
+  token?: string;
+  expiresAt?: string;
   operation: OperationType;
   reference: string;
   walletId: number;

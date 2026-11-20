@@ -25,3 +25,9 @@ Live scanned pending references are saved per signed-in agent on the device and 
 - Local Chromium exercises agent completion, merchant collection creation/status refresh, wallet creation, login rendering, and light/dark/system appearance at 320, 390 and 768 pixel widths without page errors or horizontal overflow.
 
 Demo operations are local to each app instance and reset when demo mode resets. A QR created in one offline demo app cannot settle in another offline demo app. Real cross-app payment, native camera scanning, identity provider and payment-provider checks require a running backend, configured services and device testing. No new provider credentials or trained models are supplied by these UI changes.
+
+Cash-out security (20 November): agents cannot create withdrawals for a customer
+by phone or user ID. The owner creates the cash-out and displays a rotating,
+server-issued QR. Its 30-second capability can be scanned once. The resulting
+90-second approval is bound to the scanning agent and required at completion.
+Raw references cannot authorise a withdrawal. See `agent-cash-out-security.md`.

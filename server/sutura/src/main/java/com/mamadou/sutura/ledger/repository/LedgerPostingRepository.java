@@ -22,4 +22,10 @@ public interface LedgerPostingRepository extends JpaRepository<LedgerPosting, Lo
             where p.account.id = :accountId and p.side = :side
             """)
     BigDecimal sumByAccountIdAndSide(@Param("accountId") Long accountId, @Param("side") LedgerPostingSide side);
+    @Query("""
+            select coalesce(sum(case when p.side = :creditSide then p.amount else -p.amount end), 0)
+            from LedgerPosting p where p.account.id = :accountId
+            """)
+    BigDecimal netCreditsByAccountId(@Param("accountId") Long accountId,
+                                    @Param("creditSide") LedgerPostingSide creditSide);
 }

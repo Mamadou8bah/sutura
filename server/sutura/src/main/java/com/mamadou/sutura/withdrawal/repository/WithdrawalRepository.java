@@ -9,6 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface WithdrawalRepository extends JpaRepository<Withdrawal, Long> {
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"wallet", "user"})
     List<Withdrawal> findTop100ByAgentIdOrderByCreatedAtDesc(Long agentId);
     Optional<Withdrawal> findByReferenceIgnoreCase(String reference);
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)

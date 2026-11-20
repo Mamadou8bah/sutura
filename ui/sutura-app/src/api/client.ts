@@ -104,6 +104,7 @@ export type MerchantPayment = {
 };
 
 export const api = {
+  cashOutQr: (reference: string, signal?: AbortSignal) => authFetch(`/api/v1/withdrawals/reference/${encodeURIComponent(reference)}/qr`, { method: "POST", signal }).then(readAuthJson<{token: string | null; expiresAt: string | null; status: string}>),
   lookupMerchantPayment: (reference: string) => authRequest<MerchantPayment>(`/api/v1/payment-links/ref/${encodeURIComponent(reference)}`),
   payMerchant: (reference: string, walletId: number) => authRequest<MerchantPayment>(`/api/v1/payment-links/ref/${encodeURIComponent(reference)}/pay`, {method:"POST", body:JSON.stringify({walletId})}),
   register: (payload: CustomerRegistration) => envelopeRequest<AuthSession>("/api/auth/register", { method: "POST", body: JSON.stringify({ ...payload, role: "USER", twoFactorEnabled: false }) }),

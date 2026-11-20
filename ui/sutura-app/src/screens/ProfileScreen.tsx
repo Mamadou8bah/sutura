@@ -45,9 +45,9 @@ export function ProfileScreen() {
   </ScrollView>;
 }
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { padding: spacing.screen, paddingBottom: 32, gap: 12 },
+  content: { padding: spacing.screen, paddingBottom: 20, gap: 12 },
   section: { fontFamily: fonts.bold, fontSize: 13, color: colors.slate500, marginTop: 16 },
-  hero: { alignItems: "center", paddingVertical: 18, gap: 8 },
+  hero: { alignItems: "center", paddingVertical: 12, gap: 8 },
   avatar: { width: 68, height: 68, borderRadius: 34, backgroundColor: colors.surfaceMuted, alignItems: "center", justifyContent: "center" },
   initial: { fontFamily: fonts.bold, fontSize: 28, color: colors.primary }, name: { fontFamily: fonts.bold, fontSize: 22, color: colors.primary }, subtitle: { fontFamily: fonts.regular, color: colors.slate500, fontSize: 13 },
 });

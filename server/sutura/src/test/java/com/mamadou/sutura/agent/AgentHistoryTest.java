@@ -14,7 +14,7 @@ import static org.mockito.Mockito.*;
 class AgentHistoryTest {
  @Test void queriesOnlySignedInAgent(){
   var deposits=mock(DepositRepository.class);var withdrawals=mock(WithdrawalRepository.class);
-  var service=new AgentOperationService(deposits,withdrawals,mock(TransactionRepository.class),mock(UserRepository.class),mock(LedgerWalletMovementService.class),mock(PaymentComplianceService.class));
+  var service=new AgentOperationService(deposits,withdrawals,mock(com.mamadou.sutura.agent.service.CashOutQrService.class),mock(TransactionRepository.class),mock(UserRepository.class),mock(LedgerWalletMovementService.class),mock(PaymentComplianceService.class));
   var agent=mock(User.class);when(agent.getId()).thenReturn(17L);
   // Use the role representation used by the application's security helper.
   when(agent.getRole()).thenReturn(com.mamadou.sutura.user.enums.Role.AGENT);
@@ -22,7 +22,7 @@ class AgentHistoryTest {
  }
  @Test void refusesUnprivilegedUsersBeforeReadingHistory(){
   var deposits=mock(DepositRepository.class);var withdrawals=mock(WithdrawalRepository.class);
-  var service=new AgentOperationService(deposits,withdrawals,mock(TransactionRepository.class),mock(UserRepository.class),mock(LedgerWalletMovementService.class),mock(PaymentComplianceService.class));
+  var service=new AgentOperationService(deposits,withdrawals,mock(com.mamadou.sutura.agent.service.CashOutQrService.class),mock(TransactionRepository.class),mock(UserRepository.class),mock(LedgerWalletMovementService.class),mock(PaymentComplianceService.class));
   assertThrows(WalletOperationException.class,()->service.history(mock(User.class)));verifyNoInteractions(deposits,withdrawals);
  }
 }

@@ -18,13 +18,8 @@ public class LedgerBalanceComputationService {
 
     @Transactional(readOnly = true)
     public BigDecimal computeBalance(LedgerAccount account) {
-        BigDecimal debits = ledgerPostingRepository.sumByAccountIdAndSide(account.getId(), LedgerPostingSide.DEBIT);
-        BigDecimal credits = ledgerPostingRepository.sumByAccountIdAndSide(account.getId(), LedgerPostingSide.CREDIT);
-
-        if (hasDebitNormalBalance(account)) {
-            return debits.subtract(credits);
-        }
-        return credits.subtract(debits);
+        BigDecimal netCredits = ledgerPostingRepository.netCreditsByAccountId(account.getId(), LedgerPostingSide.CREDIT);
+        return hasDebitNormalBalance(account) ? netCredits.negate() : netCredits;
     }
 
     private boolean hasDebitNormalBalance(LedgerAccount account) {

@@ -9,6 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface DepositRepository extends JpaRepository<Deposit, Long> {
+    @org.springframework.data.jpa.repository.EntityGraph(attributePaths = {"wallet", "user"})
     List<Deposit> findTop100ByAgentIdOrderByCreatedAtDesc(Long agentId);
     Optional<Deposit> findByReferenceIgnoreCase(String reference);
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)

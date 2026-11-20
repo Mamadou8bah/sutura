@@ -41,10 +41,50 @@ jobs:
       - run: npm ci
       - name: Build signed installable APK on the Android runner
         run: eas build --platform android --profile production-apk --non-interactive --local --output "${{ matrix.app }}-latest.apk"
+      - name: Verify APK archive and write checksum
+        shell: bash
+        run: |
+          python - "${{ matrix.app }}-latest.apk" <<'PY'
+          import sys, zipfile
+          with zipfile.ZipFile(sys.argv[1]) as apk:
+              if apk.testzip() is not None or not {"AndroidManifest.xml", "classes.dex"}.issubset(apk.namelist()):
+                  raise SystemExit("APK is incomplete or corrupt")
+          PY
+          sha256sum "${{ matrix.app }}-latest.apk" > "${{ matrix.app }}-latest.apk.sha256"
       - name: Upload APK download
         uses: actions/upload-artifact@v4
         with:
           name: ${{ matrix.app }}-apk
-          path: ui/${{ matrix.app }}/${{ matrix.app }}-latest.apk
+          path: |
+            ui/${{ matrix.app }}/${{ matrix.app }}-latest.apk
+            ui/${{ matrix.app }}/${{ matrix.app }}-latest.apk.sha256
           if-no-files-found: error
           retention-days: 14
+          compression-level: 0
+
+  publish:
+    name: Publish direct APK downloads
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: '*-apk'
+          merge-multiple: true
+          path: apks
+      - name: Publish installable APKs on GitHub Releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: mobile-apks-${{ github.run_id }}-${{ github.run_attempt }}
+        shell: bash
+        run: |
+          for app in sutura-app sutura-agent merchant-app; do
+            (cd apks && sha256sum --check "$app-latest.apk.sha256")
+          done
+          gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --title "Sutura Android apps (${GITHUB_SHA:0:7})" --latest \
+            --notes 'Download the .apk file for your app directly. No ZIP extraction is needed. SHA-256 checksum files are included.'
+          gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" apks/*.apk apks/*.sha256

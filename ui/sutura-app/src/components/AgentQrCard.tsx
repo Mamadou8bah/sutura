@@ -1,3 +1,4 @@
+import { CashOutQrCard } from "./CashOutQrCard";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import QRCode from "react-native-qrcode-svg";
@@ -20,6 +21,7 @@ export function AgentQrCard({
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
 
+  if (payload.operation === "WITHDRAWAL") return <CashOutQrCard payload={payload} />;
   const value = encodeAgentQrPayload(payload);
 
   return (

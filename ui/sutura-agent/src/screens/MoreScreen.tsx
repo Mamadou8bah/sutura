@@ -18,9 +18,6 @@ type MenuItem = {
 const menuItems: MenuItem[] = [
   { label: "Settings", subtitle: "Appearance and app preferences", icon: "settings-outline", tab: "settings" },
   { label: "Support", subtitle: "Contact Sutura operations", icon: "chatbubbles-outline", tab: "support" },
-  { label: "Scan QR", subtitle: "Complete customer operations", icon: "qr-code-outline", tab: "scan" },
-  { label: "New cash-in", subtitle: "Deposit on behalf of customer", icon: "arrow-down-circle-outline", tab: "new-deposit" },
-  { label: "New cash-out", subtitle: "Withdrawal on behalf of customer", icon: "arrow-up-circle-outline", tab: "new-withdrawal" },
 ];
 
 export function MoreScreen() {
@@ -63,7 +60,7 @@ export function MoreScreen() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { padding: spacing.screen, paddingBottom: 24, gap: 12 },
+  content: { padding: spacing.screen, paddingBottom: 20, gap: 0 },
   profileCard: {
     flexDirection: "row",
     alignItems: "center",
@@ -76,16 +73,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     borderColor: colors.border,
   },
   profileInfo: { flex: 1 },
-  name: { fontSize: 17, fontFamily: fonts.bold, color: colors.slate900 },
+  name: { fontSize: 17, fontFamily: fonts.medium, color: colors.primary },
   meta: { fontSize: 13, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
   phone: { fontSize: 13, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
   editLink: { fontSize: 15, fontFamily: fonts.medium, color: colors.accentText },
   menuRow: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 14,
+    gap: 12,
     backgroundColor: colors.surface,
-    paddingVertical: 18,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },
@@ -93,11 +90,11 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: radii.sm,
-    backgroundColor: colors.blue100,
+    backgroundColor: colors.surfaceMuted,
     alignItems: "center",
     justifyContent: "center",
   },
   menuBody: { flex: 1 },
-  menuLabel: { fontSize: 15, fontFamily: fonts.bold, color: colors.slate900 },
+  menuLabel: { fontSize: 15, fontFamily: fonts.medium, color: colors.primary },
   menuSub: { fontSize: 13, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
 });

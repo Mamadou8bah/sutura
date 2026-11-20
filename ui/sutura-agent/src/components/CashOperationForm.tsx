@@ -129,6 +129,6 @@ export function CashOperationForm({ kind }: { kind: Kind }) {
 
 const createStyles = (_colors: ThemeColors) => StyleSheet.create({
   flex: { flex: 1 },
-  content: { padding: spacing.screen, paddingBottom: 32, gap: 16 },
+  content: { padding: spacing.screen, paddingBottom: 20, gap: 12 },
   amount: { fontSize: 22, fontVariant: ["tabular-nums"] },
 });

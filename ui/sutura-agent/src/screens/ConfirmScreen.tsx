@@ -104,6 +104,7 @@ export function ConfirmScreen() {
             </Text>
           </View>
           <FormError message={error} />
+          {!isDeposit && <PrimaryButton label="Scan fresh cash-out QR" disabled={busy} onPress={()=>setTab("scan")} color={colors.surfaceMuted}/>}
           <HoldToConfirm label={`Complete ${operationLabel(op.operation).toLowerCase()} · ${formatMoney(op.amount, op.currency, 4)}`}
             loading={busy} loadingLabel="Completing…" disabled={busy||!["AWAITING_AGENT","PENDING","APPROVED"].includes(op.status)} onConfirm={handleComplete} />
           <PrimaryButton loading={historyLoading} label={historyLoading ? "Checking status…" : "Check operation status"} disabled={busy||historyLoading} onPress={()=>void refreshHistory()} color={colors.surfaceMuted}/>
@@ -125,12 +126,12 @@ export function ConfirmScreen() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { padding: spacing.screen, paddingBottom: 32, gap: spacing.gap },
+  content: { padding: spacing.screen, paddingBottom: 20, gap: 12 },
   emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center", padding: spacing.screen, gap: 16 },
   emptyText: { fontSize: type.headline, fontFamily: fonts.medium, color: colors.slate500 },
   hero: {
     borderRadius: radii.lg,
-    padding: 24,
+    padding: 16,
     alignItems: "center",
     borderWidth: 1,
     borderColor: colors.border,
@@ -147,7 +148,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     justifyContent: "space-between",
     gap: 16,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: colors.border,
   },

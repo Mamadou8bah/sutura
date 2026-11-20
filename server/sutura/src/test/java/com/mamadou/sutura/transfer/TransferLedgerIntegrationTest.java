@@ -73,6 +73,7 @@ class TransferLedgerIntegrationTest {
     @MockitoBean com.mamadou.sutura.webhook.client.ModemPayClient provider;
     @MockitoBean FraudDetectionService fraud;
     @MockitoSpyBean TransactionService transactionService;
+    @Autowired com.mamadou.sutura.agent.service.CashOutQrService cashQr;
     private User sender;
     private User recipient;
     private Long source, destination;
@@ -312,8 +313,8 @@ class TransferLedgerIntegrationTest {
                 .walletId(source).currency("GMD").amount(new BigDecimal("30")).idempotencyKey("cash-withdrawal").build();
         var withdrawal = withdrawals.createWithdrawal(request, sender.getId(), false);
         var agent = agent();
-        agentOperations.complete(withdrawal.getReference(), agent);
-        agentOperations.complete(withdrawal.getReference(), agent);
+        completeScanned(withdrawal.getReference(), agent);
+        completeScanned(withdrawal.getReference(), agent);
         assertBalances("70", "0");
         assertThat(limits.findByWalletId(source).orElseThrow().getAmountSpentToday()).isEqualByComparingTo("30");
         assertThat(transactions.findByReference(withdrawal.getReference()).orElseThrow().getLedgerTraceId()).isEqualTo(withdrawal.getReference());
@@ -615,12 +616,12 @@ class TransferLedgerIntegrationTest {
                 .idempotencyKey("cash-review-withdrawal").build();
         var withdrawal = withdrawals.createWithdrawal(request, sender.getId(), false);
         decision("review"); var agent = agent();
-        assertThat(agentOperations.complete(withdrawal.getReference(), agent).getStatus()).isEqualTo("PENDING_REVIEW");
+        assertThat(completeScanned(withdrawal.getReference(), agent).getStatus()).isEqualTo("PENDING_REVIEW");
         assertBalances("100", "0");
         settlementCallback(withdrawal.getReference(), "APPROVE");
         assertBalances("100", "0");
-        assertThat(agentOperations.complete(withdrawal.getReference(), agent).getStatus()).isEqualTo("COMPLETED");
-        agentOperations.complete(withdrawal.getReference(), agent);
+        assertThat(completeScanned(withdrawal.getReference(), agent).getStatus()).isEqualTo("COMPLETED");
+        completeScanned(withdrawal.getReference(), agent);
         assertBalances("70", "0");
     }
 
@@ -655,6 +656,81 @@ class TransferLedgerIntegrationTest {
     private com.mamadou.sutura.deposit.dto.CreateDepositRequest cashDeposit(String amount, String key) {
         return com.mamadou.sutura.deposit.dto.CreateDepositRequest.builder().walletId(source).currency("GMD")
                 .amount(new BigDecimal(amount)).idempotencyKey(key).build();
+    }
+
+    private com.mamadou.sutura.withdrawal.entity.Withdrawal cashOut() {
+        return withdrawals.createWithdrawal(com.mamadou.sutura.withdrawal.dto.CreateWithdrawalRequest.builder()
+                .walletId(source).amount(new BigDecimal("10")).currency("GMD")
+                .idempotencyKey("qr-" + UUID.randomUUID()).build(), sender.getId(), false);
+    }
+
+    @Test void agentCannotCreateCustomerCashOutEvenWithKnownPhoneOrWallet() {
+        var agent = agent();
+        var request = com.mamadou.sutura.withdrawal.dto.CreateWithdrawalRequest.builder()
+                .walletId(source).userId(sender.getId()).amount(BigDecimal.TEN).currency("GMD").build();
+        assertThatThrownBy(() -> withdrawals.createWithdrawal(request, agent.getId(), true))
+                .hasMessageContaining("wallet owner");
+        assertBalances("100", "0");
+    }
+
+    @Test void cashOutNeedsFreshSingleUseQrAndAgentBoundApproval() {
+        var withdrawal = cashOut(); var agent = agent(); var other = agent();
+        String reference = withdrawal.getReference();
+        assertThatThrownBy(() -> cashQr.issue(reference, recipient.getId())).hasMessageContaining("another customer");
+        assertThatThrownBy(() -> agentOperations.lookup(reference, agent)).hasMessageContaining("Scan");
+        assertThatThrownBy(() -> agentOperations.complete(reference, agent)).hasMessageContaining("Scan");
+        var old = cashQr.issue(reference, sender.getId());
+        var current = cashQr.issue(reference, sender.getId());
+        assertThat(current.token()).isNotEqualTo(old.token());
+        assertThatThrownBy(() -> cashQr.scan(reference, old.token(), agent)).hasMessageContaining("expired");
+        assertThatThrownBy(() -> cashQr.scan(reference, current.token(), sender)).hasMessageContaining("Only an agent");
+        var approval = cashQr.scan(reference, current.token(), agent);
+        assertThatThrownBy(() -> cashQr.scan(reference, current.token(), other)).hasMessageContaining("expired");
+        assertThat(cashQr.issue(reference, sender.getId()).status()).isEqualTo("SCANNED");
+        assertThatThrownBy(() -> agentOperations.complete(reference, other, approval.token())).hasMessageContaining("Scan");
+        assertThatThrownBy(() -> agentOperations.complete(reference, agent, current.token())).hasMessageContaining("Scan");
+        assertThat(agentOperations.complete(reference, agent, approval.token()).getStatus()).isEqualTo("COMPLETED");
+        agentOperations.complete(reference, agent, approval.token());
+        assertBalances("90", "0");
+    }
+
+    @Autowired org.springframework.jdbc.core.JdbcTemplate jdbc;
+    @Test void expiredQrAndApprovalCannotAuthorizeCashOut() {
+        var withdrawal = cashOut(); var agent = agent(); String reference = withdrawal.getReference();
+        var qr = cashQr.issue(reference, sender.getId());
+        jdbc.update("update withdrawals set cash_qr_expires_at=? where id=?", java.sql.Timestamp.from(Instant.now().minusSeconds(1)), withdrawal.getId());
+        assertThatThrownBy(() -> cashQr.scan(reference, qr.token(), agent)).hasMessageContaining("expired");
+        var fresh = cashQr.issue(reference, sender.getId());
+        var approval = cashQr.scan(reference, fresh.token(), agent);
+        jdbc.update("update withdrawals set cash_claim_expires_at=? where id=?", java.sql.Timestamp.from(Instant.now().minusSeconds(1)), withdrawal.getId());
+        assertThatThrownBy(() -> agentOperations.complete(reference, agent, approval.token())).hasMessageContaining("Scan");
+        assertThat(cashQr.issue(reference, sender.getId()).token()).isNotBlank();
+        assertBalances("100", "0");
+    }
+
+    @Test void overlappingScansConsumeTheQrExactlyOnce() throws Exception {
+        var withdrawal = cashOut(); var first = agent(); var second = agent();
+        var qr = cashQr.issue(withdrawal.getReference(), sender.getId());
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var attempts = List.of(first, second).stream().map(agent -> executor.submit(() -> {
+                try { cashQr.scan(withdrawal.getReference(), qr.token(), agent); return true; }
+                catch (WalletOperationException expected) { return false; }
+            })).toList();
+            int accepted = 0;
+            for (var attempt : attempts) if (attempt.get(10, TimeUnit.SECONDS)) accepted++;
+            assertThat(accepted).isEqualTo(1);
+        } finally { executor.shutdownNow(); }
+        assertBalances("100", "0");
+    }
+
+    private final Map<String, String> scanApprovals = new HashMap<>();
+    private com.mamadou.sutura.agent.dto.AgentOperationResponse completeScanned(String reference, User agent) {
+        String token = scanApprovals.computeIfAbsent(reference + agent.getId(), key -> {
+            var qr = cashQr.issue(reference, sender.getId());
+            return cashQr.scan(reference, qr.token(), agent).token();
+        });
+        return agentOperations.complete(reference, agent, token);
     }
 
     private User agent() {

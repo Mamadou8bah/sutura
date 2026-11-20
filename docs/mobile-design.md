@@ -1,3 +1,9 @@
+> Current direction (20 November 2026): use solid themed navigation and sheets
+> across all three apps. Liquid Glass and blur are removed. Agent home uses a
+> compact daily summary, grouped shortcuts and two-line operation rows. Background
+> history refresh failures are quiet; initial unavailable data is shown as unloaded,
+> never as a successful empty result. See `design/solid-mobile-surfaces.md`.
+
 # Sutura mobile design
 
 Customer, agent and merchant use one branded interface on iOS and Android.

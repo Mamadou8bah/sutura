@@ -18,6 +18,7 @@ public class AgentController {
 
     private final AgentOperationService agentOperationService;
     private final UserRepository userRepository;
+    private final com.mamadou.sutura.agent.service.CashOutQrService cashOutQrService;
 
     @GetMapping
     public ResponseEntity<java.util.List<AgentOperationResponse>> history(@AuthenticationPrincipal User currentUser) {
@@ -51,8 +52,17 @@ public class AgentController {
     @PostMapping("/{reference}/complete")
     public ResponseEntity<AgentOperationResponse> complete(
             @PathVariable String reference,
+            @RequestBody(required = false) CashApproval approval,
             @AuthenticationPrincipal User currentUser
     ) {
-        return ResponseEntity.ok(agentOperationService.complete(reference, currentUser));
+        return ResponseEntity.ok(agentOperationService.complete(reference, currentUser, approval == null ? null : approval.token()));
+    }
+    public record CashApproval(@jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 128) String token) {}
+    public record ScanResponse(AgentOperationResponse operation, String authorizationToken, java.time.Instant expiresAt) {}
+    @PostMapping("/{reference}/scan")
+    public ResponseEntity<ScanResponse> scan(@PathVariable String reference,
+            @jakarta.validation.Valid @RequestBody CashApproval approval, @AuthenticationPrincipal User currentUser) {
+        var grant = cashOutQrService.scan(reference, approval.token(), currentUser);
+        return ResponseEntity.ok(new ScanResponse(agentOperationService.lookup(reference, currentUser, grant.token()), grant.token(), grant.expiresAt()));
     }
 }

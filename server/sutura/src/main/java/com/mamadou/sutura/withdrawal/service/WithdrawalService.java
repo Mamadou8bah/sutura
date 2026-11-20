@@ -61,6 +61,9 @@ public class WithdrawalService {
 
     private Withdrawal createPending(CreateWithdrawalRequest request, Long actorId, boolean isAgent) {
         User actor = userRepository.findForKycUpdate(actorId).orElseThrow(() -> new IllegalArgumentException("Actor not found"));
+        if (isAgent || SecurityRoleUtils.isAgent(actor)
+                || (request.getUserId() != null && !request.getUserId().equals(actorId)))
+            throw new com.mamadou.sutura.wallet.exception.WalletOperationException("Only the wallet owner can request cash-out. Agents must scan the customer's QR.");
         User targetUser = resolveTargetUser(actor, isAgent, request.getUserId());
         Wallet wallet = resolveWallet(targetUser, request.getWalletId(), request.getCurrency());
 

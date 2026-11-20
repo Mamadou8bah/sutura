@@ -20,6 +20,7 @@ import java.util.List;
 public class WithdrawalController {
 
     private final WithdrawalService withdrawalService;
+    private final com.mamadou.sutura.agent.service.CashOutQrService cashOutQrService;
 
     @PostMapping
     public ResponseEntity<WithdrawalResponse> createWithdrawal(
@@ -47,5 +48,10 @@ public class WithdrawalController {
     @GetMapping("/reference/{reference}")
     public ResponseEntity<WithdrawalResponse> getWithdrawalByReference(@PathVariable String reference) {
         return ResponseEntity.ok(withdrawalService.getByReference(reference));
+    }
+    @PostMapping("/reference/{reference}/qr")
+    public ResponseEntity<com.mamadou.sutura.agent.service.CashOutQrService.Qr> cashQr(
+            @PathVariable String reference, @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(cashOutQrService.issue(reference, currentUser.getId()));
     }
 }

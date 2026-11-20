@@ -1,4 +1,4 @@
-import { GlassBackdrop } from "./GlassBackdrop";
+import { SurfaceBackdrop } from "./SurfaceBackdrop";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import { StyleSheet, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
@@ -16,12 +16,12 @@ export const merchantTabs: NavItem[] = [
   { id: "more", label: "More", icon: "grid" },
 ];
 
-/** YouPay-inspired raised centre destination; glass stays behind the quiet tabs. */
+/** YouPay-inspired raised centre destination; solid surfaces keep navigation clear. */
 export function BottomNav({ active, onChange }: { active: TabId; onChange: (tab: TabId) => void }) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
   return <View style={styles.wrapper}>
-    <View style={styles.background}><GlassBackdrop /></View>
+    <View style={styles.background}><SurfaceBackdrop /></View>
     <View accessibilityRole="tablist" style={styles.row}>
       {merchantTabs.map((item, index) => {
         const selected = active === item.id;

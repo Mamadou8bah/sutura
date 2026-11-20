@@ -37,7 +37,7 @@ export function MoreScreen() {
   </ScrollView>;
 }
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { padding: spacing.screen, paddingBottom: 28, gap: 28 },
+  content: { padding: spacing.screen, paddingBottom: 20, gap: 20 },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   title: { fontSize: 28, lineHeight: 36, fontFamily: fonts.semibold, color: colors.primary },
   profile: { flexDirection: "row", gap: 14, alignItems: "center", padding: 18, backgroundColor: colors.surfaceMuted, borderRadius: 22 },

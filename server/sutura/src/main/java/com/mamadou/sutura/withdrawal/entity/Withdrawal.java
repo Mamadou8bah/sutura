@@ -136,6 +136,14 @@ public class Withdrawal extends AuditableEntity {
      */
     private LocalDateTime completedAt;
 
+    @Column(length = 64)
+    private String cashQrHash;
+    private java.time.Instant cashQrExpiresAt;
+    @Column(length = 64)
+    private String cashClaimHash;
+    private java.time.Instant cashClaimExpiresAt;
+    private Long cashClaimAgentId;
+
     @PrePersist
     public void onCreate() {
         super.onCreate();

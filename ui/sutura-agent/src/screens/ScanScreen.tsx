@@ -29,10 +29,12 @@ export function ScanScreen() {
     lookupInFlight.current = true; setBusy(true); setError(null);
     try {
       const wallet = parseWalletDepositQr(reference.trim());
-      const result = wallet ? await prepareDepositQr(wallet) : await lookupReference(reference.trim());
+      const signed = parseAgentQr(reference.trim());
+      if (!wallet && !signed && reference.trim().startsWith("{")) { setError("QR expired or invalid. Ask the customer for a fresh code."); return; }
+      const result = wallet ? await prepareDepositQr(wallet) : signed ? await lookupQr(signed) : await lookupReference(reference.trim());
       if (!result.ok) setError(result.error ?? null);
     } finally { lookupInFlight.current = false; setBusy(false); }
-  }, [lookupReference, prepareDepositQr, reference]);
+  }, [lookupReference, lookupQr, prepareDepositQr, reference]);
 
   const handleBarcode = useCallback(
     async (raw: string) => {
@@ -42,7 +44,7 @@ export function ScanScreen() {
       const wallet = parseWalletDepositQr(raw);
       const payload = wallet ?? parseAgentQr(raw);
       if (!payload) {
-        setError("Unrecognized Sutura QR code.");
+        setError("QR expired or invalid. Ask the customer for a fresh code.");
         return;
       }
       lookupInFlight.current = true; setBusy(true);
@@ -56,7 +58,7 @@ export function ScanScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-      <ScreenTitle title="Scan customer QR" subtitle="Scan a deposit wallet or an existing cash operation" />
+      <ScreenTitle title="Scan customer QR" subtitle="Cash-out requires the customer’s current QR code." />
 
       {scanning && Platform.OS !== "web" ? (
         <Suspense fallback={<Text>Opening camera...</Text>}>
@@ -64,7 +66,7 @@ export function ScanScreen() {
         </Suspense>
       ) : (
         <View style={styles.manual}>
-          <Field label="Reference or QR code" hint="Enter an operation reference or paste a customer’s code.">
+          <Field label="Reference or QR code" hint="Cash-in accepts a reference. Cash-out requires a current customer QR.">
             <AppInput
               accessibilityLabel="Reference or QR code"
               value={reference}

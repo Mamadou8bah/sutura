@@ -96,6 +96,8 @@ export function AgentProvider({ children }: { children: ReactNode }) {
   },[authSession?.username]);
   const stats=useMemo(()=>{const today=new Date().toDateString();const rows=completed.filter(op=>new Date(op.completedAt??op.createdAt).toDateString()===today);return {...EMPTY_STATS,completedToday:rows.length,todayDeposits:rows.filter(op=>op.operation==="DEPOSIT").length,todayWithdrawals:rows.filter(op=>op.operation==="WITHDRAWAL").length};},[completed]);
   const [activeOperation, setActiveOperation] = useState<AgentOperation | null>(null);
+  const cashClaims = useRef(new Map<string, {token:string; expiresAt:string}>());
+  useEffect(() => { cashClaims.current.clear(); }, [authSession?.username]);
   const completionInFlight = useRef(false);
   const queueScope=authSession?.accessToken&&!authSession.accessToken.startsWith("demo.")?`sutura-agent_pending:${authSession.username}`:null;
   const [hydratedQueue,setHydratedQueue]=useState<string|null>(null);
@@ -208,7 +210,15 @@ export function AgentProvider({ children }: { children: ReactNode }) {
 
   const lookupQr = useCallback(
     async (payload: AgentQrPayload): Promise<OpResult> => {
-      return lookupReference(payload.reference);
+      if (payload.operation !== "WITHDRAWAL") return lookupReference(payload.reference);
+      if (!payload.token) return { ok:false, error:"Scan the customer's current cash-out QR." };
+      try {
+        const grant = await agentApi.scanCashOut(payload.reference, payload.token);
+        cashClaims.current.set(payload.reference, {token:grant.authorizationToken, expiresAt:grant.expiresAt});
+        const op = {...grant.operation, amount:Number(grant.operation.amount)} as AgentOperation;
+        setActiveOperation(op); setPending(prev => [op, ...prev.filter(p => p.reference !== op.reference)]); setTab("confirm");
+        return {ok:true};
+      } catch (err) { return {ok:false, error:err instanceof Error ? err.message : "Scan failed. Ask for a fresh QR."}; }
     },
     [lookupReference],
   );
@@ -225,7 +235,10 @@ export function AgentProvider({ children }: { children: ReactNode }) {
 
     completionInFlight.current = true;
     try {
-      const op = await agentApi.complete(activeOperation.reference);
+      const claim = cashClaims.current.get(activeOperation.reference);
+      if (activeOperation.operation === "WITHDRAWAL" && (!claim || Date.parse(claim.expiresAt) <= Date.now()))
+        return {ok:false, error:"Cash-out approval expired. Scan the customer's current QR again."};
+      const op = await agentApi.complete(activeOperation.reference, claim?.token);
       const completedOp: AgentOperation = {
         ...activeOperation,
         status: op.status as AgentOperation["status"],
@@ -239,7 +252,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
         return {
           ok: false,
           error: op.status === "PENDING_REVIEW"
-            ? "Awaiting Sentinel review. Do not exchange cash. Look up this reference again after approval."
+            ? "Awaiting Sentinel review. Do not exchange cash. After approval, scan a fresh customer QR for cash-out."
             : "Operation has not completed. Do not exchange cash; check its status before trying again.",
         };
       }
@@ -267,6 +280,7 @@ export function AgentProvider({ children }: { children: ReactNode }) {
     async (type: "DEPOSIT" | "WITHDRAWAL", phone: string, amount: string, currency: string, idempotencyKey: string, walletId?: number): Promise<OpResult> => {
       const authError = requireAuth();
       if (authError) return authError;
+      if (type === "WITHDRAWAL") return {ok:false, error:"Scan the customer's QR to cash out. Phone cash-out is not permitted."};
       const normalizedPhone=normalizePhone(phone);
       if (!normalizedPhone) return { ok: false, error: "Enter the customer's registered phone number." };
       if (!/^\d{1,13}(\.\d{1,4})?$/.test(amount) || Number(amount) < 0.01 || Number(amount) > 1e12) {

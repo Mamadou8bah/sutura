@@ -9,10 +9,9 @@ The public project does not identify the font. Poppins is a visual approximation
 bundled in four weights on all platforms; it is not a confirmed original font.
 Do not copy unsupported charts, virtual cards or reference balances into the app.
 
-Money surfaces stay opaque. Navigation and selection sheets retain bounded
-[Liquid Glass](https://developer.apple.com/documentation/technologyoverviews/liquid-glass)
-on supported iOS builds, with existing blur/solid fallbacks on other devices and
-Reduce Transparency support. Android does not run Apple's native material.
+All three apps use opaque themed surfaces for navigation, selection sheets and
+money content. The user's 20 November decision removes Liquid Glass and blur
+on every platform. Orange remains the action accent.
 
 My QR opens the selected wallet's deposit code from the customer balance card.
 Send money, Top up, Withdraw and My QR share that card's action row. Customer
@@ -27,7 +26,7 @@ More is an account page: profile, identity verification, settings and support.
 Payment shortcuts and the unnecessary service search are removed from this page.
 Bottom navigation follows the locally supplied YouPay reference: five labelled
 destinations with a raised central circle (Scan for customers/agents, Collect for
-merchants), retaining the glass background and safe-area container. Customer
+merchants), using a solid background and safe-area container. Customer
 Home no longer repeats Scan, Wallets and Support shortcuts; merchant Home no
 longer repeats the Wallets shortcut. Selection remains explicit to assistive
 technology and includes a visible dot as well as colour.

@@ -4,6 +4,12 @@ export function parseAgentQr(raw: string): AgentQrPayload | null {
   try {
     const data = JSON.parse(raw.trim());
 
+    if (data?.operation === "WITHDRAWAL") {
+      if (data.app !== "sutura" || data.v !== 2 || typeof data.reference !== "string" || !data.reference.length || data.reference.length > 100
+          || !/^[A-Za-z0-9_-]{43}$/.test(data.token ?? "") || !Number.isFinite(Date.parse(data.expiresAt))
+          || Date.parse(data.expiresAt) <= Date.now()) return null;
+      return {...data, amount: String(data.amount ?? "")} as AgentQrPayload;
+    }
     if (data?.app === "sutura" && data?.reference) {
       return {
         operation: data.operation,

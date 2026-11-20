@@ -26,6 +26,7 @@ public class AgentOperationService {
 
     private final DepositRepository depositRepository;
     private final WithdrawalRepository withdrawalRepository;
+    private final CashOutQrService cashOutQrService;
     private final TransactionRepository transactionRepository;
     private final UserRepository userRepository;
     private final LedgerWalletMovementService ledgerWalletMovementService;
@@ -46,6 +47,11 @@ public class AgentOperationService {
 
     @Transactional(readOnly = true)
     public AgentOperationResponse lookup(String reference, User agent) {
+        return lookup(reference, agent, null);
+    }
+
+    @Transactional(readOnly = true)
+    public AgentOperationResponse lookup(String reference, User agent, String authorizationToken) {
         requireAgent(agent);
         Deposit deposit = depositRepository.findByReferenceIgnoreCase(reference).orElse(null);
         if (deposit != null) {
@@ -53,11 +59,17 @@ public class AgentOperationService {
         }
         Withdrawal withdrawal = withdrawalRepository.findByReferenceIgnoreCase(reference)
                 .orElseThrow(() -> new IllegalArgumentException("Operation not found for reference " + reference));
+        cashOutQrService.requireClaim(withdrawal, agent, authorizationToken);
         return toResponse("WITHDRAWAL", withdrawal.getReference(), withdrawal.getWallet(), withdrawal.getAmount(), withdrawal.getStatus().name(), withdrawal.getUser(), withdrawal.getCreatedAt(), withdrawal.getCompletedAt());
     }
 
     @Transactional
     public AgentOperationResponse complete(String reference, User agent) {
+        return complete(reference, agent, null);
+    }
+
+    @Transactional
+    public AgentOperationResponse complete(String reference, User agent, String authorizationToken) {
         requireAgent(agent);
         Deposit deposit = depositRepository.findForCompletion(reference).orElse(null);
         if (deposit != null) {
@@ -65,6 +77,7 @@ public class AgentOperationService {
         }
         Withdrawal withdrawal = withdrawalRepository.findForCompletion(reference)
                 .orElseThrow(() -> new IllegalArgumentException("Operation not found for reference " + reference));
+        cashOutQrService.requireClaim(withdrawal, agent, authorizationToken);
         return completeWithdrawal(withdrawal, agent);
     }
 

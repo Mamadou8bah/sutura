@@ -60,13 +60,14 @@ async function authRequest<T>(path: string, init?: RequestInit): Promise<T> {
 export type DepositWalletTarget = { walletId: number; walletName: string; currency: string; userId: number; name: string; phone: string };
 
 export const agentApi = {
+  scanCashOut: (reference: string, token: string) => authRequest<{operation: AgentOperation; authorizationToken: string; expiresAt: string}>(`/api/v1/agent/operations/${encodeURIComponent(reference)}/scan`, {method:"POST", body:JSON.stringify({token})}),
   depositWallet: (walletId: number) => authRequest<DepositWalletTarget>(`/api/v1/agent/deposit-wallets/${walletId}`),
   history: () => authRequest<AgentOperation[]>("/api/v1/agent/operations"),
   customer: (phone: string) =>
     authRequest<{ id: number; name: string }>(`/api/v1/agent/operations/customer?phone=${encodeURIComponent(phone)}`),
 
   createCash: (type: "DEPOSIT" | "WITHDRAWAL", userId: number, amount: string, currency: string, idempotencyKey: string, walletId?: number) =>
-    authRequest<{ reference: string }>(`/api/v1/${type === "DEPOSIT" ? "deposits" : "withdrawals"}`, {
+    type === "WITHDRAWAL" ? Promise.reject(new Error("Scan the customer's cash-out QR. Phone cash-out is not permitted.")) : authRequest<{ reference: string }>(`/api/v1/deposits`, {
       method: "POST",
       body: JSON.stringify({ userId, amount, currency, idempotencyKey,
         ...(type === "DEPOSIT" ? { paymentMethod: "agent", ...(walletId ? { walletId } : {}) } : { withdrawalMethod: "agent" }) }),
@@ -80,8 +81,8 @@ export const agentApi = {
   lookup: (reference: string) =>
     authRequest<AgentOperation>(`/api/v1/agent/operations/${encodeURIComponent(reference)}`),
 
-  complete: (reference: string) =>
+  complete: (reference: string, token?: string) =>
     authRequest<AgentOperation>(`/api/v1/agent/operations/${encodeURIComponent(reference)}/complete`, {
-      method: "POST",
+      method: "POST", body: JSON.stringify({token}),
     }),
 };

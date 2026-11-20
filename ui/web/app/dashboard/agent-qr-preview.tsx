@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
+import { authenticatedFetch, readAuthenticatedJson } from "../../lib/authenticated-fetch";
 import QRCode from "react-qr-code";
 import { encodeAgentQrPayload, type AgentQrPayload } from "../../lib/agent-qr";
 import { CopyButton, Money, StatusBadge } from "../components/ui";
@@ -13,6 +15,7 @@ export function AgentQrPreview({
   title: string;
   hint?: string;
 }) {
+  if (payload.operation === "WITHDRAWAL") return <CashOutQrPreview payload={payload} />;
   const value = encodeAgentQrPayload(payload);
   const operation = payload.operation === "DEPOSIT" ? "cash-in" : "cash-out";
 
@@ -80,4 +83,38 @@ export function PrimaryWalletBanner({
       </p>
     </div>
   );
+}
+
+function CashOutQrPreview({payload}:{payload:AgentQrPayload}) {
+  type Qr = {token:string|null;expiresAt:string|null;status:string};
+  const [qr,setQr]=useState<Qr|null>(null), [now,setNow]=useState(Date.now()), [error,setError]=useState("");
+  const current=useRef<Qr|null>(null);
+  useEffect(()=>{
+    let active=true, running=false, retryAt=0, controller:AbortController|null=null;
+    current.current=null;setQr(null);
+    const load=async()=>{
+      const stored=current.current;
+      if(!active||running||document.visibilityState!=="visible"||Date.now()<retryAt)return;
+      if(stored&&!['AWAITING_AGENT','SCANNED','PENDING_REVIEW'].includes(stored.status))return;
+      if(stored?.token&&stored.expiresAt&&Date.parse(stored.expiresAt)>Date.now())return;
+      running=true;const request=new AbortController();controller=request;
+      try{
+        const response=await authenticatedFetch(`/api/v1/withdrawals/reference/${encodeURIComponent(payload.reference)}/qr`,{method:"POST",signal:request.signal});
+        const value=await readAuthenticatedJson<Qr>(response);
+        if(!value||typeof value.status!=="string"||(value.token&&(!/^[A-Za-z0-9_-]{43}$/.test(value.token)||!Number.isFinite(Date.parse(value.expiresAt??"")))))throw Error("Invalid QR");
+        if(active&&!request.signal.aborted){current.current=value;setQr(value);setError("");retryAt=["SCANNED","PENDING_REVIEW"].includes(value.status)?Date.now()+5000:0;}
+      }catch{if(active&&!request.signal.aborted){current.current=null;setQr(null);setError("QR unavailable. Reconnect for a fresh code.");retryAt=Date.now()+5000;}}
+      finally{if(controller===request)running=false;}
+    };
+    const visibility=()=>{controller?.abort();controller=null;running=false;current.current=null;setQr(null);setNow(Date.now());void load();};
+    document.addEventListener("visibilitychange",visibility);
+    void load();const tick=setInterval(()=>{setNow(Date.now());void load();},1000);
+    return()=>{active=false;controller?.abort();clearInterval(tick);document.removeEventListener("visibilitychange",visibility);};
+  },[payload.reference]);
+  const visible=qr?.token&&Date.parse(qr.expiresAt??"")>now;
+  return <section aria-label="Cash-out QR code" className="rounded-card border border-line bg-surface p-5 text-center">
+    <h2 className="font-semibold text-ink">Cash-out QR</h2><p className="my-3 text-lg font-semibold text-ink"><Money amount={payload.amount} currency={payload.currency}/></p>
+    {visible&&<div className="mx-auto w-fit rounded-card bg-white p-3"><QRCode value={JSON.stringify({app:"sutura",v:2,operation:"WITHDRAWAL",reference:payload.reference,token:qr.token,expiresAt:qr.expiresAt})} size={180}/></div>}
+    <p role="status" className="mt-4 text-sm text-ink-2">{qr?.status==="SCANNED"?"The agent is reviewing your cash-out.":qr?.status==="COMPLETED"?"Cash-out completed. Check Activity for your receipt.":qr&&!['AWAITING_AGENT','SCANNED'].includes(qr.status)?"This cash-out is not ready. Check Activity.":visible?`Show the agent. Refreshes in ${Math.min(30,Math.max(0,Math.ceil((Date.parse(qr.expiresAt!)-now)/1000)))}s.`:error||"Preparing a fresh QR…"}</p>
+  </section>;
 }

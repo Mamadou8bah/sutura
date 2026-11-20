@@ -12,7 +12,7 @@ import static org.mockito.Mockito.*;
 
 class AgentCustomerLookupTest {
     private final UserRepository users = mock(UserRepository.class);
-    private final AgentController controller = new AgentController(mock(AgentOperationService.class), users);
+    private final AgentController controller = new AgentController(mock(AgentOperationService.class), users, mock(com.mamadou.sutura.agent.service.CashOutQrService.class));
 
     @Test void lookupReturnsOnlyCustomerIdentity() {
         User customer = User.builder().id(42).firstName("Test").lastName("Customer").enabled(true).build();

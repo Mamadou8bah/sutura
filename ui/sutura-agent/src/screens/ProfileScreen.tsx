@@ -59,14 +59,14 @@ export function ProfileScreen() {
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { padding: spacing.screen, paddingBottom: 32, gap: spacing.gap },
+  content: { padding: spacing.screen, paddingBottom: 20, gap: 12 },
   card: { padding: 0, overflow: "hidden" },
   row: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 16,
     paddingHorizontal: 16,
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },

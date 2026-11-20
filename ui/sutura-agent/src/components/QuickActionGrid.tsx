@@ -30,6 +30,6 @@ export function QuickActionGrid({ actions }: { actions: Action[] }) {
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  item: { flexGrow: 1, flexBasis: 128, minWidth: 0, minHeight: 104, paddingVertical: 12, paddingHorizontal: 8, alignItems: "center", gap: 8 },
+  item: { flexGrow: 1, flexBasis: 128, minWidth: 0, minHeight: 80, paddingVertical: 8, paddingHorizontal: 8, alignItems: "center", gap: 8 },
   label: { fontSize: type.body, textAlign: "center", alignSelf: "stretch", fontFamily: fonts.medium, fontWeight: "500", color: colors.primary },
 });

@@ -7,9 +7,8 @@ import { OperationRow } from "../components/OperationRow";
 import { QuickActionGrid } from "../components/QuickActionGrid";
 import { StatsCarousel } from "../components/StatsCarousel";
 import { SkeletonBalance, SkeletonRows } from "../components/Skeleton";
-import { StaleNotice } from "../components/StaleNotice";
 import { useAgent } from "../context/AgentContext";
-import { fonts, radii, spacing, type, type ThemeColors } from "../theme";
+import { fonts, spacing, type, type ThemeColors } from "../theme";
 
 export function HomeScreen() {
   const { colors } = useTheme();
@@ -22,11 +21,9 @@ export function HomeScreen() {
       refreshControl={<RefreshControl refreshing={historyLoading && !firstLoad} onRefresh={() => void refreshHistory()} />}>
       <AppHeader />
 
-      {historyError ? <StaleNotice message={lastUpdated ? "Couldn't refresh operations." : "Couldn't load operations."}
-        since={lastUpdated} busy={historyLoading} onRetry={() => void refreshHistory()} /> : null}
+      {firstLoad ? <SkeletonBalance label="Loading today's totals" /> : <StatsCarousel unavailable={!lastUpdated && !!historyError} stats={stats} completed={completed} onOpenQueue={() => setTab("queue")} />}
 
-      {firstLoad ? <SkeletonBalance label="Loading today's totals" /> : <StatsCarousel stats={stats} completed={completed} onOpenQueue={() => setTab("queue")} />}
-
+      <View style={styles.section}>
       <Text accessibilityRole="header" style={styles.sectionTitle}>Services</Text>
       <QuickActionGrid
         actions={[
@@ -35,6 +32,9 @@ export function HomeScreen() {
         ]}
       />
 
+      </View>
+
+      <View style={styles.section}>
       <View style={styles.sectionHeader}>
         <Text accessibilityRole="header" style={styles.sectionTitle}>Recent completions</Text>
         {recentCompleted.length > 0 ? <Pressable accessibilityRole="button" accessibilityLabel="See all completed operations"
@@ -45,18 +45,20 @@ export function HomeScreen() {
 
       {firstLoad ? <SkeletonRows rows={3} label="Loading recent operations" /> : recentCompleted.length === 0 ? <View style={styles.empty}>
         <Ionicons name="receipt-outline" size={28} color={colors.slate500} />
-        <Text style={styles.emptyTitle}>No completed operations yet</Text>
-        <Text style={styles.emptyHint}>Your completed cash-in and cash-out history appears here.</Text>
-      </View> : recentCompleted.map(op => <OperationRow key={op.reference} op={op} onPress={() => openOperation(op)} />)}
+        <Text style={styles.emptyTitle}>{!lastUpdated && historyError ? "No operations loaded" : "No completed operations yet"}</Text>
+        <Text style={styles.emptyHint}>{!lastUpdated && historyError ? "Pull down to load your operations." : "Completed cash-in and cash-out operations appear here."}</Text>
+      </View> : <View>{recentCompleted.map(op => <OperationRow key={op.reference} op={op} onPress={() => openOperation(op)} />)}</View>}
+      </View>
     </ScrollView>
   );
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { padding: spacing.screen, paddingBottom: 24, gap: 16 },
-  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 4, gap: 8 },
-  sectionTitle: { flex: 1, fontSize: type.section, fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary },
-  seeAllBtn: { minHeight: 48, minWidth: 48, justifyContent: "center", paddingHorizontal: 4 },
+  content: { padding: spacing.screen, paddingBottom: 16, gap: 20 },
+  section: { gap: 4 },
+  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 },
+  sectionTitle: { fontSize: type.section, fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary },
+  seeAllBtn: { minHeight: 44, minWidth: 44, justifyContent: "center", paddingHorizontal: 4 },
   seeAll: { fontSize: type.body, fontFamily: fonts.medium, fontWeight: "500", color: colors.accentText },
   empty: { paddingVertical: 20, alignItems: "center", gap: 8 },
   emptyTitle: { fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary, fontSize: type.headline, textAlign: "center" },
