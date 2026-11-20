@@ -12,6 +12,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
@@ -95,6 +96,37 @@ class FraudDetectionClientTest {
         server.expect(requestTo("http://sentinel:8080/actuator/health"))
                 .andRespond(withSuccess("{\"status\":\"UP\"}", MediaType.APPLICATION_JSON));
         assertThat(client.isHealthy()).isTrue();
+        server.verify();
+    }
+
+    @Test
+    void transientGatewayFailureRetriesOnlyScoringWithTheSameTransactionId() {
+        server.expect(requestTo("http://sentinel:8080/api/integration/transactions/score"))
+                .andExpect(content().string(containsString("\"externalTransactionId\":\"transfer-42\"")))
+                .andRespond(withStatus(HttpStatus.BAD_GATEWAY));
+        server.expect(requestTo("http://sentinel:8080/api/integration/transactions/score"))
+                .andExpect(header("X-Api-Key", "test-tenant-key"))
+                .andExpect(content().string(containsString("\"externalTransactionId\":\"transfer-42\"")))
+                .andRespond(withSuccess(response("ALLOW"), MediaType.APPLICATION_JSON));
+        assertThat(client.score(event).decision()).isEqualTo("allow");
+        server.verify();
+    }
+
+    @Test
+    void persistentGatewayFailureStillFailsClosedAfterTwoAttempts() {
+        for (int attempt = 0; attempt < 2; attempt++) {
+            server.expect(requestTo("http://sentinel:8080/api/integration/transactions/score"))
+                    .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+        }
+        assertThatThrownBy(() -> client.score(event)).isInstanceOf(RestClientException.class);
+        server.verify();
+    }
+
+    @Test
+    void rejectedCredentialsAreNeverRetried() {
+        server.expect(requestTo("http://sentinel:8080/api/integration/transactions/score"))
+                .andRespond(withStatus(HttpStatus.UNAUTHORIZED));
+        assertThatThrownBy(() -> client.score(event)).isInstanceOf(RestClientException.class);
         server.verify();
     }
 

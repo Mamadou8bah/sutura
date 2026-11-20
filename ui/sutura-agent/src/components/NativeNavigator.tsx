@@ -10,9 +10,9 @@ const Stack = createNativeStackNavigator();
 const headerScreens = new Set(["profile", "support", "topup", "withdraw", "settings", "new-deposit", "new-withdrawal", "confirm"]);
 const titles: Record<string, string> = { profile: "Account", support: "Support", topup: "Top up", withdraw: "Withdraw",
   settings: "Settings", "new-deposit": "Cash in", "new-withdrawal": "Cash out", confirm: "Confirm operation" };
-export function NativeNavigator({ screen, onChange, screens, renderScreen, scope = "default" }: {
+export function NativeNavigator({ screen, onChange, screens, renderScreen, scope = "default", customHeaders, transparentScreens }: {
   screen: string; onChange: (screen: string) => void; screens: readonly string[];
-  renderScreen: (screen: string) => ReactNode; scope?: string;
+  renderScreen: (screen: string) => ReactNode; scope?: string; customHeaders?: ReadonlySet<string>; transparentScreens?: ReadonlySet<string>;
 }) {
   const { colors, mode } = useTheme();
   const navigation = useRef(createNavigationContainerRef<Record<string, undefined>>()).current;
@@ -25,6 +25,7 @@ export function NativeNavigator({ screen, onChange, screens, renderScreen, scope
   }
   useEffect(() => { if (Platform.OS !== "web") synchronize(); }, [screen, scope]);
   if (Platform.OS === "web") return <>{renderScreen(screen)}</>;
+  const hasNativeHeader = (name: string) => headerScreens.has(name) && !customHeaders?.has(name);
   const base = mode === "dark" ? DarkTheme : DefaultTheme;
   return <NavigationContainer key={scope} ref={navigation} onReady={synchronize}
     theme={{ ...base, colors: { ...base.colors, primary: colors.orange, background: colors.background,
@@ -36,7 +37,8 @@ export function NativeNavigator({ screen, onChange, screens, renderScreen, scope
     }}>
     <Stack.Navigator initialRouteName={screen} screenOptions={{ headerShown: false, gestureEnabled: true,
       contentStyle: { backgroundColor: colors.background }, animation: "default" }}>
-      {screens.map(name => <Stack.Screen key={name} name={name} options={{ headerShown: headerScreens.has(name), title: titles[name] ?? name, headerTintColor: colors.primary }}>{() => <SafeAreaView edges={headerScreens.has(name) ? ["left", "right"] : ["top", "left", "right"]} style={{flex:1}}><NativeHeaderContext.Provider value={headerScreens.has(name)}>{renderScreen(name)}</NativeHeaderContext.Provider></SafeAreaView>}</Stack.Screen>)}
+      {screens.map(name => <Stack.Screen key={name} name={name} options={{ headerShown: hasNativeHeader(name), title: titles[name] ?? name, headerTintColor: colors.primary,
+        ...(transparentScreens?.has(name) ? { contentStyle: { backgroundColor: "transparent" } } : {}) }}>{() => <SafeAreaView edges={hasNativeHeader(name) ? ["left", "right"] : ["top", "left", "right"]} style={{flex:1}}><NativeHeaderContext.Provider value={hasNativeHeader(name)}>{renderScreen(name)}</NativeHeaderContext.Provider></SafeAreaView>}</Stack.Screen>)}
     </Stack.Navigator>
   </NavigationContainer>;
 }

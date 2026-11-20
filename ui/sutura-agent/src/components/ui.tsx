@@ -3,7 +3,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View, type TextInputProps, type ViewStyle } from "react-native";
+import { KeyboardScrollView as ScrollView } from "./KeyboardScrollView";
+import { KeyboardAvoidingView, Platform, StyleSheet, View, type TextInputProps, type ViewStyle} from "react-native";
 import { NativePressable as Pressable, NativeText as Text, NativeInput as TextInput } from "./NativeControls";
 import { colors, fonts, radii, shadow } from "../theme";
 
@@ -83,10 +84,10 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   error: { fontSize: 15, lineHeight: 21, fontFamily: fonts.medium, color: colors.dangerFg, textAlign: "center" },
 });
 
-export function Screen({ children }: { children: React.ReactNode }) {
+export function Screen({ children, transparent = false }: { children: React.ReactNode; transparent?: boolean }) {
  const {colors}=useTheme();
 
-  return <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}><ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ flexGrow: 1, width: "100%", maxWidth: 560, alignSelf: "center", padding: 16, paddingBottom: 32, gap: 16 }}>{children}</ScrollView></KeyboardAvoidingView>;
+  return <KeyboardAvoidingView style={{ flex: 1, backgroundColor: transparent ? "transparent" : colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}><ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" contentContainerStyle={{ flexGrow: 1, width: "100%", maxWidth: 560, alignSelf: "center", padding: 16, paddingBottom: 32, gap: 16 }}>{children}</ScrollView></KeyboardAvoidingView>;
 }
 
 export function PasswordInput(props:TextInputProps){

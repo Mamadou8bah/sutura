@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardScrollView as ScrollView } from "./KeyboardScrollView";
+import { KeyboardAvoidingView, Platform, StyleSheet, View} from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import { fonts, radii, spacing, tabular, type, type ThemeColors } from "../theme";
@@ -54,12 +55,12 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   scroll: { padding: spacing.screen, paddingBottom: spacing.section, gap: spacing.gap },
   title: { fontSize: type.title, lineHeight: 34, fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary },
   subtitle: { fontSize: type.body, lineHeight: 21, color: colors.slate500 },
-  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.lg, paddingHorizontal: 16 },
+  card: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radii.xl, paddingHorizontal: 16 },
   row: { flexDirection: "row", flexWrap: "wrap", justifyContent: "space-between", alignItems: "baseline", gap: 12, paddingVertical: 14 },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   label: { fontSize: type.body, color: colors.slate500, flexShrink: 1 },
   value: { fontSize: type.body, fontFamily: fonts.medium, fontWeight: "500", color: colors.primary, textAlign: "right", flexShrink: 1 },
-  emphasis: { fontSize: type.section, fontFamily: fonts.semibold, fontWeight: "600" },
+  emphasis: { color: colors.accentText, fontSize: type.section, fontFamily: fonts.semibold, fontWeight: "600" },
   footer: { paddingHorizontal: spacing.screen, paddingTop: 12, paddingBottom: 12, gap: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border, backgroundColor: colors.background },
   secondary: { minHeight: 48, alignItems: "center", justifyContent: "center", borderRadius: radii.md, paddingHorizontal: 16 },
   secondaryText: { fontSize: type.headline, fontFamily: fonts.medium, fontWeight: "500" },

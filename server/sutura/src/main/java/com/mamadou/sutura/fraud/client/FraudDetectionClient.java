@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
@@ -46,8 +47,7 @@ public class FraudDetectionClient {
                         : event.metadata().get("operation_type").toString().toUpperCase(Locale.ROOT),
                 event.metadata() != null && event.metadata().get("available_balance") instanceof java.math.BigDecimal balance ? balance : null);
         long start = System.nanoTime();
-        SentinelScoreResponse response = fraudDetectionRestTemplate.postForObject(
-                url, new HttpEntity<>(request, authHeaders()), SentinelScoreResponse.class);
+        SentinelScoreResponse response = requestScore(url, request);
         validateResponse(event, response);
         List<String> reasons = new ArrayList<>();
         if (response.explanation() != null && !response.explanation().isBlank()) {
@@ -64,6 +64,23 @@ public class FraudDetectionClient {
                 response.anomalyScore(), reasons, (System.nanoTime() - start) / 1_000_000.0,
                 response.ruleFlags() == null || response.ruleFlags().isEmpty() ? null : response.ruleFlags().get(0),
                 features);
+    }
+
+    private SentinelScoreResponse requestScore(String url, SentinelScoreRequest request) {
+        // Retry only gateway availability failures, once. Sentinel deduplicates
+        // this exact externalTransactionId and validates its original payload.
+        // This never retries the wallet transfer or any ledger posting.
+        for (int attempt = 0; ; attempt++) {
+            try {
+                return fraudDetectionRestTemplate.postForObject(
+                        url, new HttpEntity<>(request, authHeaders()), SentinelScoreResponse.class);
+            } catch (RestClientResponseException ex) {
+                int status = ex.getStatusCode().value();
+                if (attempt != 0 || (status != 502 && status != 503 && status != 504)) throw ex;
+                log.warn("Sentinel gateway returned HTTP {}; retrying scoring once for {}",
+                        status, request.externalTransactionId());
+            }
+        }
     }
 
     private void validateResponse(TransactionEventRequest event, SentinelScoreResponse response) {
@@ -86,7 +103,7 @@ public class FraudDetectionClient {
             Map<?, ?> response = fraudDetectionRestTemplate.getForObject(url, Map.class);
             return response != null && "UP".equals(response.get("status"));
         } catch (RestClientException ex) {
-            log.warn("Fraud detection health check failed: {}", ex.getMessage());
+            log.warn("Fraud detection health check failed ({})", ex.getClass().getSimpleName());
             return false;
         }
     }

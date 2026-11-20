@@ -13,10 +13,10 @@ import { transactionTypeLabel } from "../utils/transactionDetails";
 export function TransactionRow({ txn, onPress }: { txn: CustomerTransaction; onPress?: () => void }) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
-  const { openTransaction, balanceHidden } = useWallet();
+  const { openTransaction } = useWallet();
   const isCredit = txn.type === "TRANSFER_IN" || txn.type === "DEPOSIT";
   const sign = isCredit ? "+" : "−";
-  const amountText = balanceHidden ? "amount hidden" : `${isCredit ? "plus" : "minus"} ${formatMoney(txn.amount, txn.currency)}`;
+  const amountText = `${isCredit ? "plus" : "minus"} ${formatMoney(txn.amount, txn.currency)}`;
 
   return <Pressable accessibilityRole="button"
     accessibilityLabel={`${transactionTypeLabel(txn.type)}, ${txn.counterparty}, ${amountText}, ${statusLabel(txn.status)}, ${formatTimestamp(txn.time)}`}
@@ -28,8 +28,7 @@ export function TransactionRow({ txn, onPress }: { txn: CustomerTransaction; onP
       <Text style={styles.meta}>{formatTimestamp(txn.time)}</Text>
     </View>
     <View style={styles.right}>
-      {balanceHidden ? <Text style={styles.amount}>••••</Text>
-        : <Money amount={txn.amount} currency={txn.currency} sign={sign} style={[styles.amount, isCredit && { color: colors.successFg }]} />}
+      <Money amount={txn.amount} currency={txn.currency} sign={sign} style={[styles.amount, isCredit && { color: colors.successFg }]} />
       {txn.status !== "COMPLETED" ? <StatusPill status={txn.status} plain /> : null}
     </View>
   </Pressable>;

@@ -1,7 +1,8 @@
-import { SurfaceBackdrop } from "./SurfaceBackdrop";
+import { useKeyboardVisible } from "../hooks/useKeyboardVisible";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import { StyleSheet, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
+import { Ionicons } from "@expo/vector-icons";
 import { Icon, type IconName } from "./Icon";
 import { fonts, type, type ThemeColors } from "../theme";
 import type { TabId } from "../types";
@@ -16,12 +17,14 @@ const tabs: NavItem[] = [
   { id: "more", label: "More", icon: "grid" },
 ];
 
-/** YouPay-inspired raised centre destination; solid surfaces keep navigation clear. */
+/** Floating navigation with a dedicated role-specific action. */
 export function BottomNav({ active, onChange }: { active: TabId; onChange: (tab: TabId) => void }) {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
+  const keyboardVisible = useKeyboardVisible();
+  if (keyboardVisible) return null;
   return <View style={styles.wrapper}>
-    <View style={styles.background}><SurfaceBackdrop /></View>
+    <View pointerEvents="none" style={styles.background} />
     <View accessibilityRole="tablist" style={styles.row}>
       {tabs.map((item, index) => {
         const selected = active === item.id;
@@ -31,24 +34,22 @@ export function BottomNav({ active, onChange }: { active: TabId; onChange: (tab:
           aria-selected={selected} accessibilityState={{ selected }} onPress={() => { if (!selected) onChange(item.id); }}
           style={[styles.item, central && styles.centralItem]}>
           <View style={central ? styles.scanCircle : styles.icon}>
-            <Icon name={item.icon} size={central ? 26 : 22} color={central ? "#ffffff" : tint} strokeWidth={selected ? 2.2 : 1.8} />
+            <>{central ? <Ionicons name="add" size={28} color={colors.actionInk} /> : <Icon name={item.icon} size={20} color={tint} strokeWidth={selected ? 2.2 : 1.8} />}</>
           </View>
-          <Text style={[styles.label, { color: tint }, selected && styles.selected]}>{item.label}</Text>
-          {selected && <View style={styles.dot} />}
+          {!central && <Text style={[styles.label, { color: tint }, selected && styles.selected]}>{item.label}</Text>}
         </Pressable>;
       })}
     </View>
   </View>;
 }
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  wrapper: { paddingHorizontal: 12, paddingTop: 20, paddingBottom: 4, backgroundColor: colors.background },
-  background: { position: "absolute", top: 20, bottom: 4, left: 12, right: 12, borderRadius: 26, overflow: "hidden" },
-  row: { flexDirection: "row", alignItems: "flex-end" },
-  item: { flex: 1, minWidth: 0, minHeight: 68, alignItems: "center", justifyContent: "center", gap: 3, paddingHorizontal: 2, paddingVertical: 8 },
-  centralItem: { marginTop: -20, paddingTop: 0 },
+  wrapper: { paddingHorizontal: 12, paddingTop: 6, paddingBottom: 8 },
+  background: { position: "absolute", top: 6, bottom: 8, left: 12, right: 12, borderRadius: 32, backgroundColor: colors.walletHighlight, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.border },
+  row: { flexDirection: "row", alignItems: "center" },
+  item: { flex: 1, minWidth: 0, minHeight: 58, alignItems: "center", justifyContent: "center", gap: 3, paddingHorizontal: 2, paddingVertical: 8 },
+  centralItem: { paddingVertical: 6 },
   icon: { height: 28, alignItems: "center", justifyContent: "center" },
-  scanCircle: { width: 56, height: 56, borderRadius: 28, borderWidth: 5, borderColor: colors.background, backgroundColor: colors.accentText, alignItems: "center", justifyContent: "center" },
+  scanCircle: { width: 46, height: 46, borderRadius: 23, backgroundColor: colors.actionFill, alignItems: "center", justifyContent: "center" },
   label: { fontSize: type.tab, lineHeight: 16, textAlign: "center", alignSelf: "stretch", fontFamily: fonts.medium },
   selected: { fontFamily: fonts.semibold },
-  dot: { position: "absolute", bottom: 2, width: 4, height: 4, borderRadius: 2, backgroundColor: colors.accentText },
 });

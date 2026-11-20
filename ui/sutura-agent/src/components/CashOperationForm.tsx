@@ -1,7 +1,8 @@
 import { isAmountDraft, isCurrencyDraft, isPhoneDraft, isValidAmount } from "../utils/inputValidation";
 import { useThemedStyles } from "../context/ThemeContext";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Keyboard, KeyboardAvoidingView, Platform, ScrollView, StyleSheet } from "react-native";
+import { KeyboardScrollView as ScrollView } from "./KeyboardScrollView";
+import { Keyboard, KeyboardAvoidingView, Platform, StyleSheet} from "react-native";
 import { NativeText as Text } from "./NativeControls";
 import { BackHeader } from "./AppHeader";
 import { AppInput, Field, FormError, PrimaryButton } from "./ui";

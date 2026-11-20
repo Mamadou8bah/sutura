@@ -8,13 +8,16 @@
  * are always paired with a dot and a label (see StatusPill).
  */
 export const colors = {
-  background: "#ffffff",
-  walletSurface: "#fff0e5",
+  background: "#fff9f4",
+  walletSurface: "#ffdfc5",
+  walletHighlight: "#fff5ec",
+  actionFill: "#b8390c",
+  actionInk: "#ffffff",
   walletInk: "#482a18",
   walletMuted: "#765642",
   surface: "#ffffff",
-  surfaceMuted: "#f5f5f7",
-  border: "#e5e5ea",
+  surfaceMuted: "#f7eee7",
+  border: "#e9d9ce",
   primary: "#1c1c1e",
   primaryDark: "#111315",
   primaryMid: "#343a40",
@@ -60,8 +63,8 @@ export const colors = {
 
 export type ThemeColors = { [Key in keyof typeof colors]: string };
 export const darkColors: ThemeColors = {
-  ...colors, walletSurface: "#38271e", walletInk: "#ffe7d3", walletMuted: "#dabfa9", background: "#000000", surface: "#1c1c1e", surfaceMuted: "#2c2c2e",
-  border: "#38383a", primary: "#f2f2f7", primaryDark: "#ffffff", primaryMid: "#d8dce1",
+  ...colors, walletSurface: "#4c2b1b", walletHighlight: "#30211a", actionFill: "#fb923c", actionInk: "#221409", walletInk: "#ffe7d3", walletMuted: "#dabfa9", background: "#181310", surface: "#241c18", surfaceMuted: "#302620",
+  border: "#48372d", primary: "#f2f2f7", primaryDark: "#ffffff", primaryMid: "#d8dce1",
   primaryLight: "#b7bdc6", orangeDark: "#fb923c", accentText: "#fb923c", orangeLight: "#3c2c20",
   slate900: "#f2f2f7", slate800: "#d8dce1",
   slate700: "#c5cbd3", slate500: "#a1a9b5", slate400: "#8d97a5", slate300: "#47515e",
@@ -100,13 +103,13 @@ export const type = {
   display: 32,
 } as const;
 
-/** Bundled Poppins at 400 / 500 / 600 / 700, shared across platforms. */
+/** Bundled Inter at 400 / 500 / 600 / 700, shared across platforms. */
 export const fonts = {
-  regular: "Poppins_400Regular",
-  medium: "Poppins_500Medium",
-  semibold: "Poppins_700Bold",
-  bold: "Poppins_700Bold",
-  black: "Poppins_700Bold",
+  regular: "Inter_400Regular",
+  medium: "Inter_500Medium",
+  semibold: "Inter_600SemiBold",
+  bold: "Inter_700Bold",
+  black: "Inter_700Bold",
 } as const;
 
 /** Tabular figures for every amount, so columns of money line up. */

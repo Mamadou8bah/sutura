@@ -1,5 +1,5 @@
 import { WalletSurface } from "../components/WalletSurface";
-import { ActivityIndicator, View } from "react-native";
+import { RefreshControl, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { Screen, SuturaLogo, LinkButton } from "../components/ui";
@@ -41,41 +41,36 @@ export function HomeScreen() {
   const firstLoad = !loaded;
   const openCount = collections.filter(c => c.status === "ACTIVE").length;
   const reviewCount = collections.filter(c => c.status === "REVIEW").length;
-  return <Screen>
+  return <Screen refreshControl={<RefreshControl refreshing={loading && loaded} onRefresh={() => void refresh()}
+    tintColor={colors.slate500} colors={[colors.orange]} />}>
     <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
       <SuturaLogo />
       <View style={{ flex: 1, minWidth: 0 }}>
         <Text numberOfLines={2} style={{ fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary, fontSize: type.headline }}>{session?.businessName || "Your business"}</Text>
 
       </View>
-      <Pressable accessibilityRole="button" accessibilityLabel="Refresh merchant data" accessibilityState={{ busy: loading, disabled: loading }} disabled={loading} onPress={() => void refresh()} style={{ width: 48, height: 48, alignItems: "center", justifyContent: "center" }}>
-        {loading ? <ActivityIndicator size="small" color={colors.primary} /> : <Ionicons name="refresh-outline" size={22} color={colors.primary} />}
-      </Pressable>
     </View>
     <DataNotice errorOnly />
     <WalletSurface>
       {firstLoad ? <SkeletonBalance /> : <>
-        <View style={{ flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 8 }}>
-          <Text style={{ fontSize: type.body, color: colors.walletMuted }}>{wallet ? "Your balance" : "Balance"}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel={hidden ? "Show balance" : "Hide balance"} onPress={() => setHidden(!hidden)} style={{ width: 48, height: 48, alignItems: "center", justifyContent: "center" }}>
+        <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+          <Text style={{ fontSize: type.body, color: colors.walletMuted }}>{wallet ? "Available balance" : "Balance"}</Text>
+          {wallet && <Pressable accessibilityRole="button" accessibilityLabel={hidden ? "Show balance" : "Hide balance"} onPress={() => setHidden(!hidden)} style={{ width: 48, height: 48, alignItems: "center", justifyContent: "center" }}>
             <Ionicons name={hidden ? "eye-off-outline" : "eye-outline"} size={20} color={colors.primary} />
-          </Pressable>
+          </Pressable>}
         </View>
-        {wallet ? <Money amount={wallet.balance ?? 0} currency={wallet.currency} hidden={hidden}
-          style={{ fontFamily: fonts.semibold, fontWeight: "600", fontSize: type.display, lineHeight: 46, color: colors.walletInk, textAlign: "center" }} />
-          : <Text style={{ color: colors.slate500, fontSize: type.body }}>No business wallet yet.</Text>}
+        {wallet && wallet.balance != null ? <Money amount={wallet.balance} currency={wallet.currency} hidden={hidden}
+          style={{ fontFamily: fonts.semibold, fontWeight: "600", fontSize: type.display, lineHeight: 46, color: colors.walletInk }} />
+          : <Text style={{ color: colors.walletMuted, fontSize: type.body }}>{wallet ? "Balance unavailable" : "No business wallet yet."}</Text>}
 
       </>}
     </WalletSurface>
-    <Text accessibilityRole="header" style={{ fontFamily: fonts.semibold, fontSize: type.section, color: colors.primary }}>Services</Text>
-    <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 12 }}>
-      {([["collections", "qr", "Create payment QR"]] as const).map(([route, icon, label]) =>
-        <Pressable accessibilityRole="button" accessibilityLabel={label} key={route} onPress={() => setScreen(route)}
-          style={{ flexGrow: 1, flexBasis: 128, minWidth: 0, minHeight: 104, paddingVertical: 12, paddingHorizontal: 8, gap: 8, alignItems: "center" }}>
-          <ActionIcon name={icon} />
-          <Text style={{ fontFamily: fonts.semibold, fontWeight: "600", fontSize: type.body, color: colors.primary, textAlign: "center", alignSelf: "stretch" }}>{label}</Text>
-        </Pressable>)}
-    </View>
+    <Pressable accessibilityRole="button" onPress={() => setScreen("collections")}
+      style={{ minHeight: 64, flexDirection: "row", alignItems: "center", gap: 12 }}>
+      <ActionIcon name="qr" size={48} />
+      <Text style={{ flex: 1, fontFamily: fonts.medium, fontSize: type.body, color: colors.primary }}>Create payment QR</Text>
+      <Ionicons name="chevron-forward" size={16} color={colors.accentText} />
+    </Pressable>
     {!firstLoad && (openCount > 0 || reviewCount > 0) && <Pressable accessibilityRole="button" accessibilityLabel="View open payment requests"
       onPress={() => setScreen("collections")} style={{ minHeight: 48, flexDirection: "row", alignItems: "center", gap: 8 }}>
       <Text style={{ flex: 1, color: colors.slate500, fontSize: type.body }}>
@@ -88,9 +83,9 @@ export function HomeScreen() {
         <Text style={{ color: colors.accentText, fontSize: type.body, fontFamily: fonts.medium, fontWeight: "500" }}>View all</Text>
       </Pressable>}
     </View>
-    {firstLoad ? <SkeletonRows rows={3} label="Loading payments" /> : transactions.slice(0, 4).map(t =>
+    {firstLoad ? <SkeletonRows rows={3} label="Loading payments" /> : transactions.length > 0 && <View style={{ backgroundColor: colors.surface, borderRadius: 20, paddingHorizontal: 12 }}>{transactions.slice(0, 4).map(t =>
       <Pressable accessibilityRole="button" accessibilityLabel={`${t.description || "Payment"}, ${statusLabel(t.status)}. Open activity`} key={t.id} onPress={() => setScreen("activity")}
-        style={{ paddingVertical: 14, borderBottomWidth: 0, borderBottomColor: colors.border, gap: 6 }}>
+        style={{ paddingVertical: 14, gap: 6 }}>
         <View style={{ flexDirection: "row", justifyContent: "space-between", flexWrap: "wrap", gap: 8 }}>
           <Text style={{ color: colors.primary, fontFamily: fonts.medium, fontWeight: "500", fontSize: type.body, flexShrink: 1 }}>{t.description || statusLabel(t.type)}</Text>
           <Money amount={t.amount} currency={t.currency} hidden={hidden} style={{ color: colors.primary, fontSize: type.body, fontFamily: fonts.medium, fontWeight: "500" }} />
@@ -99,7 +94,7 @@ export function HomeScreen() {
           <StatusPill status={t.status} />
           <Text style={{ color: colors.slate500, fontSize: type.caption }}>{formatTimestamp(t.createdAt)}</Text>
         </View>
-      </Pressable>)}
+      </Pressable>)}</View>}
     {loaded && !transactions.length && <View style={{ paddingVertical: 20, gap: 6 }}><Text style={{ fontSize: type.headline, color: colors.primary, fontWeight: "600" }}>No payments yet</Text><Text style={{ fontSize: type.caption, color: colors.slate500, lineHeight: 19 }}>Payments you receive will appear here.</Text></View>}
   </Screen>;
 }

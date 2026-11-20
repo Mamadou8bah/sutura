@@ -1,6 +1,7 @@
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardScrollView as ScrollView } from "../components/KeyboardScrollView";
+import { StyleSheet, View} from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { ScreenTitle } from "../components/AppHeader";

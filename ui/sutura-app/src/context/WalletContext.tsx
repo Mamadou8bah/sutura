@@ -147,6 +147,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         })),
         transactions: transactions.map((t) => ({
           id: String(t.id),
+          reference: t.reference,
           type: (t.type.includes("TRANSFER") && t.sourceWalletId
             ? "TRANSFER_OUT"
             : t.type.includes("TRANSFER")

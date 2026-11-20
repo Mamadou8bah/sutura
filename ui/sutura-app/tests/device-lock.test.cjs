@@ -19,6 +19,7 @@ function harness({ enabled = true, storageAvailable = true, storageError = false
   const code = ts.transpileModule(fs.readFileSync(path.join(__dirname, '../src/context/DeviceLockContext.tsx'), 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, target: ts.ScriptTarget.ES2022 } }).outputText;
   const exports = {};
   vm.runInNewContext(code, { exports, Date: { now: () => now }, require(name) {
+    if (name.endsWith('KeyboardScrollView')) return { KeyboardScrollView: 'ScrollView' };
     if (name === 'react') return react;
     if (name === 'react/jsx-runtime') return { jsx, jsxs: jsx, Fragment: 'Fragment' };
     if (name === 'react-native') return { AppState: { currentState: 'active', addEventListener: (_, cb) => { listeners.add(cb); return { remove: () => listeners.delete(cb) }; } }, Platform: { OS: 'android' }, View: 'View', ScrollView: 'ScrollView', ActivityIndicator: 'Spinner' };

@@ -3,6 +3,7 @@ export type CustomerTransactionType = "TRANSFER_IN" | "TRANSFER_OUT" | "DEPOSIT"
 export type TransactionStatus = "COMPLETED" | "PENDING" | "FAILED" | "AWAITING_AGENT";
 
 export type CustomerTransaction = {
+  reference?: string;
   id: string;
   type: CustomerTransactionType;
   counterparty: string;

@@ -4,10 +4,11 @@ import { WalletOverview } from "../components/WalletOverview";
 import { Money } from "../components/Money";
 import { StatusPill } from "../components/StatusPill";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardScrollView as ScrollView } from "../components/KeyboardScrollView";
+import { RefreshControl, StyleSheet, View} from "react-native";
 import { ScreenTitle } from "../components/AppHeader";
 import { PrimaryButton } from "../components/ui";
-import { SecondaryButton } from "../components/Review";
+import { WalletAction } from "../components/WalletAction";
 import { StaleNotice } from "../components/StaleNotice";
 import { useWallet } from "../context/WalletContext";
 import { fonts, radii, spacing, type, type ThemeColors } from "../theme";
@@ -22,8 +23,8 @@ export function WalletsScreen() {
     {refreshError ? <StaleNotice message={refreshError} since={lastUpdated} busy={loading} onRetry={() => void refreshData()} /> : null}
     {data.wallets.length > 0 && <View style={styles.card}><WalletOverview selectable={false} /></View>}
     {data.wallets.length > 0 && <View style={styles.actions}>
-      {[{ label: "Top up", tab: "topup" as const }, { label: "Withdraw", tab: "withdraw" as const }, { label: "Send", tab: "send" as const }].map(action =>
-        <View key={action.tab} style={styles.action}><SecondaryButton label={action.label} onPress={() => setTab(action.tab)} /></View>)}
+      {[{ label: "Top up", icon: "add" as const, tab: "topup" as const }, { label: "Withdraw", icon: "remove" as const, tab: "withdraw" as const }, { label: "Send", icon: "paper-plane-outline" as const, tab: "send" as const }].map(action =>
+        <WalletAction key={action.tab} label={action.label} icon={action.icon} disabled={data.wallets.find(wallet => wallet.id === selectedWalletId)?.status !== "ACTIVE"} onPress={() => setTab(action.tab)} />)}
     </View>}
     <View style={styles.sectionHeader}>
       <Text accessibilityRole="header" style={styles.sectionTitle}>Your balances</Text>
@@ -54,7 +55,7 @@ export function WalletsScreen() {
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   content: { padding: spacing.screen, paddingBottom: spacing.section, gap: spacing.gap },
   card: { backgroundColor: colors.surfaceMuted, borderRadius: radii.lg, padding: 16 },
-  actions: { flexDirection: "row", gap: 8 },
+  actions: { flexDirection: "row", flexWrap: "wrap", gap: 12, paddingVertical: 8 },
   action: { flex: 1, minWidth: 0, borderWidth: 1, borderColor: colors.border, borderRadius: radii.md },
   sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 12 },
   sectionTitle: { color: colors.primary, fontSize: type.section, lineHeight: 28, fontFamily: fonts.semibold, fontWeight: "600" },

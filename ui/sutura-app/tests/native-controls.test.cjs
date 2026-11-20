@@ -28,18 +28,20 @@ function load(platform, device = false) {
     if (name === './SelectionSheet') return { SelectionSheet: 'SelectionSheet' };
     if (name.includes('ThemeContext')) return { useTheme: () => ({ colors, mode: 'dark' }) };
     if (name === '@react-navigation/native') return { NavigationContext: { value: null } };
-    throw new Error(name);
+    if (name.endsWith('keyboardLayout')) return { notifyKeyboardFocus() {} };
+      if (name.endsWith('useKeyboardVisible')) return { useKeyboardVisible: () => false };
+      throw new Error(name);
   } });
   return { api: exports, get sheet() { return sheet; } };
 }
 
-test('mobile typography uses bundled Poppins weights consistently without replacing icon fonts', () => {
+test('mobile typography uses Helvetica Neue on iOS and bundled Inter on Android and web', () => {
   const { api } = load('ios');
   const apple = api.platformTextStyle({ fontFamily: 'Inter_700Bold', fontSize: 24 }, 'ios');
-  assert.equal(apple.fontFamily, 'Poppins_700Bold'); assert.equal(apple.fontWeight, 'normal'); assert.equal(apple.fontSize, 24);
-  assert.equal(api.platformTextStyle({ fontFamily: 'Poppins_400Regular', fontWeight: '600' }, 'android').fontFamily, 'Poppins_600SemiBold');
+  assert.equal(apple.fontFamily, 'Helvetica Neue'); assert.equal(apple.fontWeight, '700'); assert.equal(apple.fontSize, 24);
+  assert.equal(api.platformTextStyle({ fontFamily: 'Poppins_400Regular', fontWeight: '600' }, 'android').fontFamily, 'Inter_600SemiBold');
   assert.equal(api.platformTextStyle({ fontFamily: 'Ionicons' }, 'ios').fontFamily, 'Ionicons');
-  assert.equal(api.platformTextStyle({ fontFamily: 'Poppins_500Medium' }, 'web').fontFamily, 'Poppins_500Medium');
+  assert.equal(api.platformTextStyle({ fontFamily: 'Poppins_500Medium' }, 'web').fontFamily, 'Inter_500Medium');
 });
 
 test('older mobile runtimes retain the fallback button and its disabled state', () => {
@@ -72,9 +74,13 @@ test('app selection sheets replace system dialogs and prevent disabled wallet se
   }
 });
 
-test('customer, agent and merchant use identical platform controls and stack adapters', () => {
+test('customer, agent and merchant share platform controls and stack behavior', () => {
   for (const filename of ['NativeTabBar.tsx', 'DeviceControl.tsx', 'NativeControls.tsx', 'NativeNavigator.tsx', 'SelectionSheet.tsx']) {
-    const read = app => fs.readFileSync(path.join(__dirname, '../../', app, 'src/components', filename), 'utf8');
+    // Each audience owns which screens show a header; the navigation behavior
+    // and controls must remain shared. Normalize Windows checkout line endings.
+    const read = app => fs.readFileSync(path.join(__dirname, '../../', app, 'src/components', filename), 'utf8')
+      .replace(/\r\n/g, '\n')
+      .replace(/const headerScreens = new Set\(\[[^\]]*\]\);/, 'const headerScreens = APP_HEADER_SCREENS;');
     assert.equal(read('sutura-app'), read('sutura-agent'));
     assert.equal(read('sutura-app'), read('merchant-app'));
   }
@@ -120,6 +126,8 @@ test('native view registration is skipped on web and on APKs without the bridge'
         requireOptionalNativeModule() { lookups++; return installed ? {} : null; },
         requireNativeView() { registrations++; return 'FrameworkControl'; },
       };
+      if (name.endsWith('keyboardLayout')) return { notifyKeyboardFocus() {} };
+      if (name.endsWith('useKeyboardVisible')) return { useKeyboardVisible: () => false };
       throw new Error(name);
     } });
     const available = platform !== 'web' && installed;
@@ -143,6 +151,8 @@ test('native tabs reject unknown, disabled and repeated navigation events', () =
       if (name === 'react-native') return { Platform: { OS: 'android' }, useWindowDimensions: () => ({ fontScale: 1 }) };
       if (name === '../context/ThemeContext') return { useTheme: () => ({ mode: 'dark' }) };
       if (name === './DeviceControl') return { supportsNativeTabs: available, DeviceControl: 'NativeTabs' };
+      if (name.endsWith('keyboardLayout')) return { notifyKeyboardFocus() {} };
+      if (name.endsWith('useKeyboardVisible')) return { useKeyboardVisible: () => false };
       throw new Error(name);
     } });
     const changes = [];

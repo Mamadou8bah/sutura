@@ -24,7 +24,7 @@ function periodStart(period:Period) {
 }
 export function ActivityScreen() {
  const {colors}=useTheme();const styles=useThemedStyles(createStyles);
- const {data,selectedWallet,balanceHidden,loading,loaded,refreshData,refreshError,lastUpdated}=useWallet();
+ const {data,selectedWallet,loading,loaded,refreshData,refreshError,lastUpdated}=useWallet();
  const [mode,setMode]=useState<Mode>("history");const [period,setPeriod]=useState<Period>("month");const [periodOpen,setPeriodOpen]=useState(false);
  const currency=selectedWallet.currency;
  const transactions=useMemo(()=>{
@@ -49,7 +49,7 @@ export function ActivityScreen() {
   {refreshError?<StaleNotice message={refreshError} since={lastUpdated} busy={loading} onRetry={()=>void refreshData()}/>:null}
   <View accessibilityRole="tablist" style={styles.tabs}>{([{id:"history",label:"History"},{id:"expenses",label:"Expenses"},{id:"income",label:"Income"}] as const).map(tab=><Pressable key={tab.id} accessibilityRole="tab" accessibilityLabel={tab.label} accessibilityState={{selected:mode===tab.id}} onPress={()=>setMode(tab.id)} style={[styles.tab,mode===tab.id&&styles.activeTab]}><Text style={[styles.tabText,mode===tab.id&&{color:colors.primary}]}>{tab.label}</Text></Pressable>)}</View>
   <Pressable accessibilityRole="button" accessibilityLabel="Filter activity period" onPress={()=>setPeriodOpen(true)} style={styles.period} accessibilityHint="Opens period options"><Ionicons name="calendar-outline" size={16} color={colors.slate500}/><Text style={styles.periodText}>{periods.find(item=>item.id===period)?.label}</Text><Ionicons name="chevron-down" size={14} color={colors.slate500}/></Pressable>
-  <View style={styles.summary}><View style={styles.metrics}>{summary.map(metric=><View key={metric.label} style={styles.metric}><Text style={styles.metricLabel}>{metric.label}</Text><Money amount={metric.amount} currency={currency} hidden={balanceHidden} style={styles.metricValue}/></View>)}</View><Text style={styles.caption}>Completed payments only · {currency}</Text></View>
+  <View style={styles.summary}><View style={styles.metrics}>{summary.map(metric=><View key={metric.label} style={styles.metric}><Text style={styles.metricLabel}>{metric.label}</Text><Money amount={metric.amount} currency={currency} style={styles.metricValue}/></View>)}</View><Text style={styles.caption}>Completed payments only · {currency}</Text></View>
   <View style={styles.titleRow}><Text accessibilityRole="header" style={styles.sectionTitle}>{mode==="history"?"Transactions":mode==="income"?"Incoming payments":"Outgoing payments"}</Text><Text style={styles.caption}>{transactions.length}</Text></View>
  </View>}
  ListEmptyComponent={!loaded?<SkeletonRows rows={5} label="Loading activity"/>:<View style={styles.empty}><Ionicons name="receipt-outline" size={24} color={colors.slate500}/><Text style={styles.emptyTitle}>No {mode==="history"?"transactions":mode} in this period</Text><Text style={styles.emptyHint}>Try another period. Your {currency} payments will appear here.</Text></View>}

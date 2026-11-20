@@ -1,5 +1,6 @@
 import { useThemedStyles } from "../context/ThemeContext";
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardScrollView as ScrollView } from "../components/KeyboardScrollView";
+import { RefreshControl, StyleSheet, View} from "react-native";
 import { NativeText as Text } from "../components/NativeControls";
 import { ScreenTitle } from "../components/AppHeader";
 import { OperationRow } from "../components/OperationRow";

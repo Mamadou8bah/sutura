@@ -1,9 +1,13 @@
+import { SelectionSheet } from "../components/SelectionSheet";
+import { SwipeToConfirm } from "../components/SwipeToConfirm";
+import { ContactSuggestions } from "../components/ContactSuggestions";
 import { useHardwareBack } from "../hooks/useBackNavigation";
-import { ReviewCard, ReviewLayout, ReviewRow, SecondaryButton } from "../components/Review";
+import { ReviewCard, ReviewRow } from "../components/Review";
 import { SUTURA_FEE } from "../utils/fees";
 import { formatMoney } from "../utils/format";
 import { isValidAmount, isPhoneDraft, normalizePhone } from "../utils/inputValidation";
-import { useTheme, useThemedStyles } from "../context/ThemeContext";
+import { BackHeader } from "../components/AppHeader";
+import { useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { useRef, useState } from "react";
 import { KeyboardAvoidingView, Keyboard, Platform, StyleSheet, View } from "react-native";
@@ -21,7 +25,6 @@ import { formatFraudError } from "../utils/fraudErrors";
 import { useWallet } from "../context/WalletContext";
 
 export function SendScreen() {
-  const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
 
   const {
@@ -31,6 +34,7 @@ export function SendScreen() {
     setSelectedWalletId,
     selectedWallet,
     balanceHidden,
+    setTab,
   } = useWallet();
   const [destination, setDestination] = useState("");
   const [amount, setAmount] = useState("");
@@ -65,27 +69,27 @@ export function SendScreen() {
     if (Number(amount) + SUTURA_FEE > selectedWallet.balance) { setError(`Insufficient balance. Available: ${formatMoney(selectedWallet.balance, selectedWallet.currency)}.`); return; }
     Keyboard.dismiss(); setError(null); setReviewing(true);
   };
-  if (reviewing) return <ReviewLayout title="Review transfer" subtitle="Check the recipient and amount before sending."
-    footer={<>
+  const confirmation = reviewing && <SelectionSheet visible title="Confirm Transfer" onClose={() => {
+    if (!busy) { setReviewing(false); setError(null); }
+  }}>
+    <View style={{ gap: 12 }}>
+      <ReviewCard>
+        <ReviewRow label="You send" value={formatMoney(Number(amount), selectedWallet.currency, 4)} emphasis money />
+        <ReviewRow label="Sutura fee" value={formatMoney(SUTURA_FEE, selectedWallet.currency)} money />
+        <ReviewRow label="Recipient gets" value={formatMoney(Number(amount) - SUTURA_FEE, selectedWallet.currency, 4)} money />
+        <ReviewRow label="To phone number" value={normalizePhone(destination) ?? destination} />
+        <ReviewRow label="From wallet" value={`${selectedWallet.name} · ${selectedWallet.currency}`} last />
+      </ReviewCard>
+      <Text style={styles.note}>Sutura sends to the {selectedWallet.currency} wallet registered to this number. Transfers can't be cancelled once sent.</Text>
       <FormError message={error} />
-      <SubmitButton label={`Send ${formatMoney(Number(amount), selectedWallet.currency, 4)}`} loading={busy} disabled={busy} onPress={submit} />
-      <SecondaryButton label="Edit transfer" disabled={busy} onPress={() => { setReviewing(false); setError(null); }} />
-    </>}>
-    <ReviewCard>
-      <ReviewRow label="You send" value={formatMoney(Number(amount), selectedWallet.currency, 4)} emphasis money />
-      <ReviewRow label="Sutura fee" value={formatMoney(SUTURA_FEE, selectedWallet.currency)} money />
-      <ReviewRow label="Recipient gets" value={formatMoney(Number(amount) - SUTURA_FEE, selectedWallet.currency, 4)} money />
-      <ReviewRow label="To phone number" value={normalizePhone(destination) ?? destination} />
-      <ReviewRow label="From wallet" value={`${selectedWallet.name} · ${selectedWallet.currency}`} last />
-    </ReviewCard>
-    <Text style={styles.note}>Sutura sends to the {selectedWallet.currency} wallet registered to this number. Transfers can't be cancelled once sent.</Text>
-  </ReviewLayout>;
+      <SwipeToConfirm label="Swipe to Send" busy={busy} onConfirm={() => void submit()} />
+    </View>
+  </SelectionSheet>;
 
   return (
     <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === "ios" ? "padding" : undefined}>
-      <OperationScreen title="Send money" subtitle="Send to a Sutura account">
-
-
+      <OperationScreen>
+        <BackHeader title="Send Money" onBack={() => setTab("home")} />
         <FormField label="Recipient phone number">
           <FormInput
             placeholder="e.g. +220 700 0002"
@@ -102,20 +106,16 @@ export function SendScreen() {
           />
         </FormField>
 
-        <WalletPicker
-          wallets={data.wallets}
-          selectedId={selectedWalletId}
-          onSelect={setSelectedWalletId}
-          hidden={balanceHidden}
-        />
+        <ContactSuggestions value={destination} onSelect={phone => { setDestination(phone); setError(null); Keyboard.dismiss(); }} />
 
         <AmountHero amount={amount} onChange={setAmount} currency={selectedWallet.currency} />
-
-
+        <WalletPicker compact wallets={data.wallets} selectedId={selectedWalletId}
+          onSelect={setSelectedWalletId} hidden={balanceHidden} />
 
         <FormError message={error} />
-        <SubmitButton loading={busy} disabled={!amount.trim() || !destination.trim() || !selectedWallet.id} label="Review transfer" onPress={review} />
+        <SubmitButton loading={busy} disabled={!amount.trim() || !destination.trim() || !selectedWallet.id} label="Continue" onPress={review} />
       </OperationScreen>
+      {confirmation}
     </KeyboardAvoidingView>
   );
 }

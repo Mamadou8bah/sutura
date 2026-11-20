@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { ActivityIndicator, Image, ScrollView, View, useWindowDimensions } from "react-native";
+import { KeyboardScrollView as ScrollView } from "./KeyboardScrollView";
+import { ActivityIndicator, Image, View, useWindowDimensions} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { NativePressable as Pressable, NativeText as Text, NativeButton } from "./NativeControls";
 import { useTheme } from "../context/ThemeContext";

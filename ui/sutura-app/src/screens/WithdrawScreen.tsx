@@ -2,7 +2,8 @@ import { isValidAmount } from "../utils/inputValidation";
 import { useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { useRef, useState } from "react";
-import { KeyboardAvoidingView, Keyboard, Platform, ScrollView, StyleSheet } from "react-native";
+import { KeyboardScrollView as ScrollView } from "../components/KeyboardScrollView";
+import { KeyboardAvoidingView, Keyboard, Platform, StyleSheet} from "react-native";
 import { NativeText as Text } from "../components/NativeControls";
 import { BackHeader } from "../components/AppHeader";
 import { AgentQrCard } from "../components/AgentQrCard";
@@ -68,8 +69,8 @@ export function WithdrawScreen() {
     <ScrollView contentContainerStyle={styles.wrap} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
       <BackHeader title="Withdraw cash" onBack={() => setTab("home")} />
       <Text style={styles.subtitle}>Collect cash from any Sutura agent.</Text>
-      <WalletPicker wallets={data.wallets} selectedId={selectedWalletId} onSelect={setSelectedWalletId} hidden={balanceHidden} />
-      <AmountHero amount={amount} onChange={next => { setAmount(next); setError(null); }} currency={currency} />
+      <WalletPicker compact wallets={data.wallets} selectedId={selectedWalletId} onSelect={setSelectedWalletId} hidden={balanceHidden} />
+      <AmountHero flat amount={amount} onChange={next => { setAmount(next); setError(null); }} currency={currency} />
       <FormError message={error} />
       <SubmitButton disabled={!amount.trim() || !selectedWallet.id} label="Review withdrawal" onPress={review} />
       {withdrawalQr ? <AgentQrCard payload={withdrawalQr} title="Withdrawal QR code" hint="Show this to receive cash." /> : null}

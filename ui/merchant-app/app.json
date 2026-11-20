@@ -16,6 +16,7 @@
       "icon": "./assets/app-icon.png"
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "package": "gm.sutura.merchant",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",

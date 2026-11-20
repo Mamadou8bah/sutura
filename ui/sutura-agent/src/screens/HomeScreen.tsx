@@ -1,10 +1,12 @@
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardScrollView as ScrollView } from "../components/KeyboardScrollView";
+import { RefreshControl, StyleSheet, View} from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { AppHeader } from "../components/AppHeader";
 import { OperationRow } from "../components/OperationRow";
 import { QuickActionGrid } from "../components/QuickActionGrid";
+import { WalletSurface } from "../components/WalletSurface";
 import { StatsCarousel } from "../components/StatsCarousel";
 import { SkeletonBalance, SkeletonRows } from "../components/Skeleton";
 import { useAgent } from "../context/AgentContext";
@@ -21,7 +23,7 @@ export function HomeScreen() {
       refreshControl={<RefreshControl refreshing={historyLoading && !firstLoad} onRefresh={() => void refreshHistory()} />}>
       <AppHeader />
 
-      {firstLoad ? <SkeletonBalance label="Loading today's totals" /> : <StatsCarousel unavailable={!lastUpdated && !!historyError} stats={stats} completed={completed} onOpenQueue={() => setTab("queue")} />}
+      {firstLoad ? <WalletSurface><SkeletonBalance label="Loading today's totals" /></WalletSurface> : <StatsCarousel unavailable={!lastUpdated && !!historyError} stats={stats} completed={completed} onOpenQueue={() => setTab("queue")} />}
 
       <View style={styles.section}>
       <Text accessibilityRole="header" style={styles.sectionTitle}>Services</Text>
@@ -47,7 +49,7 @@ export function HomeScreen() {
         <Ionicons name="receipt-outline" size={28} color={colors.slate500} />
         <Text style={styles.emptyTitle}>{!lastUpdated && historyError ? "No operations loaded" : "No completed operations yet"}</Text>
         <Text style={styles.emptyHint}>{!lastUpdated && historyError ? "Pull down to load your operations." : "Completed cash-in and cash-out operations appear here."}</Text>
-      </View> : <View>{recentCompleted.map(op => <OperationRow key={op.reference} op={op} onPress={() => openOperation(op)} />)}</View>}
+      </View> : <View style={styles.activity}>{recentCompleted.map(op => <OperationRow key={op.reference} op={op} onPress={() => openOperation(op)} />)}</View>}
       </View>
     </ScrollView>
   );
@@ -60,6 +62,7 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   sectionTitle: { fontSize: type.section, fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary },
   seeAllBtn: { minHeight: 44, minWidth: 44, justifyContent: "center", paddingHorizontal: 4 },
   seeAll: { fontSize: type.body, fontFamily: fonts.medium, fontWeight: "500", color: colors.accentText },
+  activity: { backgroundColor: colors.surface, borderRadius: 20, paddingHorizontal: 12 },
   empty: { paddingVertical: 20, alignItems: "center", gap: 8 },
   emptyTitle: { fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary, fontSize: type.headline, textAlign: "center" },
   emptyHint: { color: colors.slate500, fontSize: type.body, textAlign: "center", lineHeight: 21 },

@@ -64,3 +64,24 @@ with isolated API fixtures. Fixtures and screenshots stay outside the repositori
 
 Browser results do not establish native motion quality or Dynamic Type behavior.
 Review those on physical iOS and Android devices before release.
+
+## Warm orange mobile surfaces
+
+The customer, agent and merchant apps use warm light and dark canvases, an
+opaque peach-to-orange gradient on the balance or daily summary, and a rounded
+navigation dock. Scan and Collect use a high-contrast orange circle inside
+the dock. Customer shortcuts sit below the balance so the amount can be
+scanned independently. Recent activity is grouped on a neutral surface across
+the three roles. Status colors keep their existing meanings.
+
+The supplied mobile reference now sets the customer dock order: Home, Wallet,
+a plus button for payment actions, Transactions, and Profile. Send Money and Add
+Money use the phone's decimal keyboard and bottom-sheet confirmation. QR
+payments use bottom sheets for review and the provider result. Home shortcuts
+are Send, Add Funds, Withdraw, and QR.
+Agent and merchant retain their role destinations in the same dock treatment.
+
+The mobile dock uses one rounded surface over the screen canvas. Its outer
+layout wrapper is transparent so it can reserve spacing and safe-area room
+without a second colored panel. Mobile interface typography uses Helvetica
+Neue on iOS and bundled Inter on Android and web, with tabular money figures.

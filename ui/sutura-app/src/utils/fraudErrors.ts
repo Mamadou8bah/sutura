@@ -10,6 +10,9 @@ export function isFraudBlockedMessage(message: string): boolean {
 }
 
 export function formatFraudError(message: string): string {
+  if (/Sentinel.*(unavailable|not connected|invalid decision)|security check.*unavailable/i.test(message)) {
+    return "We couldn't complete the security check. Check Activity before trying again.";
+  }
   if (!isFraudBlockedMessage(message)) {
     return message;
   }

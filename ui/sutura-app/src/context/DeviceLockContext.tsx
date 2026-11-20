@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { ActivityIndicator, AppState, Platform, ScrollView, View } from "react-native";
+import { KeyboardScrollView as ScrollView } from "../components/KeyboardScrollView";
+import { ActivityIndicator, AppState, Platform, View} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { NativeButton, NativeInput, NativePressable, NativeText as Text } from "../components/NativeControls";

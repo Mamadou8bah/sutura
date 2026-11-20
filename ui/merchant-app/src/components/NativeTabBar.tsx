@@ -1,3 +1,4 @@
+import { useKeyboardVisible } from "../hooks/useKeyboardVisible";
 import { Platform, useWindowDimensions } from "react-native";
 import { useTheme } from "../context/ThemeContext";
 import { DeviceControl, supportsNativeTabs } from "./DeviceControl";
@@ -9,6 +10,8 @@ export function NativeTabBar({ active, tabs, onChange }: {
 }) {
   const { mode } = useTheme();
   const { fontScale } = useWindowDimensions();
+  const keyboardVisible = useKeyboardVisible();
+  if (keyboardVisible) return null;
   if (!supportsNativeTabs || !DeviceControl) return null;
   return <DeviceControl controlKind="tabs" label="Main navigation" dark={mode === "dark"}
     value={active} options={tabs} style={{ width: "100%", height: Platform.OS === "ios" ? 49 : Math.max(80, 48 + 20 * fontScale) }}

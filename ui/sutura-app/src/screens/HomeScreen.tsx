@@ -1,5 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
-import { RefreshControl, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardScrollView as ScrollView } from "../components/KeyboardScrollView";
+import { RefreshControl, StyleSheet, View} from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import { AppHeader } from "../components/AppHeader";
@@ -10,7 +11,7 @@ import { SkeletonBalance, SkeletonRows } from "../components/Skeleton";
 import { StaleNotice } from "../components/StaleNotice";
 import { PrimaryButton } from "../components/ui";
 import { useWallet } from "../context/WalletContext";
-import { fonts, radii, spacing, type, type ThemeColors } from "../theme";
+import { fonts, spacing, type, type ThemeColors } from "../theme";
 
 export function HomeScreen() {
   const { colors } = useTheme();
@@ -23,14 +24,14 @@ export function HomeScreen() {
     <AppHeader />
     {refreshError ? <StaleNotice message={refreshError} since={lastUpdated} busy={loading} onRetry={() => void refreshData()} /> : null}
     {firstLoad ? <WalletSurface><SkeletonBalance /></WalletSurface>
-      : data.wallets.length ? <WalletSurface><WalletOverview showDepositQr /></WalletSurface>
+      : data.wallets.length ? <WalletOverview showQuickActions />
       : <View style={styles.card}>
           <Text accessibilityRole="header" style={styles.cardTitle}>Create your first wallet</Text>
           <Text style={styles.muted}>A wallet holds your balance in one currency.</Text>
           <PrimaryButton label="Create wallet" onPress={() => setTab("create-wallet")} />
         </View>}
     <View style={styles.sectionHeader}>
-      <Text accessibilityRole="header" style={styles.sectionTitle}>Recent activity</Text>
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Recent transactions</Text>
       {recentTransactions.length > 0 && <Pressable accessibilityRole="link" accessibilityLabel="See all activity" onPress={() => setTab("activity")} style={styles.seeAll}>
         <Text style={styles.seeAllText}>See all</Text>
       </Pressable>}
@@ -41,23 +42,20 @@ export function HomeScreen() {
         <Text style={styles.emptyTitle}>No transactions yet</Text>
         <Text style={styles.emptyHint}>Your payments and deposits will appear here.</Text>
       </View>
-      : <View>{recentTransactions.map(transaction => <TransactionRow key={transaction.id} txn={transaction} />)}</View>}
+      : <View style={styles.activity}>{recentTransactions.map(transaction => <TransactionRow key={transaction.id} txn={transaction} />)}</View>}
   </ScrollView>;
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  content: { padding: spacing.screen, paddingBottom: spacing.section, gap: 20 },
+  content: { padding: spacing.screen, paddingBottom: spacing.section, gap: 12 },
   card: { backgroundColor: colors.surface, borderRadius: 24, borderWidth: 1, borderColor: colors.border, padding: 16, gap: 8 },
   cardTitle: { fontSize: type.headline, fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary },
   muted: { fontSize: type.caption, lineHeight: 18, color: colors.slate500 },
-  actions: { flexDirection: "row", flexWrap: "wrap", gap: 4 },
-  action: { flex: 1, minWidth: 0, minHeight: 88, alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, paddingHorizontal: 4, borderRadius: radii.lg, backgroundColor: colors.background },
-  largeTextAction: { flexBasis: 120, flexGrow: 1 },
-  actionTitle: { fontSize: type.caption, lineHeight: 20, fontFamily: fonts.medium, fontWeight: "500", color: colors.primary, textAlign: "center", alignSelf: "stretch" },
-  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 12 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8, marginTop: 2 },
   sectionTitle: { fontSize: type.section, lineHeight: 28, fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary, flexShrink: 1 },
   seeAll: { minHeight: 48, minWidth: 48, justifyContent: "center", paddingHorizontal: 4 },
   seeAllText: { fontSize: type.body, fontFamily: fonts.medium, fontWeight: "500", color: colors.accentText },
+  activity: { backgroundColor: colors.surface, borderRadius: 20, paddingHorizontal: 12 },
   empty: { paddingVertical: 16, alignItems: "center", gap: 8 },
   emptyTitle: { fontSize: type.headline, fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary, textAlign: "center" },
   emptyHint: { fontSize: type.caption, lineHeight: 19, color: colors.slate500, textAlign: "center" },

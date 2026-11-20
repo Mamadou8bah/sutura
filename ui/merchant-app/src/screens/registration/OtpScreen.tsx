@@ -5,7 +5,8 @@ import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { NativeText as Text } from "../../components/NativeControls";
 import { merchantRegistrationApi } from "../../api/merchantRegistration";
-import { SuturaLogo, AppInput, Field, LinkButton, PrimaryButton, Screen } from "../../components/ui";
+import { VerificationCodeInput } from "../VerificationCodeScreen";
+import { SuturaLogo, LinkButton, PrimaryButton, Screen } from "../../components/ui";
 import { StepIndicator } from "../../components/StepIndicator";
 import { useApp } from "../../context/AppContext";
 import { colors } from "../../theme";
@@ -18,7 +19,7 @@ export function OtpScreen() {
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
-    if(loading)return;
+    if (loading || reg.otp.length !== 6) return;
     setError("");
     setLoading(true);
     try {
@@ -37,9 +38,8 @@ export function OtpScreen() {
       <Text style={styles.title}>Enter verification code</Text>
       <StepIndicator current={2} />
 
-      <Field label="6-digit code">
-        <AppInput keyboardType="number-pad" maxLength={6} value={reg.otp} onChangeText={(v) => updateReg({ otp: v.replace(/\D/g, "").slice(0, 6) })} placeholder="123456" />
-      </Field>
+      <VerificationCodeInput value={reg.otp} onChange={otp => updateReg({ otp })}
+        onSubmit={() => void handleSubmit()} busy={loading} />
 
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
 

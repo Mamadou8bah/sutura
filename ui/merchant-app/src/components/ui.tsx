@@ -4,7 +4,8 @@ import { Ionicons } from "@expo/vector-icons";
 import { useState } from "react";
 import {useTheme,useThemedStyles} from "../context/ThemeContext";
 import type {ThemeColors} from "../theme";
-import { KeyboardAvoidingView, Platform, Image, ScrollView, StyleSheet, View, type TextInputProps, type ViewStyle } from "react-native";
+import { KeyboardScrollView as ScrollView } from "./KeyboardScrollView";
+import { KeyboardAvoidingView, Platform, Image, StyleSheet, View, type ScrollViewProps, type TextInputProps, type ViewStyle} from "react-native";
 import { NativePressable as Pressable, NativeText as Text, NativeInput as TextInput } from "./NativeControls";
 import { SUTURA_LOGO } from "../constants/brand";
 import { colors, radii, shadow } from "../theme";
@@ -43,12 +44,14 @@ export function Card({ children, style }: { children: React.ReactNode; style?: V
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-export function Screen({ children }: { children: React.ReactNode }) {
+export function Screen({ children, transparent = false, refreshControl }: {
+  children: React.ReactNode; transparent?: boolean; refreshControl?: ScrollViewProps["refreshControl"];
+}) {
  const {colors}=useTheme();
  const styles=useThemedStyles(createStyles);
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}><ScrollView keyboardDismissMode="on-drag" contentContainerStyle={[styles.screen, { flexGrow: 1, width: "100%", maxWidth: 560, alignSelf: "center" }]} keyboardShouldPersistTaps="handled">
+    <KeyboardAvoidingView style={{ flex: 1, backgroundColor: transparent ? "transparent" : colors.background }} behavior={Platform.OS === "ios" ? "padding" : undefined}><ScrollView refreshControl={refreshControl} keyboardDismissMode="on-drag" contentContainerStyle={[styles.screen, { flexGrow: 1, width: "100%", maxWidth: 560, alignSelf: "center" }]} keyboardShouldPersistTaps="handled">
       {children}
     </ScrollView></KeyboardAvoidingView>
   );

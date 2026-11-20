@@ -1,11 +1,11 @@
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { useEffect, useState } from "react";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardScrollView as ScrollView } from "../components/KeyboardScrollView";
+import { StyleSheet, View} from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { kycApi, type KycStatus } from "../api/kyc";
-import { StatusPill } from "../components/StatusPill";
 import { useWallet } from "../context/WalletContext";
 import { fonts, spacing } from "../theme";
 import { AccountMenuRow } from "../components/AccountMenuRow";
@@ -22,7 +22,7 @@ export function MoreScreen() {
     <Text accessibilityRole="header" style={styles.title}>More</Text>
     <Pressable accessibilityRole="button" accessibilityLabel="View personal account" style={styles.profile} onPress={() => openProfile("profile")}>
       <View style={styles.avatar}><Text style={styles.initial}>{data.session.name.trim().charAt(0).toUpperCase() || "S"}</Text></View>
-      <View style={styles.profileBody}><Text numberOfLines={1} style={styles.name}>{data.session.name}</Text><Text style={styles.muted}>{data.session.phone || data.session.email || "Personal account"}</Text>{status ? <View style={styles.badge}><StatusPill status={status} label={status === "VERIFIED" ? "Identity verified" : status === "NOT_STARTED" ? "Identity not verified" : undefined} /></View> : <Text style={styles.muted}>{statusError ? "Couldn't load verification status." : "View your account"}</Text>}</View>
+      <View style={styles.profileBody}><Text numberOfLines={1} style={styles.name}>{data.session.name}</Text><Text style={styles.muted}>{data.session.phone || data.session.email || "Personal account"}</Text></View>
       <Ionicons name="chevron-forward" size={20} color={colors.slate400} />
     </Pressable>
     <View style={{ gap: 4 }}>

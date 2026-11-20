@@ -20,6 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -70,8 +71,11 @@ public class FraudDetectionService {
       handleDecision(decision, wallet.getId(), persistedTransactionId, operationType);
       return decision;
     } catch (RestClientException ex) {
-      log.error(
-          "Fraud detection API unavailable for transaction {}: {}", transactionId, ex.getMessage());
+      // Provider error bodies can contain large HTML pages. Keep the useful
+      // status and correlation ID without copying untrusted response content.
+      String failure = ex instanceof RestClientResponseException response
+          ? "HTTP " + response.getStatusCode().value() : ex.getClass().getSimpleName();
+      log.error("Fraud detection API unavailable for transaction {} ({})", transactionId, failure);
       throw new FraudBlockedException(
           "Transaction stopped: Sentinel unavailable or returned an invalid decision",
           1.0,

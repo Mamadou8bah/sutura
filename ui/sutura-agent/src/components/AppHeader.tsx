@@ -7,13 +7,12 @@ import { StyleSheet, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { useAgent } from "../context/AgentContext";
-import { fonts, radii, type } from "../theme";
+import { fonts, type } from "../theme";
 
 export function AppHeader() {
- const {colors}=useTheme();
  const styles=useThemedStyles(createStyles);
 
-  const { session, stats, setTab } = useAgent();
+  const { session } = useAgent();
 
   return (
     <View style={styles.row}>
@@ -24,10 +23,6 @@ export function AppHeader() {
           {[session.agentCode, session.location].filter(Boolean).join(" · ")}
         </Text> : null}
       </View>
-
-      <Pressable accessibilityRole="button" accessibilityLabel="Support" style={styles.iconBtn} onPress={() => setTab("support")}>
-        <Ionicons name="chatbubble-outline" size={22} color={colors.slate700} />
-      </Pressable>
 
     </View>
   );
@@ -66,15 +61,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   greeting: { flex: 1, minWidth: 0 },
   greetingName: { fontSize: type.headline, fontFamily: fonts.semibold, fontWeight: "600", color: colors.primary },
   agentMeta: { fontSize: type.caption, fontFamily: fonts.regular, color: colors.slate500, marginTop: 2 },
-  iconBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.md,
-    backgroundColor: colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 0,
-  },
   badge: {
     position: "absolute",
     top: 2,

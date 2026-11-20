@@ -16,13 +16,17 @@
       "icon": "./assets/app-icon.png"
     },
     "android": {
+      "softwareKeyboardLayoutMode": "resize",
       "package": "gm.sutura.customer",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff",
         "monochromeImage": "./assets/monochrome-icon.png"
       },
-      "icon": "./assets/app-icon.png"
+      "icon": "./assets/app-icon.png",
+      "blockedPermissions": [
+        "android.permission.WRITE_CONTACTS"
+      ]
     },
     "plugins": [
       "expo-asset",
@@ -39,6 +43,12 @@
         "expo-local-authentication",
         {
           "faceIDPermission": "Allow Sutura to use Face ID to unlock your saved session on this device."
+        }
+      ],
+      [
+        "expo-contacts",
+        {
+          "contactsPermission": "Allow Sutura to suggest recipients from your phone contacts."
         }
       ]
     ],

@@ -1,3 +1,4 @@
+import { notifyKeyboardFocus } from "../utils/keyboardLayout";
 import { NavigationContext } from "@react-navigation/native";
 import { createContext, useContext, useEffect, useState, forwardRef, type ComponentRef } from "react";
 import { ActivityIndicator, PixelRatio, Platform, Pressable, StyleSheet, Switch, Text, TextInput, View,
@@ -20,7 +21,8 @@ export function platformTextStyle(style: TextStyle | undefined, platform = Platf
   if (family && !/^(Inter|Poppins)_/.test(family) && !["System", "sans-serif"].includes(family)) return style;
   const requested = style?.fontWeight ?? family?.match(/_(\d{3})/)?.[1] ?? "400";
   const weight = requested === "bold" ? 700 : requested === "normal" ? 400 : Number(requested);
-  const fontFamily = weight >= 700 ? "Poppins_700Bold" : weight >= 600 ? "Poppins_600SemiBold" : weight >= 500 ? "Poppins_500Medium" : "Poppins_400Regular";
+  if (platform === "ios") return { ...style, fontFamily: "Helvetica Neue", fontWeight: weight >= 700 ? "700" : weight >= 600 ? "600" : weight >= 500 ? "500" : "400" };
+  const fontFamily = weight >= 700 ? "Inter_700Bold" : weight >= 600 ? "Inter_600SemiBold" : weight >= 500 ? "Inter_500Medium" : "Inter_400Regular";
   return { ...style, fontFamily, fontWeight: "normal" };
 }
 export type NativeText = ComponentRef<typeof Text>;
@@ -31,7 +33,7 @@ export const NativeText = forwardRef<NativeText, TextProps>((props, ref) => {
 });
 export const NativeInput = forwardRef<NativeInput, TextInputProps>((props, ref) => {
   const { colors, mode } = useTheme();
-  return <TextInput {...props} ref={ref} keyboardAppearance={props.keyboardAppearance ?? mode}
+  return <TextInput {...props} ref={ref} onFocus={event => { notifyKeyboardFocus(); props.onFocus?.(event); }} keyboardAppearance={props.keyboardAppearance ?? mode}
     selectionColor={props.selectionColor ?? colors.orange} underlineColorAndroid={props.underlineColorAndroid ?? "transparent"}
     style={[{ color: colors.primary }, platformTextStyle(StyleSheet.flatten(props.style) ?? undefined)]} />;
 });

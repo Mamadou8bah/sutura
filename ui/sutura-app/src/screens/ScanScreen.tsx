@@ -1,11 +1,14 @@
-import { Money } from "../components/Money";
+import { BackHeader } from "../components/AppHeader";
+import { ReviewCard, ReviewRow } from "../components/Review";
+import { SelectionSheet } from "../components/SelectionSheet";
+import { SwipeToConfirm } from "../components/SwipeToConfirm";
 import { statusLabel } from "../components/StatusPill";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Keyboard, View } from "react-native";
 import { NativeText as Text } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import MerchantScanner from "../components/MerchantScanner";
-import { OperationScreen, WalletPicker, FormError, SubmitButton } from "../components/OperationForm";
+import { OperationScreen, WalletPicker, FormError } from "../components/OperationForm";
 import { PrimaryButton } from "../components/ui";
 import { api, type MerchantPayment } from "../api/client";
 import { useWallet } from "../context/WalletContext";
@@ -15,7 +18,7 @@ import { parseMerchantQr } from "../utils/merchantQr";
 
 export function ScanScreen() {
  const {colors}=useTheme();
- const {data,selectedWalletId,setSelectedWalletId,selectedWallet,balanceHidden,refreshData}=useWallet();
+ const {data,selectedWalletId,setSelectedWalletId,selectedWallet,balanceHidden,refreshData,setTab,openTransaction}=useWallet();
  const [payment,setPayment]=useState<MerchantPayment|null>(null);
  const [result,setResult]=useState<MerchantPayment|null>(null);const [error,setError]=useState("");const [busy,setBusy]=useState(false);
  const lastScan=useRef("");const lock=useRef(false);const mounted=useRef(true);
@@ -50,25 +53,46 @@ export function ScanScreen() {
   finally{lock.current=false;if(mounted.current)setBusy(false);}
  }
  function reset(){lastScan.current="";setPayment(null);setResult(null);setError("");}
- if(result)return <OperationScreen title={result.status==="PAID"?"Payment complete":result.status==="REVIEW"?"Payment under review":"Payment status"}>
-  <Ionicons name={result.status==="PAID"?"checkmark-circle-outline":"time-outline"} size={64} color={result.status==="PAID"?colors.emerald700:colors.orange}/>
-  <Money amount={Number(result.amount)} currency={result.currency} maxFractionDigits={4} style={{fontSize:32,fontWeight:"600",color:colors.primary}}/>
-  <Text style={{color:colors.primary,fontSize:17}}>{result.merchantName}</Text>
-  <Text style={{color:colors.slate500,lineHeight:21}}>{result.status==="PAID"?"Your merchant payment is complete.":result.status==="REVIEW"?"Your payment is pending review. It has not completed. Check Activity for updates.":`Payment status: ${result.status}. Check Activity before paying again.`}</Text>
-  <Text selectable style={{color:colors.slate500,fontSize:12}}>{result.transactionReference||result.reference}</Text>
-  <PrimaryButton label="Scan another code" onPress={reset}/>
- </OperationScreen>;
- if(payment)return <OperationScreen title="Review payment" subtitle="Check the merchant and amount before confirming.">
-  <View style={{alignItems:"center",paddingVertical:24,gap:12,backgroundColor:colors.surfaceMuted,borderRadius:16}}><Ionicons name="storefront-outline" color={colors.primary} size={36}/><Text style={{color:colors.primary,fontSize:19,fontWeight:"600"}}>{payment.merchantName}</Text><Money amount={Number(payment.amount)} currency={payment.currency} maxFractionDigits={4} style={{color:colors.primary,fontSize:30,fontWeight:"600"}}/>{!!payment.description&&<Text style={{color:colors.slate500,textAlign:"center",paddingHorizontal:16}}>{payment.description}</Text>}</View>
-  <WalletPicker wallets={data.wallets.filter(w=>w.currency===payment.currency)} selectedId={selectedWalletId} onSelect={setSelectedWalletId} hidden={balanceHidden}/>
-  {!data.wallets.some(w=>w.currency===payment.currency&&w.status==="ACTIVE")&&<Text style={{color:colors.rose800}}>You need an active {payment.currency} wallet to pay this merchant.</Text>}
-  <FormError message={error}/><SubmitButton label="Confirm payment" loading={busy} disabled={busy||!selectedWallet.id||selectedWallet.currency!==payment.currency||selectedWallet.status!=="ACTIVE"} onPress={()=>void pay()}/>
-  <PrimaryButton label="Cancel payment" color={colors.surfaceMuted} textColor={colors.primary} disabled={busy} onPress={reset}/>
- </OperationScreen>;
- return <OperationScreen title="Scan & pay" subtitle="Scan the merchant’s Sutura QR code.">
-  {!busy&&!error&&<MerchantScanner onCode={value=>{if(value!==lastScan.current){lastScan.current=value;void lookup(value);}}}/>}
-  {busy&&<ActivityIndicator accessibilityLabel="Looking up merchant" color={colors.slate500}/>}
-  <FormError message={error}/>{!!error&&<PrimaryButton label="Scan again" color={colors.surfaceMuted} textColor={colors.primary} onPress={()=>{lastScan.current="";setError("");}}/>}
+ const canPay = !!selectedWallet.id && selectedWallet.currency === payment?.currency && selectedWallet.status === "ACTIVE";
+ const receipt = result?.transactionReference ? data.transactions.find(transaction => transaction.reference === result.transactionReference) : undefined;
+ return <OperationScreen>
+  <BackHeader title="QR Scan" onBack={() => { if (!busy) setTab("home"); }} />
+  {payment && !result && <SelectionSheet visible title="Payment Confirmation" onClose={() => { if (!busy) reset(); }}>
+    <View style={{ gap: 12 }}>
+      <ReviewCard>
+        <ReviewRow label="Merchant" value={payment.merchantName || "Merchant"} />
+        <ReviewRow label="Reference" value={payment.reference} />
+        <ReviewRow label="Total amount" value={formatMoney(Number(payment.amount), payment.currency, 4)} emphasis money last />
+      </ReviewCard>
+      <WalletPicker compact wallets={data.wallets.filter(wallet => wallet.currency === payment.currency)}
+        selectedId={selectedWalletId} onSelect={setSelectedWalletId} hidden={balanceHidden} />
+      {!canPay && <Text style={{ color: colors.rose800 }}>You need an active {payment.currency} wallet to pay this merchant.</Text>}
+      <FormError message={error} />
+      <SwipeToConfirm label="Swipe to Pay" busy={busy} disabled={!canPay} onConfirm={() => void pay()} />
+    </View>
+  </SelectionSheet>}
+  {result && <SelectionSheet visible title={result.status === "PAID" ? "Payment Successful" : result.status === "REVIEW" ? "Payment under review" : "Payment status"}
+    onClose={reset}>
+    <View style={{ gap: 12 }}>
+      <View style={{ alignItems: "center", paddingVertical: 8 }}>
+        <Ionicons name={result.status === "PAID" ? "checkmark-circle-outline" : "time-outline"} size={54}
+          color={result.status === "PAID" ? colors.emerald700 : colors.accentText} />
+      </View>
+      <ReviewCard>
+        <ReviewRow label="Transaction ID" value={result.transactionReference || result.reference} />
+        <ReviewRow label="Merchant" value={result.merchantName || "Merchant"} />
+        <ReviewRow label="Amount" value={formatMoney(Number(result.amount), result.currency, 4)} emphasis money />
+        <ReviewRow label="Status" value={statusLabel(result.status)} last />
+      </ReviewCard>
+      {result.status !== "PAID" && <Text style={{ color: colors.slate500 }}>Check Transactions for updates before paying again.</Text>}
+      {receipt && result.status === "PAID" && <PrimaryButton label="Get Receipt" color={colors.surfaceMuted} textColor={colors.primary}
+        onPress={() => { reset(); openTransaction(receipt.id); }} />}
+      <PrimaryButton label="Scan Again" onPress={reset} />
+    </View>
+  </SelectionSheet>}
+  {!payment&&!result&&!busy&&!error&&<MerchantScanner onCode={value=>{if(value!==lastScan.current){lastScan.current=value;void lookup(value);}}}/>}
+  {busy&&!payment&&<ActivityIndicator accessibilityLabel="Looking up merchant" color={colors.slate500}/>}
+  <FormError message={payment ? "" : error}/>{!payment&&!!error&&<PrimaryButton label="Scan again" color={colors.surfaceMuted} textColor={colors.primary} onPress={()=>{lastScan.current="";setError("");}}/>}
   <Text style={{color:colors.slate500,fontSize:12,lineHeight:19}}>You’ll review the merchant, amount and wallet before any payment is made.</Text>
  </OperationScreen>;
 }

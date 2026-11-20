@@ -4,9 +4,11 @@ import { useState } from "react";
 import { SelectionSheet } from "./SelectionSheet";
 import { AppInput } from "./ui";
 import { isAmountDraft } from "../utils/inputValidation";
+import { WalletSurface } from "./WalletSurface";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardScrollView as ScrollView } from "./KeyboardScrollView";
+import { StyleSheet, View} from "react-native";
 import { NativePressable as Pressable, NativeText as Text, NativeInput as TextInput } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { brand } from "../constants/brand";
@@ -16,14 +18,14 @@ import { formatBalance } from "../utils/format";
 import { statusLabel } from "./StatusPill";
 import { tabular, type } from "../theme";
 export function OperationScreen({ title, subtitle, children, }: {
-    title: string;
+    title?: string;
     subtitle?: string;
     children: React.ReactNode;
 }) {
     const { colors } = useTheme();
     const styles = useThemedStyles(createStyles);
     return (<ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
-      <Text style={styles.title}>{title}</Text>
+      {title ? <Text accessibilityRole="header" style={styles.title}>{title}</Text> : null}
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
       {children}
     </ScrollView>);
@@ -46,21 +48,23 @@ export function WalletPicker({ wallets, selectedId, onSelect, hidden, compact = 
       onChange={value => onSelect(Number(value))} disabled={wallets.length === 0} />;
     return <><Pressable accessibilityRole="button" accessibilityLabel="Select wallet" disabled={!wallets.length} onPress={() => { setSearch(""); setOpen(true); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, minHeight: 48, paddingVertical: compact ? 0 : 16, borderBottomWidth: compact ? 0 : 1, borderBottomColor: colors.border }}><View style={{ width: 40, height: 40, borderRadius: 20, backgroundColor: colors.surfaceMuted, alignItems: "center", justifyContent: "center" }}><Ionicons name="wallet-outline" size={20} color={colors.slate500} /></View><View style={{ flex: 1, gap: 4 }}><Text style={{ color: colors.primary, fontWeight: "600" }}>{selected?.name ?? "Choose wallet"}</Text>{!compact && <Text style={[{ color: colors.slate500, fontSize: 13 }, tabular]}>Available: {selected ? formatBalance(selected.balance, selected.currency, hidden) : "—"}</Text>}</View><Ionicons name="chevron-down" size={18} color={colors.primary}/></Pressable><SelectionSheet visible={open} title="Select wallet" onClose={() => setOpen(false)}><AppInput accessibilityLabel="Search wallets" placeholder="Search name or currency" value={search} onChangeText={setSearch}/>{wallets.filter(w => `${w.name} ${w.currency}`.toLowerCase().includes(search.toLowerCase())).map(w => <Pressable key={w.id} accessibilityRole="radio" accessibilityLabel={`${w.name}, ${w.currency}`} accessibilityState={{ checked: w.id === selectedId, disabled: w.status !== "ACTIVE" }} disabled={w.status !== "ACTIVE"} onPress={() => { onSelect(w.id); setOpen(false); }} style={{ flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 20, borderBottomWidth: 1, borderBottomColor: colors.border, opacity: w.status === "ACTIVE" ? 1 : 0.5 }}><View style={{ flex: 1, gap: 5 }}><Text style={{ color: colors.primary, fontSize: 16, fontWeight: "600" }}>{w.name}</Text><Text style={{ color: colors.slate500, fontSize: 13 }}>{w.currency} · {w.status === "ACTIVE" ? "Available balance" : statusLabel(w.status)}</Text></View><Text style={[{ color: colors.primary }, tabular]}>{formatBalance(w.balance, w.currency, hidden)}</Text>{w.id === selectedId && <Ionicons name="checkmark" color={colors.accentText} size={20} accessibilityLabel="Selected"/>}</Pressable>)}{!wallets.some(w => `${w.name} ${w.currency}`.toLowerCase().includes(search.toLowerCase())) && <Text style={{ paddingVertical: 24, color: colors.slate500 }}>No matching wallets</Text>}</SelectionSheet></>;
 }
-export function AmountHero({ amount, onChange, currency, }: {
+export function AmountHero({ amount, onChange, currency, flat = false, }: {
+    flat?: boolean;
     amount: string;
     onChange: (v: string) => void;
     currency: string;
 }) {
     const { colors } = useTheme();
     const styles = useThemedStyles(createStyles);
-    return (<View style={[styles.amountCard, shadow.card]}>
-      <Text style={styles.amountLabel}>Amount</Text>
+    const AmountSurface = flat ? View : WalletSurface;
+    return (<AmountSurface style={flat ? { paddingVertical: 24, gap: 8 } : undefined}>
+      <Text style={[styles.amountLabel, flat && { color: colors.slate500 }]}>Amount</Text>
       <View style={styles.amountRow}>
-        <Text style={styles.amountCurrency}>{currency}</Text>
+        <Text style={[styles.amountCurrency, flat && { color: colors.slate500 }]}>{currency}</Text>
         <TextInput value={amount} onChangeText={(value) => { if (isAmountDraft(value))
-        onChange(value); }} keyboardType="decimal-pad" inputMode="decimal" autoComplete="off" placeholder="0.00" accessibilityLabel={`Amount in ${currency}`} maxLength={18} placeholderTextColor={colors.slate500} style={[styles.amountInput, tabular]}/>
+        onChange(value); }} keyboardType="decimal-pad" inputMode="decimal" autoComplete="off" placeholder="0.00" accessibilityLabel={`Amount in ${currency}`} maxLength={18} placeholderTextColor={flat ? colors.slate500 : colors.walletMuted} style={[styles.amountInput, tabular, flat && { color: colors.primary }]}/>
       </View>
-    </View>);
+    </AmountSurface>);
 }
 export function ContactChips({ contacts, selected, onSelect, }: {
     contacts: QuickContact[];
@@ -192,23 +196,16 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
     chipNameActive: { color: colors.primary },
     chipBal: { fontSize: 12, fontFamily: fonts.regular, color: colors.slate500, marginTop: 4 },
     chipBalActive: { color: colors.slate700 },
-    amountCard: {
-        backgroundColor: colors.surface,
-        borderRadius: radii.lg,
-        padding: 16,
-        borderWidth: 1,
-        borderColor: colors.border,
-    },
-    amountLabel: { fontSize: 13, fontFamily: fonts.medium, color: colors.slate500 },
-    amountRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 12 },
-    amountCurrency: { fontSize: 22, fontFamily: fonts.medium, color: colors.slate500 },
+    amountLabel: { fontSize: 13, fontFamily: fonts.medium, color: colors.walletMuted },
+    amountRow: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+    amountCurrency: { fontSize: 22, fontFamily: fonts.medium, color: colors.walletMuted },
     amountInput: {
         flex: 1,
         minWidth: 0,
         fontSize: 36,
         fontFamily: fonts.semibold,
         fontWeight: "600",
-        color: colors.slate900,
+        color: colors.walletInk,
         textAlign: "left",
         padding: 0,
     },

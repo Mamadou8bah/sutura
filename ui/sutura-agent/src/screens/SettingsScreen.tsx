@@ -1,7 +1,8 @@
 import { DeviceSecuritySettings } from "../components/DeviceSecuritySettings";
 import { NativeSwitch as Switch } from "../components/NativeControls";
 import {useState} from "react";
-import { ScrollView, View } from "react-native";
+import { KeyboardScrollView as ScrollView } from "../components/KeyboardScrollView";
+import { View} from "react-native";
 import { NativeText as Text } from "../components/NativeControls";
 import {BackHeader} from "../components/AppHeader";
 import {ThemePicker} from "../components/ThemePicker";

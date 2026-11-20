@@ -1,7 +1,8 @@
 import { SelectionSheet } from "./SelectionSheet";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
-import { Modal, ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardScrollView as ScrollView } from "./KeyboardScrollView";
+import { Modal, StyleSheet, View} from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { useWallet } from "../context/WalletContext";

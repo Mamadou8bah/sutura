@@ -3,7 +3,8 @@ import { NativeSwitch as Switch } from "../components/NativeControls";
 import { ThemePicker } from "../components/ThemePicker";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
-import { ScrollView, StyleSheet, View } from "react-native";
+import { KeyboardScrollView as ScrollView } from "../components/KeyboardScrollView";
+import { StyleSheet, View} from "react-native";
 import { NativeText as Text } from "../components/NativeControls";
 import { BackHeader } from "../components/AppHeader";
 import { AccountMenuRow } from "../components/AccountMenuRow";
@@ -20,7 +21,7 @@ export function ProfileScreen() {
   const { data, profileSection, setProfileSection, setTab, balanceHidden, toggleBalanceHidden, selectedWallet } = useWallet();
   const settings = profileSection === "settings";
   return <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
-    <BackHeader title={settings ? "Settings" : "Personal account"} onBack={() => setTab("more")} />
+    <BackHeader title={settings ? "Settings" : "Profile"} onBack={() => setTab("more")} />
     {settings ? <>
       <Text style={styles.section}>Account</Text>
       <View><AccountMenuRow label="Personal account" icon="person-outline" onPress={() => setProfileSection("profile")} /></View>

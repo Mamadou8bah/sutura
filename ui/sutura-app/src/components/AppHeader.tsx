@@ -7,7 +7,6 @@ import { StyleSheet, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "./NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { useWallet } from "../context/WalletContext";
-import { colors, radii } from "../theme";
 
 export function AppHeader() {
   const { colors } = useTheme();
@@ -19,13 +18,10 @@ export function AppHeader() {
     <View style={styles.row}>
       <Pressable accessibilityRole="button" accessibilityLabel="Open account" onPress={() => setTab("more")} style={{ minWidth: 48, minHeight: 48, alignItems: "center", justifyContent: "center" }}><SuturaLogo size={44} /></Pressable>
       <View style={styles.greeting}>
+        <Text style={{ fontSize: 12, color: colors.slate500 }}>Welcome back</Text>
         <Text accessibilityRole="header" numberOfLines={1} style={styles.greetingName}>{data.session.name || "Home"}</Text>
-        {!!data.session.phone && <Text style={{ fontSize: 12, color: colors.slate500 }}>{data.session.phone}</Text>}
-      </View>
 
-      <Pressable accessibilityRole="button" accessibilityLabel="Support" style={styles.iconBtn} onPress={() => setTab("support")}>
-        <Ionicons name="chatbubble-outline" size={20} color={colors.slate700} />
-      </Pressable>
+      </View>
 
     </View>
   );
@@ -63,15 +59,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   row: { flexDirection: "row", alignItems: "center", gap: 10 },
   greeting: { flex: 1, minWidth: 0 },
   greetingName: { fontSize: 17, fontWeight: "600", color: colors.primary },
-  iconBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: radii.md,
-    backgroundColor: colors.surface,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 0,
-  },
   badge: {
     position: "absolute",
     top: 2,

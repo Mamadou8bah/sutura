@@ -1,3 +1,4 @@
+import { LinearGradient } from "expo-linear-gradient";
 import { DeviceLockProvider } from "./src/context/DeviceLockContext";
 import { FirstLaunchGate } from "./src/components/FirstLaunchGate";
 import { CreateWalletScreen } from "./src/screens/CreateWalletScreen";
@@ -23,7 +24,7 @@ import { TransactionDetailSheet } from "./src/components/TransactionDetailSheet"
 
 import { AuthProvider, useAuth } from "./src/context/AuthContext";
 
-import { WalletProvider, navTabFor, useWallet } from "./src/context/WalletContext";
+import { WalletProvider, useWallet } from "./src/context/WalletContext";
 
 
 
@@ -55,7 +56,9 @@ import type { TabId } from "./src/types";
 
 
 
-const mainTabs = new Set<TabId>(["home", "wallets", "scan", "send", "activity", "more"]);
+const transparentScreens = new Set(["home"]);
+const customHeaders = new Set(["profile", "topup"]);
+const mainTabs = new Set<TabId>(["home", "wallets", "activity", "more", "profile"]);
 
 
 
@@ -74,10 +77,12 @@ function MainApp() {
 
     <View style={styles.safeArea}>
 
+      {tab === "home" && <LinearGradient colors={[colors.background, colors.walletHighlight, colors.walletSurface]}
+        locations={[0, 0.48, 1]} pointerEvents="none" style={StyleSheet.absoluteFill} />}
       <StatusBar style={mode === "dark" ? "light" : "dark"} />
 
       <View style={styles.body}>
-        <NativeNavigator screen={tab} onChange={value => setTab(value as TabId)}
+        <NativeNavigator transparentScreens={transparentScreens} customHeaders={customHeaders} screen={tab} onChange={value => setTab(value as TabId)}
           screens={["home", "wallets", "create-wallet", "scan", "send", "activity", "more", "topup", "withdraw", "support", "profile", "verification"]} renderScreen={name => {
           switch (name) {
             case "home": return <HomeScreen />;
@@ -99,7 +104,7 @@ function MainApp() {
 
 
 
-      {showNav ? <BottomNav active={navTabFor(tab)} onChange={setTab} /> : null}
+      {showNav ? <BottomNav active={tab} onChange={setTab} /> : null}
 
       <WalletActionsSheet />
 
