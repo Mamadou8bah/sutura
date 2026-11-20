@@ -2,8 +2,8 @@ name: Keep Sutura awake
 
 on:
   schedule:
-    # Every five minutes, away from the busiest minute at the top of the hour.
-    - cron: '3-58/5 * * * *'
+    # Every twenty minutes, away from the busiest minute at the top of the hour.
+    - cron: '3,23,43 * * * *'
   workflow_dispatch:
 
 permissions: {}

@@ -1,7 +1,7 @@
 # Sutura keep-alive
 
 The **Keep Sutura awake** GitHub Actions workflow sends a GET request to
-`https://suturagambia.onrender.com/actuator/health/liveness` every five minutes.
+`https://suturagambia.onrender.com/actuator/health/liveness` every twenty minutes (at :03, :23 and :43 each hour).
 It also supports **Run workflow** from the Actions tab. No secrets, checkout,
 login requests or financial writes are required. The job retries temporary
 failures, has a four-minute time limit and checks that the response reports UP.
@@ -18,3 +18,6 @@ or stop provider restarts or quota suspension.
 
 Sources: [Render free instances](https://render.com/docs/free) and
 [GitHub scheduled events](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule).
+
+This interval exceeds Render's 15-minute idle threshold, so the service can
+sleep between scheduled pings.
