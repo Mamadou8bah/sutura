@@ -22,6 +22,7 @@ function render(relative, focused, unlocked = true) {
     if (name.includes('DeviceLockContext')) return { useDeviceLock: () => ({ unlocked }) };
     if (name.includes('ThemeContext')) return { useTheme: () => ({ colors }), useThemedStyles: fn => fn(colors) };
     if (name === './NativeControls') return { NativeText: 'Text', NativePressable: 'Pressable' };
+    if (name === './QrScanner') return { QrScanner: 'QrScanner' };
     if (name === './ui') return { PrimaryButton: 'Button' };
     if (name === '../theme') return { colors };
     throw new Error(name);

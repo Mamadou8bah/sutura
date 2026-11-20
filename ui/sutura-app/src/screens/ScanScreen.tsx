@@ -33,7 +33,7 @@ export function ScanScreen() {
    setPayment(found);
    const wallet=data.wallets.find(w=>w.status==="ACTIVE"&&w.currency===found.currency);
    if(wallet)setSelectedWalletId(wallet.id);
-  }catch(e){if(mounted.current)setError(e instanceof Error?e.message:"Could not read merchant payment.");}
+  }catch(e){if(mounted.current){lastScan.current="";setError(e instanceof Error?e.message:"Could not read merchant payment.");}}
   finally{lock.current=false;if(mounted.current)setBusy(false);}
  }
  async function pay() {
@@ -66,7 +66,7 @@ export function ScanScreen() {
   <PrimaryButton label="Cancel payment" color={colors.surfaceMuted} textColor={colors.primary} disabled={busy} onPress={reset}/>
  </OperationScreen>;
  return <OperationScreen title="Scan & pay" subtitle="Scan the merchant’s Sutura QR code.">
-  {!busy&&<MerchantScanner onCode={value=>{if(value!==lastScan.current){lastScan.current=value;void lookup(value);}}}/>}
+  {!busy&&!error&&<MerchantScanner onCode={value=>{if(value!==lastScan.current){lastScan.current=value;void lookup(value);}}}/>}
   {busy&&<ActivityIndicator accessibilityLabel="Looking up merchant" color={colors.slate500}/>}
   <FormError message={error}/>{!!error&&<PrimaryButton label="Scan again" color={colors.surfaceMuted} textColor={colors.primary} onPress={()=>{lastScan.current="";setError("");}}/>}
   <Text style={{color:colors.slate500,fontSize:12,lineHeight:19}}>You’ll review the merchant, amount and wallet before any payment is made.</Text>
