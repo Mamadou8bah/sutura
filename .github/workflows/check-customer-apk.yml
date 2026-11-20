@@ -21,9 +21,13 @@ jobs:
         shell: bash
         run: |
           mkdir -p current previous
-          gh release download mobile-apks-44769060473-1 --repo "$GITHUB_REPOSITORY" \
+          mapfile -t releases < <(gh api "repos/$GITHUB_REPOSITORY/releases?per_page=20" \
+            --jq '.[] | select(.draft == false and .prerelease == false) | select(.tag_name | startswith("mobile-apks-")) | .tag_name')
+          test "${#releases[@]}" -ge 2
+          echo "Current: ${releases[0]}; previous: ${releases[1]}"
+          gh release download "${releases[0]}" --repo "$GITHUB_REPOSITORY" \
             --pattern sutura-app-latest.apk --pattern sutura-app-latest.apk.sha256 --dir current
-          gh release download mobile-apks-44764195845-1 --repo "$GITHUB_REPOSITORY" \
+          gh release download "${releases[1]}" --repo "$GITHUB_REPOSITORY" \
             --pattern sutura-app-latest.apk --pattern sutura-app-latest.apk.sha256 --dir previous
           (cd current && sha256sum --check sutura-app-latest.apk.sha256)
           (cd previous && sha256sum --check sutura-app-latest.apk.sha256)
