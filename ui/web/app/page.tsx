@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Icon, StatusBadge, type IconName } from "./components/ui";
+import Image from "next/image";
+import { Icon, type IconName } from "./components/ui";
 import { LandingHeader } from "./landing-header";
 import { SiteFooter } from "./site-page";
 import { headerNavGroups } from "./site-nav";
@@ -62,60 +63,42 @@ const principles = [
 
 function ProductPreview() {
   return (
-    <figure className="relative mx-auto w-full max-w-[440px]" aria-labelledby="preview-caption">
-      <div className="rounded-panel border border-line bg-surface-2 p-4 sm:p-6">
-        {/* Wallet card moment: flat charcoal, tabular balance */}
-        <div className="rounded-card bg-charcoal-card p-5 text-[#f2f2f7]">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-[#aeaeb2]">Main wallet</span>
-            <span className="rounded-full border border-white/15 px-2 py-0.5 text-xs text-[#aeaeb2]">Example</span>
+    <figure className="relative mx-auto w-full max-w-[310px]" aria-labelledby="preview-caption">
+      <div className="relative rounded-[48px] border border-[#77777b] bg-[#242426] p-[7px] shadow-[0_24px_60px_-20px_rgba(0,0,0,0.35)]">
+        <span aria-hidden="true" className="absolute -left-[3px] top-28 h-8 w-[3px] rounded-l bg-[#555558]" />
+        <span aria-hidden="true" className="absolute -left-[3px] top-40 h-12 w-[3px] rounded-l bg-[#555558]" />
+        <span aria-hidden="true" className="absolute -right-[3px] top-36 h-16 w-[3px] rounded-r bg-[#555558]" />
+        <div className="overflow-hidden rounded-[40px] bg-white">
+          <div aria-hidden="true" className="relative flex h-11 items-center justify-between px-6 text-[11px] font-semibold text-[#1c1c1e]">
+            <span>9:41</span>
+            <span className="absolute left-1/2 top-2 h-[22px] w-[80px] -translate-x-1/2 rounded-full bg-[#151515]" />
+            <svg width="47" height="12" viewBox="0 0 47 12" fill="currentColor">
+              <path d="M0 8h3v4H0zm5-3h3v7H5zm5-3h3v10h-3zm5-2h3v12h-3z" />
+              <rect x="24" y="2" width="19" height="9" rx="2" fill="none" stroke="currentColor" />
+              <rect x="26" y="4" width="15" height="5" rx="1" />
+              <path d="M44 5h2v3h-2z" />
+            </svg>
           </div>
-          <p className="mt-6 text-sm text-[#aeaeb2]">Available balance</p>
-          <p className="mt-1 text-[40px] font-medium leading-[44px] tracking-[-0.02em] tabular-nums">
-            <span className="mr-2 text-xl font-medium text-[#aeaeb2]">GMD</span>12,450.00
-          </p>
-          <div className="mt-5 grid grid-cols-2 gap-2">
-            <span className="inline-flex h-10 items-center justify-center gap-2 rounded-control bg-[#f97316] text-sm font-semibold text-[#1c1c1e]">
-              <Icon name="send" size={16} /> Send
-            </span>
-            <span className="inline-flex h-10 items-center justify-center gap-2 rounded-control border border-white/15 text-sm font-semibold">
-              <Icon name="plus" size={16} /> Top up
-            </span>
-          </div>
-        </div>
-
-        {/* Receipt with the reference stamp */}
-        <div className="ml-auto mr-2 mt-4 w-[92%] rounded-card border border-line bg-surface p-4 shadow-pop">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-ink">Paid Kairaba Grocery</p>
-              <p className="text-xs text-ink-3">Payment link · 14 Nov, 10:42</p>
-            </div>
-            <p className="text-base font-semibold text-ink tabular-nums">−GMD 850.00</p>
-          </div>
-          <dl className="mt-3 space-y-1.5 border-t border-line pt-3 text-xs tabular-nums">
-            <div className="flex justify-between">
-              <dt className="text-ink-2">Debit · Main wallet</dt>
-              <dd className="text-ink">850.00</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-ink-2">Credit · Merchant wallet</dt>
-              <dd className="text-ink">850.00</dd>
-            </div>
-          </dl>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <StatusBadge status="POSTED" />
-            <code className="font-mono text-xs text-ink-2">TXN-2026-004182</code>
+          <Image
+            src="/brand/customer-app-home.png"
+            alt="Sutura customer app home screen showing the wallet balance, Send, Add Funds, Withdraw and QR actions, and recent transactions."
+            width={780}
+            height={1560}
+            sizes="(max-width: 340px) 270px, 294px"
+            priority
+            className="block h-auto w-full"
+          />
+          <div aria-hidden="true" className="flex h-5 items-center justify-center">
+            <span className="h-1 w-24 rounded-full bg-[#1c1c1e]" />
           </div>
         </div>
       </div>
-      <figcaption id="preview-caption" className="mt-3 text-center text-xs text-ink-3">
-        Example wallet and receipt. Names and amounts are illustrative.
+      <figcaption id="preview-caption" className="mt-4 text-center text-xs text-ink-3">
+        Sutura customer app. Illustrative account and transactions.
       </figcaption>
     </figure>
   );
 }
-
 export default function HomePage() {
   return (
     <>
