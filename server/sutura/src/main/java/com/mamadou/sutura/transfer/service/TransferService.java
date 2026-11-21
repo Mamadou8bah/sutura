@@ -35,6 +35,7 @@ public class TransferService {
     private final com.mamadou.sutura.user.repository.UserRepository userRepository;
     private final TransferComplianceService transferComplianceService;
     private final TransferFailureRecorder failureRecorder;
+    private final com.mamadou.sutura.transfer.repository.TransferJobRepository transferJobs;
 
     @Transactional(readOnly = true)
     public List<TransferListItem> listForCurrentUser() {
@@ -48,6 +49,15 @@ public class TransferService {
 
     @Transactional
     public TransferResponse transfer(TransferRequest request, String headerIdempotencyKey) {
+        return submit(request, headerIdempotencyKey, false);
+    }
+
+    @Transactional
+    public TransferResponse queue(TransferRequest request, String headerIdempotencyKey) {
+        return submit(request, headerIdempotencyKey, true);
+    }
+
+    private TransferResponse submit(TransferRequest request, String headerIdempotencyKey, boolean background) {
         metricsService.recordTransferInitiationAttempt();
         Timer.Sample sample = metricsService.startTransferExecutionTimer();
 
@@ -61,6 +71,8 @@ public class TransferService {
                     new com.mamadou.sutura.transaction.exception.TransactionException("Account not found"));
             String rawKey = resolveIdempotencyKey(request.getIdempotencyKey(), headerIdempotencyKey);
             if (rawKey == null) rawKey = request.getReference();
+            if (background && (rawKey == null || rawKey.isBlank()))
+                throw new IllegalArgumentException("An idempotency key is required for background transfers");
             if (rawKey != null && rawKey.length() > 160) throw new IllegalArgumentException("Idempotency key is too long");
             String idempotencyKey = scopedKey(userId, rawKey);
             if (request.getRecipientPhone() != null) request.setRecipientPhone(
@@ -81,7 +93,9 @@ public class TransferService {
                                 validationResult.getSourceWallet(), validationResult.getDestinationWallet(),
                                 validationResult.getInitiatedBy(), request.getAmount(),
                                 validationResult.getSourceWallet().getCurrency(), request.getDescription(), request.getReference());
-                        if (transferComplianceService.assess(transaction)) {
+                        if (background) {
+                            transferJobs.save(new com.mamadou.sutura.transfer.entity.TransferJob(transaction.getId()));
+                        } else if (transferComplianceService.assess(transaction)) {
                             failureRecorder.track(transaction, idempotencyKey, fingerprint);
                             transaction = transferExecutionService.executePending(transaction);
                         }

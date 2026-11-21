@@ -40,7 +40,8 @@ import static org.mockito.Mockito.*;
         "sutura.sentinel-webhook.signing-secret=integration-test-secret-0123456789",
         "sutura.sentinel-webhook.tenant-code=TEST",
         "sutura.webhooks.modempay.signing-secret=provider-test-secret",
-        "sutura.payments.approved-payout-recovery-enabled=false"})
+        "sutura.payments.approved-payout-recovery-enabled=false",
+        "sutura.transfers.worker-enabled=false"})
 @ActiveProfiles("test")
 class TransferLedgerIntegrationTest {
     private static final String SECRET = "integration-test-secret-0123456789";
@@ -60,6 +61,8 @@ class TransferLedgerIntegrationTest {
     @Autowired LedgerPostingRepository postings;
     @Autowired LedgerTraceRepository traces;
     @Autowired TransferService transfers;
+    @Autowired com.mamadou.sutura.transfer.service.TransferJobProcessor backgroundTransfers;
+    @Autowired com.mamadou.sutura.transfer.repository.TransferJobRepository transferJobs;
     @Autowired com.mamadou.sutura.transfer.service.TransferReversalService reversals;
     @Autowired TransactionRepository transactions;
     @Autowired SentinelWebhookService callbacks;
@@ -109,6 +112,81 @@ class TransferLedgerIntegrationTest {
     }
 
     @AfterEach void clear() { SecurityContextHolder.clearContext(); }
+
+    @Test void queuedTransferCommitsBeforeScoringAndCompletesWithoutPhoneOrSession() {
+        var request = request("50");
+        String key = "queued-" + UUID.randomUUID();
+        var queued = transfers.queue(request, key);
+        Long id = queued.getTransaction().getId();
+        assertThat(queued.getTransaction().getStatus()).isEqualTo(TransactionStatus.PENDING);
+        verifyNoInteractions(fraud);
+        assertBalances("100", "0");
+        assertThat(transferJobs.findById(id)).isPresent();
+        assertThat(transfers.queue(request, key).getTransaction().getId()).isEqualTo(id);
+        SecurityContextHolder.clearContext();
+        backgroundTransfers.process(id);
+        backgroundTransfers.process(id);
+        assertBalances("50", "50");
+        assertThat(transactions.findById(id).orElseThrow().getStatus()).isEqualTo(TransactionStatus.COMPLETED);
+        assertThat(transferJobs.findById(id).orElseThrow().getFinishedAt()).isNotNull();
+        verify(fraud, times(1)).evaluateTransaction(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test void queuedTransfersRecheckFundsAndFailedExecutionIsNotRetried() {
+        Long first = transfers.queue(request("80"), "queue-a-" + UUID.randomUUID()).getTransaction().getId();
+        Long second = transfers.queue(request("80"), "queue-b-" + UUID.randomUUID()).getTransaction().getId();
+        SecurityContextHolder.clearContext();
+        backgroundTransfers.process(first);
+        assertThatThrownBy(() -> backgroundTransfers.process(second)).hasMessageContaining("Insufficient");
+        backgroundTransfers.fail(second);
+        backgroundTransfers.process(second);
+        assertBalances("20", "80");
+        assertThat(transactions.findById(second).orElseThrow().getStatus()).isEqualTo(TransactionStatus.FAILED);
+    }
+
+    @Test void backgroundLedgerFailureRollsBackBeforeRecordingFailure() {
+        Long id = transfers.queue(request("50"), "queue-rollback-" + UUID.randomUUID()).getTransaction().getId();
+        doThrow(new WalletOperationException("Injected completion failure"))
+                .when(transactionService).markCompleted(any(), anyString());
+        SecurityContextHolder.clearContext();
+        assertThatThrownBy(() -> backgroundTransfers.process(id)).hasMessageContaining("Injected");
+        backgroundTransfers.fail(id);
+        backgroundTransfers.process(id);
+        assertBalances("100", "0");
+        assertThat(transactions.findById(id).orElseThrow().getStatus()).isEqualTo(TransactionStatus.FAILED);
+        assertThat(transactions.findById(id).orElseThrow().getLedgerTraceId()).isNull();
+    }
+
+    @Test void concurrentBackgroundWorkersPostOnce() throws Exception {
+        Long id = transfers.queue(request("50"), "queue-concurrent-" + UUID.randomUUID()).getTransaction().getId();
+        var executor = Executors.newFixedThreadPool(2);
+        try {
+            var first = executor.submit(() -> backgroundTransfers.process(id));
+            var second = executor.submit(() -> backgroundTransfers.process(id));
+            first.get(20, TimeUnit.SECONDS);
+            second.get(20, TimeUnit.SECONDS);
+        } finally { executor.shutdownNow(); }
+        assertBalances("50", "50");
+        verify(fraud, times(1)).evaluateTransaction(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test void backgroundReviewAndOutageNeverPostMoney() {
+        decision("review");
+        Long review = transfers.queue(request("50"), "queue-review-" + UUID.randomUUID()).getTransaction().getId();
+        SecurityContextHolder.clearContext();
+        backgroundTransfers.process(review);
+        assertThat(transactions.findById(review).orElseThrow().getStatus()).isEqualTo(TransactionStatus.PENDING);
+        assertThat(transferJobs.findById(review).orElseThrow().getFinishedAt()).isNotNull();
+        authenticate(sender);
+        doThrow(new com.mamadou.sutura.fraud.exception.FraudBlockedException("Unavailable", 1.0, "block"))
+                .when(fraud).evaluateTransaction(any(), any(), any(), any(), any(), any());
+        Long outage = transfers.queue(request("50"), "queue-outage-" + UUID.randomUUID()).getTransaction().getId();
+        SecurityContextHolder.clearContext();
+        backgroundTransfers.process(outage);
+        backgroundTransfers.process(outage);
+        assertThat(transactions.findById(outage).orElseThrow().getStatus()).isEqualTo(TransactionStatus.FAILED);
+        assertBalances("100", "0");
+    }
 
     @Test void pendingMerchantCannotCreateCollectionsOrReceiveTransfer() {
         recipient.setRole(Role.MERCHANT);recipient.setUserStatus(UserStatus.PENDING_REVIEW);users.saveAndFlush(recipient);

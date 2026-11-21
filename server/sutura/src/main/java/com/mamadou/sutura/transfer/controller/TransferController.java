@@ -50,4 +50,11 @@ public class TransferController {
     ) {
         return ResponseEntity.ok(transferReversalService.reverse(transactionId, request));
     }
+
+    @PostMapping("/queued")
+    public ResponseEntity<TransferResponse> queue(
+            @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey,
+            @Valid @RequestBody TransferRequest request) {
+        return ResponseEntity.accepted().body(transferService.queue(request, idempotencyKey));
+    }
 }

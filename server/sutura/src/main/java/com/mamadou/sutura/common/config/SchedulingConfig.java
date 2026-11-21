@@ -10,4 +10,12 @@ import org.springframework.scheduling.annotation.EnableScheduling;
     name = "sutura.scheduling.enabled",
     havingValue = "true",
     matchIfMissing = true)
-public class SchedulingConfig {}
+public class SchedulingConfig {
+    @org.springframework.context.annotation.Bean(name = "taskScheduler")
+    public org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler taskScheduler() {
+        var scheduler = new org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler();
+        scheduler.setPoolSize(1);
+        scheduler.setThreadNamePrefix("scheduled-");
+        return scheduler;
+    }
+}

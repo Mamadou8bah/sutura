@@ -23,6 +23,8 @@ public class TransactionMapper {
                 .amount(transaction.getAmount())
                 .currency(transaction.getCurrency())
                 .description(transaction.getDescription())
+                .sentinelRecommendation(transaction.getSentinelRecommendation())
+                .failureReason(transaction.getFailureReason())
                 .reversible(isReversible(transaction))
                 .createdAt(transaction.getCreatedAt())
                 .updatedAt(transaction.getUpdatedAt())

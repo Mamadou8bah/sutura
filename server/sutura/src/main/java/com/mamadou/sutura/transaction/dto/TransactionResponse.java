@@ -20,6 +20,8 @@ public class TransactionResponse {
     private BigDecimal amount;
     private String currency;
     private String description;
+    private String sentinelRecommendation;
+    private String failureReason;
     private boolean reversible;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
