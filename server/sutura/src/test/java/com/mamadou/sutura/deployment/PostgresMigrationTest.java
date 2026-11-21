@@ -72,7 +72,9 @@ class PostgresMigrationTest {
               .load();
       assertThrows(org.flywaydb.core.api.FlywayException.class, adoption::migrate);
       adoption.baseline();
-      assertEquals(15, adoption.migrate().migrationsExecuted);
+      int pending = adoption.info().pending().length;
+      assertTrue(pending > 0);
+      assertEquals(pending, adoption.migrate().migrationsExecuted);
       try (var result =
           statement.executeQuery(
               "select count(*) from "
@@ -93,7 +95,7 @@ class PostgresMigrationTest {
 
   @Test
   void freshDatabaseMigratesAndHibernateValidates() {
-    assertEquals("16", flyway.info().current().getVersion().toString());
+    assertEquals("18", flyway.info().current().getVersion().toString());
     assertEquals(0, flyway.migrate().migrationsExecuted);
     assertTrue(
         jdbc.queryForObject(
@@ -101,5 +103,6 @@ class PostgresMigrationTest {
                     + " table_name='users'",
                 Integer.class)
             > 0);
+    assertNotNull(jdbc.queryForObject("select to_regclass('public.transfer_jobs')::text", String.class));
   }
 }
