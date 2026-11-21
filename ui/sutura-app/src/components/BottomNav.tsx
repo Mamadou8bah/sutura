@@ -41,7 +41,7 @@ export function BottomNav({ active, onChange }: { active: TabId; onChange: (tab:
         const selected = active === item.id;
         const central = item.id === "actions";
         const tint = selected ? colors.accentText : colors.slate500;
-        return <Pressable key={item.id} accessibilityRole={central ? "button" : "tab"} accessibilityLabel={item.label}
+        return <Pressable quiet key={item.id} accessibilityRole={central ? "button" : "tab"} accessibilityLabel={item.label}
           aria-selected={central ? undefined : selected}
           accessibilityState={central ? { expanded: sheet === "actions" } : { selected }}
           onPress={() => {

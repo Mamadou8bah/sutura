@@ -1,3 +1,4 @@
+import { useWebKeyboardFrame } from "./src/hooks/useWebKeyboardFrame";
 import { DeviceLockProvider } from "./src/context/DeviceLockContext";
 import { FirstLaunchGate } from "./src/components/FirstLaunchGate";
 import { BottomNav, merchantTabs } from "./src/components/BottomNav";
@@ -113,5 +114,6 @@ export default function App() { return <SafeAreaProvider><ThemeProvider><AppFram
 
 function AppFrame() {
   const { colors } = useTheme();
-  return <PlatformSafeAreaView edges={["bottom", "left", "right"]} style={{ flex: 1, backgroundColor: colors.background }}><ThemedApp /></PlatformSafeAreaView>;
+  const keyboardFrame = useWebKeyboardFrame();
+  return <PlatformSafeAreaView edges={["bottom", "left", "right"]} style={[{ flex: 1, backgroundColor: colors.background }, keyboardFrame]}><ThemedApp /></PlatformSafeAreaView>;
 }

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
 import { NativeInput, NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { PrimaryButton, Screen } from "../components/ui";
 import { useTheme } from "../context/ThemeContext";
@@ -46,35 +45,30 @@ export function VerificationCodeScreen({ value, onChange, onSubmit, onBack, busy
   onBack: () => void; busy: boolean; error: string;
 }) {
   const { colors } = useTheme();
-  return <View style={styles.screen}>
-    <LinearGradient pointerEvents="none" accessible={false} style={StyleSheet.absoluteFill}
-      colors={[colors.background, colors.walletHighlight, colors.walletSurface]} locations={[0, 0.52, 1]} />
-    <Screen transparent>
-      <Pressable accessibilityRole="button" accessibilityLabel="Back to sign in" disabled={busy}
-        onPress={onBack} style={[styles.back, { backgroundColor: colors.surface }]}>
-        <Ionicons name="chevron-back" size={20} color={colors.primary} />
-      </Pressable>
-      <View style={styles.content}>
-        <View style={styles.intro}>
-          <View style={[styles.icon, { backgroundColor: colors.surface }]}>
-            <Ionicons name="mail-outline" size={23} color={colors.accentText} />
-          </View>
-          <Text accessibilityRole="header" style={styles.title}>Verify your account</Text>
-          <Text style={[styles.description, { color: colors.slate500 }]}>
-            Enter the six-digit code sent to your email. It expires in five minutes.
-          </Text>
+  return <Screen>
+    <Pressable accessibilityRole="button" accessibilityLabel="Back to sign in" disabled={busy}
+      onPress={onBack} style={[styles.back, { backgroundColor: colors.surface }]}>
+      <Ionicons name="chevron-back" size={20} color={colors.primary} />
+    </Pressable>
+    <View style={styles.content}>
+      <View style={styles.intro}>
+        <View style={[styles.icon, { backgroundColor: colors.surface }]}>
+          <Ionicons name="mail-outline" size={23} color={colors.accentText} />
         </View>
-        <VerificationCodeInput value={value} onChange={onChange} onSubmit={onSubmit} busy={busy} autoFocus />
-        {!!error && <Text accessibilityRole="alert" style={[styles.error, { color: colors.dangerFg }]}>{error}</Text>}
-        <PrimaryButton loading={busy} label={busy ? "Verifying…" : "Verify and continue"}
-          disabled={busy || !/^[0-9]{6}$/.test(value)} onPress={onSubmit} />
+        <Text accessibilityRole="header" style={styles.title}>Verify your account</Text>
+        <Text style={[styles.description, { color: colors.slate500 }]}>
+          Enter the six-digit code sent to your email. It expires in five minutes.
+        </Text>
       </View>
-    </Screen>
-  </View>;
+      <VerificationCodeInput value={value} onChange={onChange} onSubmit={onSubmit} busy={busy} autoFocus />
+      {!!error && <Text accessibilityRole="alert" style={[styles.error, { color: colors.dangerFg }]}>{error}</Text>}
+      <PrimaryButton loading={busy} label={busy ? "Verifying…" : "Verify and continue"}
+        disabled={busy || !/^[0-9]{6}$/.test(value)} onPress={onSubmit} />
+    </View>
+  </Screen>;
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1 },
   back: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
   content: { gap: 20, maxWidth: 420, width: "100%", alignSelf: "center" },
   intro: { alignItems: "center", gap: 10, paddingTop: 12 },
@@ -87,6 +81,8 @@ const styles = StyleSheet.create({
     borderRadius: 10, borderWidth: 1 },
   digit: { fontSize: 22, fontWeight: "500", textAlign: "center" },
   cursor: { position: "absolute", width: 1, height: 20 },
-  input: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", padding: 0, color: "transparent", backgroundColor: "transparent" },
+  // Keep the real input available for the keyboard and autofill. Only the
+  // slots paint digits, even while an autofill or native text style is active.
+  input: { position: "absolute", top: 0, left: 0, width: "100%", height: "100%", opacity: 0 },
   error: { fontSize: 14, lineHeight: 20 },
 });

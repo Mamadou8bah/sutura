@@ -8,16 +8,16 @@
  * are always paired with a dot and a label (see StatusPill).
  */
 export const colors = {
-  background: "#fff9f4",
-  walletSurface: "#ffdfc5",
-  walletHighlight: "#fff5ec",
+  background: "#ffffff",
+  walletSurface: "#ffffff",
+  walletHighlight: "#ffffff",
   actionFill: "#b8390c",
   actionInk: "#ffffff",
-  walletInk: "#482a18",
-  walletMuted: "#765642",
+  walletInk: "#1c1c1e",
+  walletMuted: "#5b6577",
   surface: "#ffffff",
-  surfaceMuted: "#f7eee7",
-  border: "#e9d9ce",
+  surfaceMuted: "#f5f5f7",
+  border: "#e1e1e6",
   primary: "#1c1c1e",
   primaryDark: "#111315",
   primaryMid: "#343a40",
@@ -33,7 +33,7 @@ export const colors = {
   slate900: "#0f172a",
   slate800: "#1e293b",
   slate700: "#334155",
-  /** Secondary text: 5.4:1 on surfaceMuted. */
+  /** Secondary text on neutral surfaces. */
   slate500: "#5b6577",
   /** Icons and hairline glyphs only, never body text. */
   slate400: "#7c8595",

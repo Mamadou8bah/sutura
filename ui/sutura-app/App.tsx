@@ -1,4 +1,4 @@
-import { LinearGradient } from "expo-linear-gradient";
+import { useWebKeyboardFrame } from "./src/hooks/useWebKeyboardFrame";
 import { DeviceLockProvider } from "./src/context/DeviceLockContext";
 import { FirstLaunchGate } from "./src/components/FirstLaunchGate";
 import { CreateWalletScreen } from "./src/screens/CreateWalletScreen";
@@ -77,8 +77,6 @@ function MainApp() {
 
     <View style={styles.safeArea}>
 
-      {tab === "home" && <LinearGradient colors={[colors.background, colors.walletHighlight, colors.walletSurface]}
-        locations={[0, 0.48, 1]} pointerEvents="none" style={StyleSheet.absoluteFill} />}
       <StatusBar style={mode === "dark" ? "light" : "dark"} />
 
       <View style={styles.body}>
@@ -181,5 +179,6 @@ export default function App() { return <SafeAreaProvider><ThemeProvider><AppFram
 
 function AppFrame() {
   const { colors } = useTheme();
-  return <PlatformSafeAreaView edges={["bottom", "left", "right"]} style={{ flex: 1, backgroundColor: colors.background }}><ThemedApp /></PlatformSafeAreaView>;
+  const keyboardFrame = useWebKeyboardFrame();
+  return <PlatformSafeAreaView edges={["bottom", "left", "right"]} style={[{ flex: 1, backgroundColor: colors.background }, keyboardFrame]}><ThemedApp /></PlatformSafeAreaView>;
 }

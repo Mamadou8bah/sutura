@@ -1,3 +1,4 @@
+import { useWebKeyboardFrame } from "../hooks/useWebKeyboardFrame";
 import { useEffect, useState, type ReactNode } from "react";
 import { KeyboardScrollView as ScrollView } from "./KeyboardScrollView";
 import { AccessibilityInfo, Modal, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, View} from "react-native";
@@ -8,6 +9,7 @@ export function SelectionSheet({ visible, title, onClose, children }: {
   visible: boolean; title: string; onClose: () => void; children: ReactNode;
 }) {
   const { colors } = useTheme();
+  const keyboardFrame = useWebKeyboardFrame();
   const [reduceMotion, setReduceMotion] = useState(true);
   useEffect(() => {
     let active = true;
@@ -16,7 +18,7 @@ export function SelectionSheet({ visible, title, onClose, children }: {
     return () => { active = false; listener.remove(); };
   }, []);
   return <Modal visible={visible} transparent animationType={reduceMotion ? "fade" : "slide"} presentationStyle="overFullScreen" onRequestClose={onClose}>
-    <SafeAreaProvider><KeyboardAvoidingView style={styles.overlay} behavior={Platform.OS === "ios" ? "padding" : undefined}>
+    <SafeAreaProvider><KeyboardAvoidingView style={[styles.overlay, keyboardFrame]} behavior={Platform.OS === "ios" ? "padding" : undefined}>
       <Pressable accessibilityRole="button" accessibilityLabel="Dismiss selection" onPress={onClose} style={StyleSheet.absoluteFill} />
       <SafeAreaView edges={["bottom", "left", "right"]} accessibilityViewIsModal style={[styles.sheet, { backgroundColor: colors.surface }]}>
         <View style={[styles.inner, styles.header]}><Text accessibilityRole="header" style={{ flex: 1, fontSize: 22, lineHeight: 28, fontWeight: "600", color: colors.primary }}>{title}</Text>

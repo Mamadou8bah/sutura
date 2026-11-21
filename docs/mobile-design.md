@@ -65,11 +65,11 @@ with isolated API fixtures. Fixtures and screenshots stay outside the repositori
 Browser results do not establish native motion quality or Dynamic Type behavior.
 Review those on physical iOS and Android devices before release.
 
-## Warm orange mobile surfaces
+## Mobile surfaces and orange accents
 
-The customer, agent and merchant apps use warm light and dark canvases, an
-opaque peach-to-orange gradient on the balance or daily summary, and a rounded
-navigation dock. Scan and Collect use a high-contrast orange circle inside
+The customer, agent and merchant apps use a white canvas, balance or daily
+summary, and rounded navigation dock in light mode. Muted surfaces use neutral
+gray. Dark mode uses its own surface palette. Scan and Collect use a high-contrast orange circle inside
 the dock. Customer shortcuts sit below the balance so the amount can be
 scanned independently. Recent activity is grouped on a neutral surface across
 the three roles. Status colors keep their existing meanings.

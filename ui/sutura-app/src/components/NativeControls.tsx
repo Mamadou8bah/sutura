@@ -37,15 +37,19 @@ export const NativeInput = forwardRef<NativeInput, TextInputProps>((props, ref) 
     selectionColor={props.selectionColor ?? colors.orange} underlineColorAndroid={props.underlineColorAndroid ?? "transparent"}
     style={[{ color: colors.primary }, platformTextStyle(StyleSheet.flatten(props.style) ?? undefined)]} />;
 });
-export const NativePressable = forwardRef<ComponentRef<typeof View>, PressableProps>((props, ref) => {
+export const NativePressable = forwardRef<ComponentRef<typeof View>, PressableProps & { quiet?: boolean }>(({ quiet, ...props }, ref) => {
   const { colors } = useTheme();
   const [focused, setFocused] = useState(false);
   return <Pressable {...props} ref={ref}
-    onFocus={event => { setFocused(true); props.onFocus?.(event); }}
+    onFocus={event => {
+      const target = event.target as unknown as HTMLElement | null;
+      setFocused(!quiet || (Platform.OS === "web" && target?.matches?.(":focus-visible") === true));
+      props.onFocus?.(event);
+    }}
     onBlur={event => { setFocused(false); props.onBlur?.(event); }}
     style={state => [typeof props.style === "function" ? props.style(state) : props.style,
-      state.pressed && !props.disabled && { opacity: 0.72 },
-      Platform.OS === "web" && focused && { outlineStyle: "solid", outlineWidth: 2, outlineOffset: -2, outlineColor: colors.accentText }]} android_ripple={props.android_ripple ?? { color: colors.border, foreground: true }}
+      !quiet && state.pressed && !props.disabled && { opacity: 0.72 },
+      Platform.OS === "web" && focused && { outlineStyle: "solid", outlineWidth: 2, outlineOffset: -2, outlineColor: colors.accentText }]} android_ripple={quiet ? undefined : props.android_ripple ?? { color: colors.border, foreground: true }}
     hitSlop={props.hitSlop ?? 4} />;
 });
 

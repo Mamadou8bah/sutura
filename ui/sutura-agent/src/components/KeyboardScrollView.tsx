@@ -13,9 +13,25 @@ export const KeyboardScrollView = forwardRef<ComponentRef<typeof ScrollView>, Sc
   const keyboardTop = useRef<number | undefined>(undefined);
 
   const reveal = useCallback(() => {
-    if (Platform.OS === "web" || props.horizontal || !active.current) return;
+    if (props.horizontal || !active.current) return;
     const view = scroll.current;
     if (!view) return;
+    if (Platform.OS === "web") {
+      const viewport = window.visualViewport;
+      const field = document.activeElement;
+      const node = view.getScrollableNode() as unknown as HTMLElement | null;
+      if (!viewport || viewport.scale !== 1 || window.innerHeight - viewport.height <= 100
+        || !node || !field || !node.contains(field)
+        || !(field instanceof HTMLInputElement || field instanceof HTMLTextAreaElement)) return;
+      const bounds = node.getBoundingClientRect();
+      const fieldBounds = field.getBoundingClientRect();
+      const top = Math.max(bounds.top, viewport.offsetTop);
+      const bottom = Math.min(bounds.bottom, viewport.offsetTop + viewport.height);
+      if (bottom <= top) return;
+      const y = focusedScrollOffset(node.scrollTop, top, bottom, fieldBounds.top, fieldBounds.height);
+      if (Math.abs(y - node.scrollTop) > 1) view.scrollTo({ y, animated: false });
+      return;
+    }
     view.measureInWindow((_x, windowTop, _width, height) => {
       // Android measureInWindow excludes the status-bar origin; keyboard events
       // use screen coordinates. Compare them in the same coordinate space.
@@ -57,9 +73,20 @@ export const KeyboardScrollView = forwardRef<ComponentRef<typeof ScrollView>, Sc
 
   useEffect(() => {
     active.current = true;
-    if (Platform.OS === "web" || props.horizontal) return;
+    if (props.horizontal) return;
+    if (Platform.OS === "web") {
+      const viewport = window.visualViewport;
+      viewport?.addEventListener("resize", schedule);
+      const unsubscribe = subscribeKeyboardFocus(schedule);
+      return () => {
+        active.current = false;
+        viewport?.removeEventListener("resize", schedule);
+        unsubscribe();
+        timers.current.forEach(clearTimeout);
+      };
+    }
     keyboardTop.current = Keyboard.metrics()?.screenY;
-    const show = Keyboard.addListener("keyboardDidShow", event => { keyboardTop.current = event.endCoordinates.screenY; schedule(); });
+    const show = Keyboard.addListener(Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow", event => { keyboardTop.current = event.endCoordinates.screenY; schedule(); });
     const frame = Keyboard.addListener("keyboardWillChangeFrame", event => {
       // iOS emits this for predictive-text, keyboard type and hardware keyboard changes.
       keyboardTop.current = event.endCoordinates.height > 0 ? event.endCoordinates.screenY : undefined;
