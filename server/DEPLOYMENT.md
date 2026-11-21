@@ -417,3 +417,17 @@ The API key must belong to the Sutura tenant. Review, block, invalid responses
 and unreachable scoring stop the current pre-execution path. See
 [the integration contract](../docs/sentinel-integration.md) for configuration
 and the remaining durable-review and settlement work.
+# Sentinel scoring latency
+
+For the hosted Sutura → Sentinel → fraud-model chain, use
+`SUTURA_FRAUD_CONNECT_TIMEOUT_MS=5000` and `SUTURA_FRAUD_TIMEOUT_MS=30000`
+in Sutura's Render environment. These are also the application defaults. An
+existing Render environment value overrides the defaults, so replace any old
+`SUTURA_FRAUD_TIMEOUT_MS=2000` value. Local `.env` edits do not change Render.
+
+Sentinel uses `TRANSACTION_ML_CONNECT_TIMEOUT_MS=5000` and
+`TRANSACTION_ML_READ_TIMEOUT_MS=20000`. These deadlines allow ordinary hosted
+inference latency while keeping requests bounded. A service cold start may still
+exceed them; a timeout blocks the payment and never replays a wallet write.
+Logs include the underlying exception class to distinguish read timeouts from
+DNS, TLS and connection errors without exposing provider response bodies.

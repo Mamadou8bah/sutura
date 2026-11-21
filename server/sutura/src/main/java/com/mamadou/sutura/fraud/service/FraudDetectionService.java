@@ -75,6 +75,8 @@ public class FraudDetectionService {
       // status and correlation ID without copying untrusted response content.
       String failure = ex instanceof RestClientResponseException response
           ? "HTTP " + response.getStatusCode().value() : ex.getClass().getSimpleName();
+      // Only log the exception type: low-level messages can contain URLs or secrets.
+      if (ex.getCause() != null) failure += "/" + ex.getCause().getClass().getSimpleName();
       log.error("Fraud detection API unavailable for transaction {} ({})", transactionId, failure);
       throw new FraudBlockedException(
           "Transaction stopped: Sentinel unavailable or returned an invalid decision",

@@ -13,7 +13,7 @@ public class FraudDetectionConfig {
     @Primary
     public RestTemplate fraudDetectionRestTemplate(FraudDetectionProperties properties) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(properties.getTimeoutMs());
+        factory.setConnectTimeout(properties.getConnectTimeoutMs());
         factory.setReadTimeout(properties.getTimeoutMs());
         return new RestTemplate(factory);
     }

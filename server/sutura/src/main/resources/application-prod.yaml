@@ -212,7 +212,8 @@ sutura:
     connected: ${SUTURA_SENTINEL_CONNECTED:true}
     enabled: ${SUTURA_FRAUD_ENABLED:true}
     base-url: ${SUTURA_SENTINEL_BASE_URL:}
-    timeout-ms: ${SUTURA_FRAUD_TIMEOUT_MS:2000}
+    connect-timeout-ms: ${SUTURA_FRAUD_CONNECT_TIMEOUT_MS:5000}
+    timeout-ms: ${SUTURA_FRAUD_TIMEOUT_MS:30000}
     default-country: ${SUTURA_FRAUD_DEFAULT_COUNTRY:GM}
     default-channel: ${SUTURA_FRAUD_DEFAULT_CHANNEL:api}
     api-key: ${SUTURA_SENTINEL_API_KEY}

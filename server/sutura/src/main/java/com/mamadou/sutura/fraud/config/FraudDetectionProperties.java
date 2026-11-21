@@ -13,7 +13,8 @@ public class FraudDetectionProperties {
     /** Whether the separately deployed Sentinel service is configured and ready. */
     private boolean connected = true;
     private String baseUrl = "http://localhost:8080";
-    private int timeoutMs = 2000;
+    private int connectTimeoutMs = 5000;
+    private int timeoutMs = 30000;
     private String defaultCountry = "GM";
     private String defaultChannel = "api";
     /** Sentinel tenant credential sent as X-Api-Key. */
