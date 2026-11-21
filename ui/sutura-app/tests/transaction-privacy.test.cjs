@@ -15,7 +15,7 @@ test('hiding wallet balances leaves transaction amounts and their accessible lab
       if (name.endsWith('WalletContext')) return { useWallet: () => ({ balanceHidden: true, openTransaction() {} }) };
       if (name.endsWith('Money')) return { Money: 'Money' };
       if (name.endsWith('StatusPill')) return { StatusPill: 'Status', statusLabel: value => value };
-      if (name.endsWith('transactionDetails')) return { transactionTypeLabel: () => 'Sent' };
+      if (name.endsWith('transactionDetails')) return { transactionTypeLabel: () => 'Sent', transactionStatusLabel: value => value };
       if (name.endsWith('format')) return { formatMoney: () => 'GMD 100.00', formatTimestamp: () => 'Today' };
       if (name.endsWith('theme')) return { fonts: {}, type: {} };
       throw Error(name);

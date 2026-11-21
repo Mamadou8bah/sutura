@@ -17,6 +17,8 @@ import type {
 import type { OpResult } from "../types/operation";
 import { buildAgentQrPayload } from "../utils/agentQr";
 import { formatFraudError } from "../utils/fraudErrors";
+import { randomUUID } from "expo-crypto";
+import { pendingTransfers, reconcileTransfers, restoreTransferActivity, toActivity, type TransferIntent } from "../utils/transferActivity";
 
 const EMPTY_DASHBOARD: CustomerDashboardData = {
   session: { name: "", phone: "", email: "", address: "" },
@@ -74,6 +76,28 @@ const WalletContext = createContext<WalletContextValue | null>(null);
 export function WalletProvider({ children }: { children: ReactNode }) {
   const { session, newlyRegistered } = useAuth();
   const [data, setData] = useState(EMPTY_DASHBOARD);
+  const activeOwner = useRef(session?.username);
+  activeOwner.current = session?.username;
+  const submissions = useMemo(() => {
+    const scope = `customer-transfers:${session?.username ?? "signed-out"}`;
+    const state = { scope, items: [] as TransferIntent[], ready: Promise.resolve() };
+    state.ready = session?.username ? loadSnapshot<TransferIntent[]>(scope).then(saved => {
+      if (Array.isArray(saved?.data)) state.items = saved.data.map(t => t.submissionState === "sending"
+        ? { ...t, submissionState: "uncertain" as const, status: "UNKNOWN" as const } : t);
+    }).catch(() => undefined) : Promise.resolve();
+    return state;
+  }, [session?.username]);
+  useEffect(() => {
+    let cancelled = false;
+    void submissions.ready.then(() => {
+      if (cancelled) return;
+      setData(current => {
+        const transactions = restoreTransferActivity(current.transactions, submissions.items);
+        return { ...current, transactions, pendingCount: pendingTransfers(transactions) };
+      });
+    });
+    return () => { cancelled = true; };
+  }, [submissions]);
   const [loading, setLoading] = useState(false);
   const [refreshError, setRefreshError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
@@ -101,12 +125,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const scope = session?.username ? `customer:${session.username}` : null;
     if (scope) void loadSnapshot<CustomerDashboardData>(scope).then(saved => {
       if (cancelled || freshData.current || !saved || !Array.isArray(saved.data?.wallets) || !Array.isArray(saved.data?.transactions)) return;
-      setData(saved.data); setLoaded(true); setLastUpdated(new Date(saved.savedAt));
+      const transactions = restoreTransferActivity(saved.data.transactions, submissions.items);
+      setData({ ...saved.data, transactions, pendingCount: pendingTransfers(transactions) });
+      setLoaded(true); setLastUpdated(new Date(saved.savedAt));
       setRefreshError("Showing saved data. Reconnect to confirm current balances.");
       setSelectedWalletId(saved.data.wallets[0]?.id ?? 0);
     }).catch(() => undefined);
     return () => { cancelled = true; };
-  }, [session?.username]);
+  }, [session?.username, submissions]);
   const refreshGeneration=useRef(0);
   useEffect(()=>()=>{refreshGeneration.current++;},[session?.username]);
   const refreshData = useCallback(async (silent = false) => {
@@ -117,6 +143,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const request=++refreshGeneration.current;
     if (!silent) setLoading(true);
     try {
+      await submissions.ready;
       const [{ wallets, balances }, transactions] = await Promise.all([
         api.listWallets().then(async wallets => ({
           wallets,
@@ -125,6 +152,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         api.listTransactions(),
       ]);
       if(request!==refreshGeneration.current)return;
+      const activity = reconcileTransfers(transactions.map(t => toActivity(t, wallets.map(w => w.id))), submissions.items);
+      submissions.items = activity.unresolved;
+      void saveSnapshot(submissions.scope, submissions.items).catch(() => undefined);
       const next: CustomerDashboardData = {
         session: {
           name:
@@ -145,25 +175,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           dailyUsed: 0,
           kind: i === 0 ? "primary" : "secondary",
         })),
-        transactions: transactions.map((t) => ({
-          id: String(t.id),
-          reference: t.reference,
-          type: (t.type.includes("TRANSFER") && t.sourceWalletId
-            ? "TRANSFER_OUT"
-            : t.type.includes("TRANSFER")
-              ? "TRANSFER_IN"
-              : t.type.includes("DEPOSIT")
-                ? "DEPOSIT"
-                : "WITHDRAWAL") as CustomerTransaction["type"],
-          counterparty: t.description || t.reference,
-          amount: Number(t.amount),
-          currency: t.currency,
-          status: t.status as CustomerTransaction["status"],
-          method: "Sutura",
-          category: t.type,
-          time: t.createdAt,
-        })),
-        pendingCount: transactions.filter((t) => t.status === "PENDING").length,
+        transactions: activity.transactions,
+        pendingCount: pendingTransfers(activity.transactions),
         contacts: [],
       };
       freshData.current = true;
@@ -185,13 +198,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } finally {
       if(request===refreshGeneration.current){setLoading(false);setLoaded(true);}
     }
-  }, [session?.username, session?.firstName, session?.lastName]);
+  }, [session?.username, session?.firstName, session?.lastName, submissions]);
 
   useEffect(() => {
     void refreshData();
   }, [refreshData]);
 
-  useAutoRefresh(() => refreshData(true),!!session?.accessToken);
+  useAutoRefresh(() => refreshData(true),!!session?.accessToken,
+    data.transactions.some(t => t.status === "PROCESSING") ? 5000 : 30000);
 
   const toggleBalanceHidden = useCallback(() => {
     setBalanceHidden((prev) => !prev);
@@ -215,7 +229,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const selectedTransaction = useMemo(
-    () => (selectedTransactionId ? data.transactions.find((t) => t.id === selectedTransactionId) ?? null : null),
+    () => (selectedTransactionId ? data.transactions.find((t) => t.id === selectedTransactionId || t.reference === selectedTransactionId) ?? null : null),
     [data.transactions, selectedTransactionId],
   );
 
@@ -246,23 +260,73 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         if (!phone) {
           return { ok: false, error: "Enter a valid recipient phone number, including its country code" };
         }
-        const transfer = await api.createTransfer({
+        await submissions.ready;
+        if (activeOwner.current !== session?.username) return { ok: false, error: "Sign in again to send money." };
+        if (submissions.items.some(t => t.status !== "FAILED" && t.counterparty === `Transfer to ${phone}` && t.amount === amount && t.currency === wallet.currency))
+          return { ok: false, error: "This transfer is already being submitted. Check Activity before sending again." };
+        const reference = `xfer_${randomUUID()}`;
+        const intent: TransferIntent = {
+          id: reference, reference, type: "TRANSFER_OUT", counterparty: `Transfer to ${phone}`,
+          amount, currency: wallet.currency, time: new Date().toISOString(), method: "Sutura", category: "TRANSFER",
+          status: "PROCESSING", submissionState: "sending",
+        };
+        submissions.items = [intent, ...submissions.items];
+        // Persist the reference before dispatch. Recovery only reads; it never resends money.
+        try { await saveSnapshot(submissions.scope, submissions.items); }
+        catch {
+          submissions.items = submissions.items.filter(t => t.reference !== reference);
+          return { ok: false, error: "Could not save this request safely. Try again." };
+        }
+        if (activeOwner.current !== session?.username) {
+          submissions.items = submissions.items.filter(t => t.reference !== reference);
+          void saveSnapshot(submissions.scope, submissions.items).catch(() => undefined);
+          return { ok: false, error: "Sign in again to send money." };
+        }
+        setData(current => {
+          const transactions = [intent, ...current.transactions];
+          return { ...current, transactions, pendingCount: pendingTransfers(transactions) };
+        });
+        setTab("home");
+        void api.createTransfer({
           sourceWalletId: walletId,
           recipientPhone: phone,
           amount,
           description: `Transfer to ${phone}`,
-          reference: `xfer_${Date.now()}`,
-        });
-        await refreshData();
-        if (transfer.transaction.status === "FAILED") return { ok: false, error: "Transfer was declined. No money was sent." };
-        if (transfer.transaction.status === "PENDING") return { ok: false, error: "Transfer is pending compliance review. No money has been sent. Check activity for the result." };
-        setTab("home");
+          reference,
+        }).then(transfer => {
+          const transaction = toActivity(transfer.transaction, data.wallets.map(w => w.id));
+          submissions.items = submissions.items.map(t => t.reference === reference
+            ? { ...transaction, submissionState: "accepted" } : t);
+          if (activeOwner.current === session?.username) {
+            setData(current => {
+              const existing = current.transactions.find(t => t.reference === reference);
+              if (existing && ["COMPLETED", "FAILED", "REVERSED"].includes(existing.status)) return current;
+              const transactions = [transaction, ...current.transactions.filter(t => t.reference !== reference)];
+              return { ...current, transactions, pendingCount: pendingTransfers(transactions) };
+            });
+            void refreshData(true);
+          }
+        }).catch((error: unknown) => {
+          const code = (error as { status?: number })?.status;
+          const rejected = code !== undefined && [400, 403, 404, 409, 422].includes(code);
+          const status = rejected ? "FAILED" as const : "UNKNOWN" as const;
+          const failureReason = rejected ? formatFraudError(error instanceof Error ? error.message : "Transfer was not accepted. No money was sent.") : undefined;
+          submissions.items = submissions.items.map(t => t.reference === reference
+            ? { ...t, submissionState: "uncertain", status, failureReason } : t);
+          if (activeOwner.current === session?.username) {
+            setData(current => {
+              const transactions = current.transactions.map(t => t.id === reference ? { ...t, status, failureReason } : t);
+              return { ...current, transactions, pendingCount: pendingTransfers(transactions) };
+            });
+            void refreshData(true);
+          }
+        }).finally(() => { void saveSnapshot(submissions.scope, submissions.items).catch(() => undefined); });
         return { ok: true };
       } catch (err) {
         return { ok: false, error: formatFraudError(err instanceof Error ? err.message : "Transfer failed") };
       }
     },
-    [data.wallets, refreshData, requireAuth, selectedWallet, selectedWalletId, session],
+    [data.wallets, refreshData, requireAuth, selectedWallet, selectedWalletId, session, submissions],
   );
 
   const topUp = useCallback(

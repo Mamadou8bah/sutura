@@ -1,8 +1,9 @@
 export type CustomerTransactionType = "TRANSFER_IN" | "TRANSFER_OUT" | "DEPOSIT" | "WITHDRAWAL";
 
-export type TransactionStatus = "COMPLETED" | "PENDING" | "FAILED" | "AWAITING_AGENT";
+export type TransactionStatus = "COMPLETED" | "PENDING" | "FAILED" | "AWAITING_AGENT" | "PROCESSING" | "UNDER_REVIEW" | "UNKNOWN" | "REVERSED";
 
 export type CustomerTransaction = {
+  failureReason?: string;
   reference?: string;
   id: string;
   type: CustomerTransactionType;

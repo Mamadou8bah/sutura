@@ -23,6 +23,10 @@ export function transactionStatusLabel(status: TransactionStatus): string {
       return "Failed";
     case "AWAITING_AGENT":
       return "Awaiting agent";
+    case "PROCESSING": return "Processing";
+    case "UNKNOWN": return "Check status";
+    case "UNDER_REVIEW": return "Under review";
+    case "REVERSED": return "Reversed";
   }
 }
 

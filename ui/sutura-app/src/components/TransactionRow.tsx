@@ -7,8 +7,8 @@ import { fonts, type, type ThemeColors } from "../theme";
 import type { CustomerTransaction } from "../types";
 import { formatMoney, formatTimestamp } from "../utils/format";
 import { Money } from "./Money";
-import { StatusPill, statusLabel } from "./StatusPill";
-import { transactionTypeLabel } from "../utils/transactionDetails";
+import { StatusPill } from "./StatusPill";
+import { transactionTypeLabel, transactionStatusLabel } from "../utils/transactionDetails";
 
 export function TransactionRow({ txn, onPress }: { txn: CustomerTransaction; onPress?: () => void }) {
   const { colors } = useTheme();
@@ -19,7 +19,7 @@ export function TransactionRow({ txn, onPress }: { txn: CustomerTransaction; onP
   const amountText = `${isCredit ? "plus" : "minus"} ${formatMoney(txn.amount, txn.currency)}`;
 
   return <Pressable accessibilityRole="button"
-    accessibilityLabel={`${transactionTypeLabel(txn.type)}, ${txn.counterparty}, ${amountText}, ${statusLabel(txn.status)}, ${formatTimestamp(txn.time)}`}
+    accessibilityLabel={`${transactionTypeLabel(txn.type)}, ${txn.counterparty}, ${amountText}, ${transactionStatusLabel(txn.status)}, ${formatTimestamp(txn.time)}`}
     accessibilityHint="Opens transaction details"
     onPress={onPress ?? (() => openTransaction(txn.id))} style={styles.row}>
     <View style={styles.icon}><Ionicons name={txn.type === "DEPOSIT" ? "add-outline" : txn.type === "WITHDRAWAL" ? "cash-outline" : isCredit ? "arrow-down-outline" : "arrow-up-outline"} size={20} color={colors.primary} /></View>
@@ -29,7 +29,7 @@ export function TransactionRow({ txn, onPress }: { txn: CustomerTransaction; onP
     </View>
     <View style={styles.right}>
       <Money amount={txn.amount} currency={txn.currency} sign={sign} style={[styles.amount, isCredit && { color: colors.successFg }]} />
-      {txn.status !== "COMPLETED" ? <StatusPill status={txn.status} plain /> : null}
+      {txn.status !== "COMPLETED" ? <StatusPill status={txn.status} label={transactionStatusLabel(txn.status)} tone={txn.status === "UNKNOWN" ? "warning" : undefined} plain /> : null}
     </View>
   </Pressable>;
 }

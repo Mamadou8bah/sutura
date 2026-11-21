@@ -44,6 +44,8 @@ export type TransactionResponse = {
   amount: number;
   currency: string;
   description: string;
+  sentinelRecommendation?: string;
+  failureReason?: string;
   createdAt: string;
   sourceWalletId?: number;
   destinationWalletId?: number;
@@ -130,10 +132,14 @@ export const api = {
     description?: string;
     reference?: string;
   }) =>
-    authRequest<TransferResponse>("/api/v1/transfers", {
+    authFetch("/api/v1/transfers/queued", {
       method: "POST",
       headers: payload.reference ? { "Idempotency-Key": payload.reference } : {},
       body: JSON.stringify(payload),
+    }).then(async response => {
+      try { return await readAuthJson<TransferResponse>(response); }
+      catch (error) { throw Object.assign(error instanceof Error ? error : new Error("Could not read transfer response"),
+        { status: response.ok ? undefined : response.status }); }
     }),
 
   createDeposit: (payload: {

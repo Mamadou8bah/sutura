@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { transferStatusMessage } from "../utils/transferActivity";
+import { transactionStatusLabel } from "../utils/transactionDetails";
 import { StyleSheet, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { useTheme, useThemedStyles } from "../context/ThemeContext";
@@ -62,7 +64,7 @@ function TransactionReceipt({ txn, onClose, owner }: {
         </View>
         <Money amount={txn.amount} currency={txn.currency} sign={credit ? "+" : "−"} style={styles.amount} />
         <Text style={styles.counterparty}>{txn.counterparty}</Text>
-        <View><StatusPill status={txn.status} /></View>
+        <View><StatusPill status={txn.status} label={transactionStatusLabel(txn.status)} tone={txn.status === "UNKNOWN" ? "warning" : undefined} /></View>
       </View>
       <View style={styles.details}>
         <DetailRow label="Date and time" value={formatTimestamp(txn.time)} />
@@ -70,9 +72,10 @@ function TransactionReceipt({ txn, onClose, owner }: {
         <DetailRow label="Payment method" value={txn.method} />
         <DetailRow label="Reference" value={txn.reference ?? txn.id} />
       </View>
+      {transferStatusMessage(txn) && <Text accessibilityLiveRegion="polite" style={styles.detailLabel}>{transferStatusMessage(txn)}</Text>}
       {shareError && <Text accessibilityRole="alert" style={styles.shareError}>{shareError}</Text>}
-      <PrimaryButton label={sharing ? "Preparing receipt…" : "Share PDF receipt"} loading={sharing}
-        disabled={sharing} onPress={() => void shareReceipt()} />
+      {txn.status === "COMPLETED" && <PrimaryButton label={sharing ? "Preparing receipt…" : "Share PDF receipt"} loading={sharing}
+        disabled={sharing} onPress={() => void shareReceipt()} />}
     </View>
   </SelectionSheet>;
 }
