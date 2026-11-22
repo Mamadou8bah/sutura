@@ -30,9 +30,12 @@ public class AdminOperationsController {
  private final TransactionRepository transactions;
  private final KycVerificationRepository verification;
  private final com.mamadou.sutura.audit.repository.AuditLogRepository audit;
+ private final com.mamadou.sutura.admin.service.AdminPaymentRiskService paymentRisk;
  public record Entry(long id,String reference,String name,String kind,String status,BigDecimal amount,String currency,Long accountId,Long agentId,String detail,LocalDateTime createdAt){}
  @GetMapping("/payments") @Transactional(readOnly=true)
- public Page<com.mamadou.sutura.transaction.dto.TransactionResponse> payments(@RequestParam(defaultValue="0") int page){if(page<0||page>100000)throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid page");return transactions.findAll(PageRequest.of(page,50,Sort.by(Sort.Direction.DESC,"id"))).map(t->com.mamadou.sutura.transaction.dto.TransactionResponse.builder().id(t.getId()).reference(t.getReference()).type(t.getType()).status(t.getStatus()).sourceWalletId(t.getSourceWallet()==null?null:t.getSourceWallet().getId()).destinationWalletId(t.getDestinationWallet()==null?null:t.getDestinationWallet().getId()).amount(t.getAmount()).currency(t.getCurrency()).description(t.getDescription()).createdAt(t.getCreatedAt()).updatedAt(t.getUpdatedAt()).build());}
+ public com.mamadou.sutura.admin.dto.AdminPageResponse<com.mamadou.sutura.admin.dto.AdminPaymentResponse> payments(@RequestParam(defaultValue="0") int page){return com.mamadou.sutura.admin.dto.AdminPageResponse.from(paymentRisk.payments(page));}
+ @GetMapping("/payments/{id}/risk")
+ public com.mamadou.sutura.admin.service.AdminPaymentRiskService.History paymentRisk(@PathVariable Long id,@RequestParam(defaultValue="0") int page){return paymentRisk.history(id,page);}
  public record MerchantDecision(String decision,String reason){}
  @PostMapping("/merchants/{id}/decision") @Transactional
  public java.util.Map<String,String> decideMerchant(@PathVariable Long id,@RequestBody MerchantDecision request,@org.springframework.security.core.annotation.AuthenticationPrincipal com.mamadou.sutura.user.entity.User admin){

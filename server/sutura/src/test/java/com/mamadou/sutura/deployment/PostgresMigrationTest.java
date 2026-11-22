@@ -95,7 +95,7 @@ class PostgresMigrationTest {
 
   @Test
   void freshDatabaseMigratesAndHibernateValidates() {
-    assertEquals("18", flyway.info().current().getVersion().toString());
+    assertEquals("19", flyway.info().current().getVersion().toString());
     assertEquals(0, flyway.migrate().migrationsExecuted);
     assertTrue(
         jdbc.queryForObject(
@@ -104,5 +104,7 @@ class PostgresMigrationTest {
                 Integer.class)
             > 0);
     assertNotNull(jdbc.queryForObject("select to_regclass('public.transfer_jobs')::text", String.class));
+    assertNotNull(jdbc.queryForObject("select to_regclass('public.idx_fraud_eval_payment_latest')::text", String.class));
+    assertNotNull(jdbc.queryForObject("select to_regclass('public.idx_fraud_eval_reference_latest')::text", String.class));
   }
 }

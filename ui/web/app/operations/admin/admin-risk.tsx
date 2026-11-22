@@ -17,11 +17,12 @@ import {
   useApiResource,
 } from "../../components/ui";
 import { DataTable } from "../../dashboard/data-table";
-import { ConfirmActionDrawer, IdEntry, RiskBadge, humanize } from "./admin-shared";
+import { ConfirmActionDrawer, IdEntry, RiskBadge, humanize, useAdminNav } from "./admin-shared";
 
 type FlagRow = RiskFlagResponse & Record<string, unknown>;
 
 export function AdminRisk() {
+  const nav = useAdminNav();
   const [walletInput, setWalletInput] = useState("");
   const [walletId, setWalletId] = useState<number | null>(null);
   const [resolving, setResolving] = useState<RiskFlagResponse | null>(null);
@@ -37,6 +38,7 @@ export function AdminRisk() {
     <div className="space-y-5">
       <PageHeading
         title="Risk"
+        action={<Button variant="secondary" onClick={() => nav("transactions")}>Transaction risk scores</Button>}
         description="Look up a wallet's open risk flags, resolve them with a reason, and check the fraud engine."
       />
 

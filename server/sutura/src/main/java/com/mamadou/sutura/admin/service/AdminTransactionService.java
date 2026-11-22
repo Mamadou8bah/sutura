@@ -54,10 +54,10 @@ public class AdminTransactionService {
     }
 
     public long getFailedTransactionCount() {
-        return transactionRepository.countByStatus("FAILED");
+        return transactionRepository.countByStatus(TransactionStatus.FAILED);
     }
 
     public long getPendingTransactionCount() {
-        return transactionRepository.countByStatus("PENDING");
+        return transactionRepository.countByStatus(TransactionStatus.PENDING);
     }
 }

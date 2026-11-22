@@ -70,5 +70,5 @@ public interface TransactionRepository
   long countByWallet(@Param("walletId") Long walletId);
 
   @Query("SELECT COUNT(t) FROM Transaction t WHERE t.status = :status")
-  long countByStatus(@Param("status") String status);
+  long countByStatus(@Param("status") com.mamadou.sutura.transaction.enums.TransactionStatus status);
 }

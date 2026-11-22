@@ -19,6 +19,7 @@ import {
 } from "../../components/ui";
 import { DataTable } from "../../dashboard/data-table";
 import { ConfirmActionDrawer, FilterChip, IdEntry, humanize, useAdminNav, useStatusFilter } from "./admin-shared";
+import { PaymentRiskDetails, RiskDecision, RiskScore } from "./payment-risk-details";
 
 type Row = AdminPayment & Record<string, unknown>;
 
@@ -67,7 +68,7 @@ export function AdminTransactions({ action }: { action?: string }) {
     <div className="space-y-5">
       <PageHeading
         title="Payments"
-        description="Transfers, deposits, withdrawals and merchant payments, newest first."
+        description="Payments and their latest risk decisions. Open a payment for failure reasons and model explanations."
         action={
           action ? (
             <Button variant="secondary" icon="chevron-left" onClick={() => nav("transactions")}>
@@ -170,6 +171,9 @@ export function AdminTransactions({ action }: { action?: string }) {
             exportValue: (r) => formatAmount(r.amount, r.currency),
           },
           { key: "status", label: "Status", sortValue: (r) => r.status, render: (r) => <StatusBadge status={r.status} /> },
+          { key: "riskScore", label: "Risk score", align: "right", sortValue: r => r.fraud?.score ?? -1, searchValue: r => r.fraud?.score == null ? "Not scored" : String(r.fraud.score * 100),
+            render: r => <RiskScore score={r.fraud?.score} />, exportValue: r => r.fraud?.score == null ? "Not scored" : String(r.fraud.score * 100) },
+          { key: "riskDecision", label: "Risk decision", searchValue: r => r.fraud?.decision ?? "Not assessed", render: r => <RiskDecision decision={r.fraud?.decision} />, exportValue: r => r.fraud?.decision ?? "Not assessed" },
           {
             key: "createdAt",
             label: "Created",
@@ -201,7 +205,7 @@ export function AdminTransactions({ action }: { action?: string }) {
         title={selected ? `Payment #${selected.id}` : ""}
         subtitle={selected ? humanize(selected.type) : undefined}
         footer={
-          selected && !["REVERSED", "REFUNDED"].includes(selected.status?.toUpperCase()) ? (
+          selected && selected.status?.toUpperCase() === "COMPLETED" ? (
             <Button
               variant="danger"
               icon="undo"
@@ -231,7 +235,7 @@ export function AdminTransactions({ action }: { action?: string }) {
                 { label: "Created", value: formatDateTime(selected.createdAt) },
               ]}
             />
-            <p className="text-xs text-ink-3">Ledger postings for a single payment aren't exposed by the admin API yet, so only the payment record is shown.</p>
+            <PaymentRiskDetails key={selected.id} payment={selected} />
           </div>
         ) : null}
       </Drawer>

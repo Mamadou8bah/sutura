@@ -13,6 +13,7 @@ import java.util.List;
 
 @Repository
 public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
+    long countBySuccessFalse();
 
     @Query("SELECT a FROM AuditLog a WHERE a.actorId = :actorId ORDER BY a.timestamp DESC")
     List<AuditLog> findByActorId(@Param("actorId") Long actorId);

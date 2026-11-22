@@ -50,6 +50,7 @@ export function AdminOverview() {
         action={
           <>
             <UpdatedAgo at={dashboard.loadedAt} />
+            <Button variant="secondary" onClick={() => nav("transactions")}>Payment risk</Button>
             <Button variant="secondary" icon="refresh" onClick={refresh} busy={dashboard.refreshing} busyLabel="Refreshing">
               Refresh
             </Button>

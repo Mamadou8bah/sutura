@@ -63,6 +63,21 @@ export type AdminPayment = {
   sourceWalletId: number | null;
   destinationWalletId: number | null;
   createdAt: string;
+  failureReason?: string | null;
+  sentinelRecommendation?: string | null;
+  fraud?: { evaluationId: number; decision: string; score: number | null; evaluatedAt: string } | null;
+};
+
+export type PaymentRiskEvaluation = {
+  id: number; decision: string; score: number | null; reasons: string[];
+  ruleTriggered: string | null; provider: string | null; providerTransactionId: string | null;
+  caseId: string | null; evaluatedAt: string; detailsReadable: boolean;
+  shapTopFeatures: { feature: string; value: number | null; contribution: number }[];
+};
+export type PaymentRiskHistory = {
+  transactionId: number; reference: string; failureReason: string | null;
+  sentinelRecommendation: string | null; evaluations: PaymentRiskEvaluation[];
+  page: number; totalPages: number; totalElements: number;
 };
 
 export type ReconciliationReportDto = {
@@ -104,6 +119,7 @@ export type ReconciliationStatusDto = {
 };
 
 export const adminApi = {
+  getPaymentRisk: (id: number, page = 0) => rawRequest<PaymentRiskHistory>(`/api/v1/admin/operations/payments/${id}/risk?page=${page}`),
   replayWebhook: (id: number, reason: string) =>
     rawRequest<{ accepted: boolean; status: string; message: string }>("/api/v1/webhooks/replay", {
       method: "POST",

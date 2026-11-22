@@ -145,6 +145,7 @@ public class AdminController {
     // ==================== DASHBOARD & METRICS ====================
 
     @GetMapping("/dashboard")
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ResponseEntity<AdminDashboardResponse> getDashboard() {
         log.info("Fetching admin dashboard");
 
@@ -160,7 +161,7 @@ public class AdminController {
         long criticalRiskFlags = riskFlagRepository.countByRiskLevelAndResolvedFalse(RiskLevel.CRITICAL);
 
         long unresolvedMismatches = adminReconciliationService.getUnresolvedMismatchesCount();
-        long failedOperations = auditLogRepository.findFailedOperations().size();
+        long failedOperations = auditLogRepository.countBySuccessFalse();
 
         // Operation counts for last 24 hours
         Map<String, Long> operationCounts = new HashMap<>();
@@ -171,8 +172,8 @@ public class AdminController {
 
         // System health
         Map<String, Object> systemHealth = new HashMap<>();
-        systemHealth.put("status", "HEALTHY");
-        systemHealth.put("uptime", "100%");
+        systemHealth.put("database", "Responding");
+        systemHealth.put("externalServices", "Not checked by this overview");
         systemHealth.put("lastCheck", LocalDateTime.now());
 
         AdminDashboardResponse dashboard = new AdminDashboardResponse(
@@ -194,14 +195,14 @@ public class AdminController {
     }
 
     @GetMapping("/audit-trail")
-    public ResponseEntity<Page<AuditLogEntryResponse>> getAuditTrail(
+    public ResponseEntity<com.mamadou.sutura.admin.dto.AdminPageResponse<AuditLogEntryResponse>> getAuditTrail(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size
     ) {
         Page<AuditLog> logs = auditLogRepository.findAll(
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"))
         );
-        return ResponseEntity.ok(logs.map(this::toAuditEntry));
+        return ResponseEntity.ok(com.mamadou.sutura.admin.dto.AdminPageResponse.from(logs.map(this::toAuditEntry)));
     }
 
     private AuditLogEntryResponse toAuditEntry(AuditLog log) {
