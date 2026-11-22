@@ -3,7 +3,6 @@ package com.mamadou.sutura.kyc.client;
 import com.mamadou.sutura.fraud.config.FraudDetectionProperties;
 import com.mamadou.sutura.kyc.dto.SentinelKycResponse;
 import java.net.URI;
-import java.util.Map;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.*;
@@ -23,9 +22,16 @@ public class SentinelKycClient {
     }
 
     public SentinelKycResponse start(String customerId) {
+        return start(customerId, null);
+    }
+
+    public SentinelKycResponse start(String customerId, String fullName) {
         requireConnected();
+        var details = new java.util.LinkedHashMap<String, String>();
+        details.put("externalCustomerId", customerId);
+        if (fullName != null && !fullName.isBlank()) details.put("fullName", fullName.trim());
         var response = fraudDetectionRestTemplate.postForObject(url(""),
-                new HttpEntity<>(Map.of("externalCustomerId", customerId), headers()), SentinelKycResponse.class);
+                new HttpEntity<>(details, headers()), SentinelKycResponse.class);
         validate(response, customerId, null);
         return response;
     }

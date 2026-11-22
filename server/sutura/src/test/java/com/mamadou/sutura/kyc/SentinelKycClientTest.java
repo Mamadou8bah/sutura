@@ -43,8 +43,9 @@ class SentinelKycClientTest {
                 .andExpect(method(HttpMethod.POST))
                 .andExpect(header("X-Api-Key", "tenant-key"))
                 .andExpect(content().string(containsString("\"externalCustomerId\":\"7\"")))
+                .andExpect(content().string(containsString("\"fullName\":\"Mamadou Bah\"")))
                 .andRespond(withSuccess(pending(), MediaType.APPLICATION_JSON));
-        assertThat(client.start("7").sessionId()).isEqualTo(42);
+        assertThat(client.start("7", "Mamadou Bah").sessionId()).isEqualTo(42);
         server.verify();
     }
 

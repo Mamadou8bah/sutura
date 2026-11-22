@@ -62,19 +62,19 @@ class AutomaticKycOnboardingTest {
         new LoginRequest(
             phone, "test-onboarding-password", registered.twoFactorChallengeId(), code.get()));
     assertEquals("PENDING", jobs.findById(id).orElseThrow().getStatus());
-    when(sentinel.start(Long.toString(id))).thenReturn(response(id));
+    when(sentinel.start(Long.toString(id), "New Customer")).thenReturn(response(id));
     delivery.deliver(id);
     delivery.deliver(id);
     assertEquals("COMPLETED", jobs.findById(id).orElseThrow().getStatus());
     assertEquals("PENDING", verification.findById(id).orElseThrow().getStatus());
-    verify(sentinel, times(1)).start(Long.toString(id));
+    verify(sentinel, times(1)).start(Long.toString(id), "New Customer");
   }
 
   @Test
   void outageRetainsDurableJobAndRetryDoesNotGrantVerification() {
     var user = user(Role.MERCHANT);
     onboarding.enqueue(user);
-    when(sentinel.start(Long.toString(user.getId())))
+    when(sentinel.start(Long.toString(user.getId()), "Auto Identity"))
         .thenThrow(new org.springframework.web.client.ResourceAccessException("offline"));
     delivery.deliver(user.getId());
     var pending = jobs.findById(user.getId()).orElseThrow();
@@ -83,7 +83,7 @@ class AutomaticKycOnboardingTest {
     assertFalse(verification.existsById(user.getId()));
     pending.setNextAttemptAt(LocalDateTime.now().minusSeconds(1));
     jobs.saveAndFlush(pending);
-    doReturn(response(user.getId())).when(sentinel).start(Long.toString(user.getId()));
+    doReturn(response(user.getId())).when(sentinel).start(Long.toString(user.getId()), "Auto Identity");
     delivery.deliver(user.getId());
     assertEquals("COMPLETED", jobs.findById(user.getId()).orElseThrow().getStatus());
   }

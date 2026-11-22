@@ -57,15 +57,14 @@ public class KycService {
     var current = repository.findById(user.getId()).orElse(null);
     if (current != null
         && ("VERIFIED".equals(current.getStatus())
-            || "FLAGGED".equals(current.getStatus())
-            || ("PENDING".equals(current.getStatus())
-                && current.getSentinelSessionId() != null
-                && current.getSentinelSessionId() > 0
-                && current.getExpiresAt().isAfter(Instant.now())))) {
+            || "FLAGGED".equals(current.getStatus()))) {
       return KycStatusResponse.from(current);
     }
     try {
-      var response = client.start(Long.toString(user.getId()));
+      String fullName = java.util.stream.Stream.of(user.getFirstName(), user.getLastName())
+          .filter(value -> value != null && !value.isBlank()).map(String::trim)
+          .collect(java.util.stream.Collectors.joining(" "));
+      var response = client.start(Long.toString(user.getId()), fullName);
       KycVerification record = current == null ? new KycVerification() : current;
       record.setUserId(user.getId());
       return apply(record, response);

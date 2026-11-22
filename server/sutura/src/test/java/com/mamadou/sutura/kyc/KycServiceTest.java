@@ -28,7 +28,7 @@ class KycServiceTest {
     private final KycVerificationRepository records = mock(KycVerificationRepository.class);
     private final SentinelKycClient client = mock(SentinelKycClient.class);
     private final KycService service = new KycService(current, users, records, client);
-    private final User user = User.builder().id(7).role(Role.USER).build();
+    private final User user = User.builder().id(7).firstName("Mamadou").lastName("Bah").role(Role.USER).build();
 
     @BeforeEach
     void setup() {
@@ -40,19 +40,20 @@ class KycServiceTest {
 
     @Test
     void startsUsingAuthenticatedIdentityAndPersistsLink() {
-        when(client.start("7")).thenReturn(response("PENDING", null));
+        when(client.start("7", "Mamadou Bah")).thenReturn(response("PENDING", null));
         var result = service.start();
         assertThat(result.status()).isEqualTo("PENDING");
         assertThat(result.sessionId()).isEqualTo(42);
-        verify(client).start("7");
+        verify(client).start("7", "Mamadou Bah");
         verify(records).save(argThat(r -> r.getUserId() == 7 && r.getExternalCustomerId().equals("7")));
     }
 
     @Test
     void activeSessionIsReusedWithoutCreatingAnother() {
         when(records.findById(7L)).thenReturn(Optional.of(record("PENDING")));
+        when(client.start("7", "Mamadou Bah")).thenReturn(response("PENDING", null));
         assertThat(service.start().sessionId()).isEqualTo(42);
-        verifyNoInteractions(client);
+        verify(client).start("7", "Mamadou Bah");
     }
 
     @Test
@@ -60,9 +61,9 @@ class KycServiceTest {
         var old = record("PENDING");
         old.setExpiresAt(Instant.now().minusSeconds(10));
         when(records.findById(7L)).thenReturn(Optional.of(old));
-        when(client.start("7")).thenReturn(response("PENDING", null));
+        when(client.start("7", "Mamadou Bah")).thenReturn(response("PENDING", null));
         assertThat(service.start().status()).isEqualTo("PENDING");
-        verify(client).start("7");
+        verify(client).start("7", "Mamadou Bah");
     }
 
     @ParameterizedTest
@@ -116,7 +117,7 @@ class KycServiceTest {
         assertThatThrownBy(service::refresh).isInstanceOfSatisfying(ResponseStatusException.class,
                 e -> assertThat(e.getStatusCode().value()).isEqualTo(409));
         verifyNoInteractions(client);
-        when(client.start("7")).thenReturn(response("PENDING", null));
+        when(client.start("7", "Mamadou Bah")).thenReturn(response("PENDING", null));
         assertThat(service.start().sessionId()).isEqualTo(42L);
     }
 
