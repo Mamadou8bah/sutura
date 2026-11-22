@@ -55,9 +55,7 @@ type WalletContextValue = {
   topUp: (amount: number, method: "mobile_money" | "agent", phone: string, walletId?: number) => Promise<OpResult>;
   withdraw: (amount: number, walletId?: number) => Promise<OpResult>;
   refreshData: () => Promise<void>;
-  /** Set when the last read failed; the data shown is from `lastUpdated`. */
-  refreshError: string | null;
-  lastUpdated: Date | null;
+  dataUnavailable: boolean;
   /** True once the first read finished (success or failure). */
   loaded: boolean;
   recentTransactions: CustomerTransaction[];
@@ -99,8 +97,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     return () => { cancelled = true; };
   }, [submissions]);
   const [loading, setLoading] = useState(false);
-  const [refreshError, setRefreshError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [readFailed, setReadFailed] = useState(false);
+  const [hasSnapshot, setHasSnapshot] = useState(false);
+  const dataUnavailable = readFailed && !hasSnapshot;
   const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useBackNavigation<TabId>("home");
   useEffect(() => { if (newlyRegistered) setTab("verification"); }, [newlyRegistered]);
@@ -116,7 +115,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setData(EMPTY_DASHBOARD);
     setDepositQr(null); setWithdrawalQr(null); setSelectedTransactionId(null);
     setSelectedWalletId(0); setTab("home");
-    setRefreshError(null); setLastUpdated(null); setLoaded(false);
+    setReadFailed(false); setHasSnapshot(false); setLoaded(false);
   }, [session?.username]);
 
   const freshData = useRef(false);
@@ -127,8 +126,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       if (cancelled || freshData.current || !saved || !Array.isArray(saved.data?.wallets) || !Array.isArray(saved.data?.transactions)) return;
       const transactions = restoreTransferActivity(saved.data.transactions, submissions.items);
       setData({ ...saved.data, transactions, pendingCount: pendingTransfers(transactions) });
-      setLoaded(true); setLastUpdated(new Date(saved.savedAt));
-      setRefreshError("Showing saved data. Reconnect to confirm current balances.");
+      setLoaded(true); setHasSnapshot(true);
       setSelectedWalletId(saved.data.wallets[0]?.id ?? 0);
     }).catch(() => undefined);
     return () => { cancelled = true; };
@@ -187,14 +185,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           wallets.some((w) => w.id === prev) ? prev : wallets[0].id,
         );
       }
-      setRefreshError(null);
-      setLastUpdated(new Date());
-    } catch (err) {
-      // Keep the last good data but mark it stale; never show it as current.
-      if (request === refreshGeneration.current) {
-        const reason = err instanceof Error && /timed? ?out|timeout/i.test(err.message) ? "The connection timed out." : "Couldn't refresh.";
-        setRefreshError(reason);
-      }
+      setReadFailed(false);
+      setHasSnapshot(true);
+    } catch {
+      if (request === refreshGeneration.current) setReadFailed(true);
     } finally {
       if(request===refreshGeneration.current){setLoading(false);setLoaded(true);}
     }
@@ -430,8 +424,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       topUp,
       withdraw,
       refreshData,
-      refreshError,
-      lastUpdated,
+      dataUnavailable,
       loaded,
       recentTransactions,
       balanceHidden,
@@ -456,8 +449,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       topUp,
       withdraw,
       refreshData,
-      refreshError,
-      lastUpdated,
+      dataUnavailable,
       loaded,
       recentTransactions,
       balanceHidden,

@@ -39,6 +39,14 @@ jobs:
           eas-version: '27.5.0'
           token: ${{ secrets.EXPO_TOKEN }}
       - run: npm ci
+      - name: Check app types and existing tests
+        shell: bash
+        run: |
+          npx tsc --noEmit
+          node --test ../shared/mobile-update-config.test.cjs
+          if compgen -G 'tests/*.test.cjs' > /dev/null; then
+            node --test tests/*.test.cjs
+          fi
       - name: Build signed installable APK on the Android runner
         run: eas build --platform android --profile production-apk --non-interactive --local --output "${{ matrix.app }}-latest.apk"
       - name: Verify APK archive and write checksum
@@ -89,6 +97,22 @@ jobs:
             (cd apks && sha256sum --check "$app-latest.apk.sha256")
           done
           gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" --title "Sutura Android apps (${GITHUB_SHA:0:7})" --latest \
+            --target "$GITHUB_SHA" --title "Sutura Android apps (${GITHUB_SHA:0:7})" --draft \
             --notes 'Download the .apk file for your app directly. No ZIP extraction is needed. SHA-256 checksum files are included.'
           gh release upload "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" apks/*.apk apks/*.sha256
+      - name: Verify the GitHub downloads before publishing
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: mobile-apks-${{ github.run_id }}-${{ github.run_attempt }}
+        shell: bash
+        run: |
+          mkdir verified-downloads
+          gh release download "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
+            --pattern '*.apk' --pattern '*.sha256' --dir verified-downloads
+          signer="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
+          test -n "$signer"
+          for app in sutura-app sutura-agent merchant-app; do
+            (cd verified-downloads && sha256sum --check "$app-latest.apk.sha256")
+            "$signer" verify --verbose "verified-downloads/$app-latest.apk"
+          done
+          gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

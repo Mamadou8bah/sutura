@@ -7,7 +7,6 @@ import { useTheme } from "../context/ThemeContext";
 import { useMerchant } from "../context/MerchantContext";
 import { fonts, type } from "../theme";
 import { formatBalance } from "../utils/format";
-import { StaleNotice } from "./StaleNotice";
 import { statusLabel } from "./StatusPill";
 /** Deprecated alias kept for call sites: en-GB, 2 decimals, currency first (see utils/format). */
 export function money(value: number, currency: string, hidden = false) { return formatBalance(Number(value), currency, hidden); }
@@ -15,8 +14,8 @@ export function Heading({ title, subtitle }: {
     title: string;
     subtitle?: string;
 }) { const { colors } = useTheme(); return <View style={{ gap: 8, marginBottom: 8 }}><Text accessibilityRole="header" style={{ fontFamily: fonts.semibold, fontWeight: "600", fontSize: type.title, lineHeight: 34, color: colors.primary }}>{title}</Text>{subtitle && <Text style={{ fontFamily: fonts.regular, color: colors.slate500, fontSize: type.body, lineHeight: 21 }}>{subtitle}</Text>}</View>; }
-/** Refresh errors are never swallowed: a stale strip with Retry, otherwise a quiet manual refresh. */
-export function DataNotice({ errorOnly = false }: { errorOnly?: boolean } = {}) { const { colors } = useTheme(); const { loading, error, refresh, updatedAt } = useMerchant(); if (error) return <StaleNotice message={`Couldn't refresh. ${error}`} since={updatedAt} busy={loading} onRetry={() => void refresh()}/>; if (errorOnly) return null; return <Pressable accessibilityRole="button" accessibilityLabel="Refresh merchant data" accessibilityState={{ busy: loading, disabled: loading }} disabled={loading} onPress={() => void refresh()} style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 8, minHeight: 44 }}><Ionicons name="refresh-outline" size={16} color={colors.slate500}/><Text style={{ fontFamily: fonts.medium, color: colors.slate500, fontSize: type.caption }}>{loading ? "Refreshing…" : "Refresh"}</Text></Pressable>; }
+/** Manual refresh complements the background and pull-to-refresh reads. */
+export function RefreshDataButton() { const { colors } = useTheme(); const { loading, refresh } = useMerchant(); return <Pressable accessibilityRole="button" accessibilityLabel="Refresh merchant data" accessibilityState={{ busy: loading, disabled: loading }} disabled={loading} onPress={() => void refresh()} style={{ alignSelf: "flex-start", flexDirection: "row", alignItems: "center", gap: 8, minHeight: 44 }}><Ionicons name="refresh-outline" size={16} color={colors.slate500}/><Text style={{ fontFamily: fonts.medium, color: colors.slate500, fontSize: type.caption }}>Refresh</Text></Pressable>; }
 export function Empty({ title, hint }: {
     title: string;
     hint: string;

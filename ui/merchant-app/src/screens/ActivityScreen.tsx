@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Share, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { Screen, AppInput } from "../components/ui";
-import { Heading, DataNotice, Empty, money } from "../components/MerchantUI";
+import { Heading, RefreshDataButton, Empty, money } from "../components/MerchantUI";
 import { Money } from "../components/Money";
 import { StatusPill, statusLabel } from "../components/StatusPill";
 import { SkeletonRows } from "../components/Skeleton";
@@ -30,7 +30,7 @@ export function ActivityScreen() {
   const searching = query.trim().length > 0;
   return <Screen>
     <Heading title="Activity" subtitle="Business payments and their status." />
-    <DataNotice />
+    <RefreshDataButton />
     <AppInput accessibilityLabel="Search payments" placeholder="Search reference or description" value={query} onChangeText={setQuery} maxLength={100} />
     <View accessibilityRole="tablist" style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 24, borderBottomWidth: 1, borderBottomColor: colors.border }}>
       {filters.map(f => <Pressable accessibilityRole="tab" accessibilityLabel={`${f} payments`} accessibilityState={{ selected: f === filter }} key={f} onPress={() => setFilter(f)}

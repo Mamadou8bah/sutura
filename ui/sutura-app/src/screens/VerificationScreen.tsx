@@ -1,5 +1,4 @@
 import { KycConnectionPending } from "../api/kycWarmup";
-import { PrimaryButton as KycActionButton } from "../components/ui";
 import { useAutoRefresh } from "../hooks/useAutoRefresh";
 import { Ionicons } from "@expo/vector-icons";
 import { fonts } from "../theme";
@@ -7,7 +6,7 @@ import { useTheme, useThemedStyles } from "../context/ThemeContext";
 import type { ThemeColors } from "../theme";
 import { useEffect, useRef, useState } from "react";
 import { KeyboardScrollView as ScrollView } from "../components/KeyboardScrollView";
-import { ActivityIndicator, AppState, Linking, StyleSheet, View} from "react-native";
+import { ActivityIndicator, Linking, StyleSheet, View} from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { kycApi, type KycStatus } from "../api/kyc";
 import { StatusPill } from "../components/StatusPill";
@@ -29,7 +28,8 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
   const styles = useThemedStyles(createStyles);
 
   const [record, setRecord] = useState<KycStatus | null>(null);
-  const [busy, setBusy] = useState(true);
+  const [pendingAction, setPendingAction] = useState<"load" | "start" | "refresh" | null>("load");
+  const busy = pendingAction !== null;
   const [error, setError] = useState("");
   const [connecting, setConnecting] = useState(false);
   const [connectionNotice, setConnectionNotice] = useState("");
@@ -37,14 +37,14 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
   const active = useRef(true);
   const inFlight = useRef(false);
 
-  async function run(action: "load" | "start" | "refresh") {
+  async function run(action: "load" | "start" | "refresh", background = false) {
     if (inFlight.current) return;
     inFlight.current = true;
-    setBusy(true);
+    if (!background) setPendingAction(action);
     setError(""); setConnectionNotice(""); setConnecting(false);
     const controller = new AbortController(); request.current = controller;
     const current = () => active.current && request.current === controller && !controller.signal.aborted;
-    const options = { signal: controller.signal, deadline: Date.now() + 180000, onRetry: () => { if (current()) setConnecting(true); } };
+    const options = { signal: controller.signal, deadline: Date.now() + 180000, onRetry: () => { if (current() && !background) setConnecting(true); } };
     try {
       if (action === "load") {
         let stored = await kycApi.status(options);
@@ -64,7 +64,7 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
     } finally {
       if (request.current === controller) {
         inFlight.current = false;
-        if (active.current) { setBusy(false); setConnecting(false); }
+        if (active.current) { setPendingAction(null); setConnecting(false); }
       }
     }
   }
@@ -75,7 +75,11 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
     return () => { active.current = false; request.current?.abort(); request.current = null; inFlight.current = false; };
   }, []);
 
-  useAutoRefresh(()=>run("load"),record?.status==="PENDING" && !connectionNotice);
+  useAutoRefresh(()=>run("load", true),record?.status==="PENDING" && !connectionNotice);
+
+  const canStart = !!record && ["NOT_STARTED", "EXPIRED", "REJECTED"].includes(record.status);
+  const refreshing = pendingAction === "refresh" || (pendingAction === "load" && !!record && !canStart);
+  const loadingLabel = connecting ? "Connecting verification…" : "Checking verification…";
 
   async function openVerification() {
     const url = record?.hostedUrl;
@@ -90,23 +94,23 @@ export function VerificationScreen({ onBack }: { onBack: () => void }) {
       <View style={styles.header}><Pressable accessibilityRole="button" accessibilityLabel="Back to your account" onPress={onBack} style={styles.back}><Ionicons name="arrow-back" size={24} color={colors.primary}/></Pressable><Text style={styles.headerTitle}>Identity verification</Text></View>
       <View style={styles.intro}><View style={styles.heroIcon}><Ionicons name={record?.status === "VERIFIED" ? "shield-checkmark-outline" : "person-outline"} size={28} color={colors.primary}/></View><Text accessibilityRole="header" style={styles.title}>{record?.status === "VERIFIED" ? "Identity verified" : "Verify your identity"}</Text><Text style={styles.body}>{record?.status === "VERIFIED" ? "Your identity check is complete." : "You need an identity document and a camera. It takes about five minutes."}</Text></View>
       <View style={styles.card}>
-        {record?.status !== "NOT_STARTED" && <View style={styles.statusRow}>{record ? <StatusPill status={record.status} tone={record.status === "PENDING" ? "info" : undefined} label={({PENDING:"In progress",EXPIRED:"Link expired",VERIFIED:"Verified",FLAGGED:"Under review",REJECTED:"Not verified",NOT_STARTED:"Not started"} as const)[record.status]}/> : <Text style={styles.status}>Checking your status…</Text>}</View>}
+        {record && record.status !== "NOT_STARTED" && <View style={styles.statusRow}><StatusPill status={record.status} tone={record.status === "PENDING" ? "info" : undefined} label={({PENDING:"In progress",EXPIRED:"Link expired",VERIFIED:"Verified",FLAGGED:"Under review",REJECTED:"Not verified",NOT_STARTED:"Not started"} as const)[record.status]}/></View>}
         {record && ["NOT_STARTED","EXPIRED","REJECTED"].includes(record.status) && <View style={styles.steps}>{([
           ["card-outline","Identity document","Have a valid identity document ready."],
           ["scan-outline","Face and liveness check","Follow the camera prompts in good lighting."],
           ["shield-checkmark-outline","Review","We'll show your verification result here."]
         ] as const).map(([icon,title,hint],index)=><View key={title} style={styles.step}><View style={styles.stepIcon}><Ionicons name={icon} size={23} color={colors.primary}/></View><View style={styles.stepCopy}><Text style={styles.stepTitle}>{title}</Text><Text style={styles.stepHint}>{hint}</Text></View></View>)}</View>}
         {record && record.status !== "NOT_STARTED" && <Text style={styles.body}>{descriptions[record.status]}</Text>}
-        {(connecting || !!connectionNotice) && <Text accessibilityLiveRegion="polite" style={styles.body}>{connecting ? "Connecting to verification. This can take about a minute. Your status has not changed." : connectionNotice}</Text>}
+        {!!connectionNotice && <Text accessibilityLiveRegion="polite" style={styles.body}>{connectionNotice}</Text>}
         {!!error && <Text accessibilityRole="alert" style={styles.error}>{error}</Text>}
-        {record && ["NOT_STARTED", "EXPIRED", "REJECTED"].includes(record.status) && (
-          <PrimaryButton label={connecting ? "Connecting verification…" : "Start verification"} loading={busy} disabled={busy} onPress={() => void run("start")} />
+        {canStart && (
+          <PrimaryButton label={busy && !refreshing ? loadingLabel : "Start verification"} loading={busy && !refreshing} disabled={busy} onPress={() => void run("start")} />
         )}
         {record?.status === "PENDING" && record.hostedUrl && (
           <PrimaryButton label="Continue verification" onPress={() => void openVerification()} />
         )}
-        {record?.sessionId && <Pressable accessibilityRole="button" disabled={busy} onPress={() => void run("refresh")} style={styles.linkBtn}>{busy ? <ActivityIndicator color={colors.slate500}/> : <Text style={styles.link}>Refresh status</Text>}</Pressable>}
-        {!record && <KycActionButton label={busy ? "Connecting verification…" : "Try again"} loading={busy} disabled={busy} onPress={() => void run("load")} />}
+        {record?.sessionId && <Pressable accessibilityRole="button" accessibilityState={{ busy: refreshing, disabled: busy }} accessibilityLabel={refreshing ? loadingLabel : "Refresh status"} disabled={busy} onPress={() => void run("refresh")} style={styles.linkBtn}>{refreshing ? <ActivityIndicator color={colors.slate500}/> : <Text style={styles.link}>Refresh status</Text>}</Pressable>}
+        {!record && <PrimaryButton label={busy ? loadingLabel : "Try again"} loading={busy} disabled={busy} onPress={() => void run("load")} />}
 
       </View>
     </ScrollView>
@@ -123,7 +127,6 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: {gap:16},
   statusRow:{flexDirection:"row",alignItems:"center",gap:8},linkBtn:{minHeight:44,justifyContent:"center",alignSelf:"flex-start"},
   dot:{width:7,height:7,borderRadius:4},
-  status: {fontFamily:fonts.medium,color:colors.primary,fontSize:13},
   body: {fontFamily:fonts.regular,color:colors.slate500,lineHeight:22,fontSize:14},
   steps:{gap:0},
   step:{flexDirection:"row",alignItems:"center",gap:14,paddingVertical:14,borderBottomWidth:1,borderBottomColor:colors.border},

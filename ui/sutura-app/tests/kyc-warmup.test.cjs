@@ -52,7 +52,9 @@ test('all KYC clients share the bounded retry policy', () => {
 });
 function hosted(fetch) {
   const exports = {}, warmup = load();
-  const source = fs.readFileSync(path.join(root, 'sentinel/frontend/src/api/hostedKyc.ts'), 'utf8').replace("import.meta.env.VITE_API_BASE_URL", "'https://fixture.invalid'");
+  const source = fs.readFileSync(path.join(root, 'sentinel/frontend/src/api/hostedKyc.ts'), 'utf8')
+    .replaceAll("import.meta.env.VITE_HOSTED_KYC_API_BASE_URL", "'https://fixture.invalid'")
+    .replaceAll("import.meta.env.VITE_API_BASE_URL", "'https://fixture.invalid'");
   vm.runInNewContext(ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText,
     { exports, require: name => { assert.equal(name, './kycWarmup'); return warmup; }, fetch, AbortController, setTimeout, clearTimeout });
   return exports;
@@ -67,9 +69,13 @@ test('hosted verification bypasses staff auth and demo fallback during a cold st
   assert.equal((await api.loadHostedKyc('fixture/token')).status, 'PENDING');
   assert.equal(calls, 2);
 });
-test('uncertain evidence submission is sent once and never fabricated as successful', { skip: !hasSentinel }, async () => {
-  let calls = 0;
-  const api = hosted(async (url, options) => { calls++; assert.equal(options.method, 'POST'); return new Response('', { status: 503 }); });
-  await assert.rejects(api.submitHostedKyc('fixture', { fullName: 'Fixture' }), /could not be confirmed/);
-  assert.equal(calls, 1);
+test('unavailable evidence submission is sent once and never fabricated as successful', { skip: !hasSentinel }, async () => {
+  const methods = [];
+  const api = hosted(async (url, options) => {
+    const method = options.method || 'GET';
+    methods.push(method);
+    return method === 'POST' ? new Response('', { status: 503 }) : Response.json({ status: 'PENDING' });
+  });
+  await assert.rejects(api.submitHostedKyc('fixture', { fullName: 'Fixture' }), /temporarily unavailable/);
+  assert.deepEqual(methods, ['POST', 'GET']);
 });

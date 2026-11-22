@@ -8,7 +8,6 @@ import { TransactionRow } from "../components/TransactionRow";
 import { WalletSurface } from "../components/WalletSurface";
 import { WalletOverview } from "../components/WalletOverview";
 import { SkeletonBalance, SkeletonRows } from "../components/Skeleton";
-import { StaleNotice } from "../components/StaleNotice";
 import { PrimaryButton } from "../components/ui";
 import { useWallet } from "../context/WalletContext";
 import { fonts, spacing, type, type ThemeColors } from "../theme";
@@ -16,14 +15,14 @@ import { fonts, spacing, type, type ThemeColors } from "../theme";
 export function HomeScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
-  const { data, loading, loaded, setTab, recentTransactions, refreshData, refreshError, lastUpdated } = useWallet();
+  const { data, loading, loaded, setTab, recentTransactions, refreshData, dataUnavailable } = useWallet();
   const firstLoad = !loaded && data.wallets.length === 0;
   const refreshControl = <RefreshControl refreshing={loading && loaded} onRefresh={() => void refreshData()} tintColor={colors.slate500} colors={[colors.orange]} />;
 
   return <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false} refreshControl={refreshControl}>
     <AppHeader />
-    {refreshError ? <StaleNotice message={refreshError} since={lastUpdated} busy={loading} onRetry={() => void refreshData()} /> : null}
     {firstLoad ? <WalletSurface><SkeletonBalance /></WalletSurface>
+      : dataUnavailable ? <Text style={styles.muted}>Wallets unavailable</Text>
       : data.wallets.length ? <WalletOverview showQuickActions />
       : <View style={styles.card}>
           <Text accessibilityRole="header" style={styles.cardTitle}>Create your first wallet</Text>
@@ -37,6 +36,7 @@ export function HomeScreen() {
       </Pressable>}
     </View>
     {firstLoad ? <SkeletonRows rows={4} label="Loading activity" />
+      : dataUnavailable ? <Text style={styles.muted}>Activity unavailable</Text>
       : recentTransactions.length === 0 ? <View style={styles.empty}>
         <Ionicons name="receipt-outline" size={24} color={colors.slate500} />
         <Text style={styles.emptyTitle}>No transactions yet</Text>

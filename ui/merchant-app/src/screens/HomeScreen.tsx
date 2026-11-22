@@ -3,7 +3,6 @@ import { RefreshControl, View } from "react-native";
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { Screen, SuturaLogo, LinkButton } from "../components/ui";
-import { DataNotice } from "../components/MerchantUI";
 import { ActionIcon } from "../components/ActionIcon";
 import { Money } from "../components/Money";
 import { StatusPill, statusLabel, statusTone } from "../components/StatusPill";
@@ -35,7 +34,7 @@ function BlockedAccount({ status }: { status: string }) {
 export function HomeScreen() {
   const { colors } = useTheme();
   const { session, setScreen } = useApp();
-  const { wallets, selectedId, hidden, setHidden, transactions, collections, loaded, refresh, loading } = useMerchant();
+  const { wallets, selectedId, hidden, setHidden, transactions, collections, loaded, refresh, loading, updatedAt, error } = useMerchant();
   if (session && session.userStatus !== "ACTIVE" && statusTone(session.userStatus) === "danger") return <BlockedAccount status={session.userStatus} />;
   const wallet = wallets.find(w => w.id === selectedId);
   const firstLoad = !loaded;
@@ -50,7 +49,6 @@ export function HomeScreen() {
 
       </View>
     </View>
-    <DataNotice errorOnly />
     <WalletSurface>
       {firstLoad ? <SkeletonBalance /> : <>
         <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
@@ -61,7 +59,7 @@ export function HomeScreen() {
         </View>
         {wallet && wallet.balance != null ? <Money amount={wallet.balance} currency={wallet.currency} hidden={hidden}
           style={{ fontFamily: fonts.semibold, fontWeight: "600", fontSize: type.display, lineHeight: 46, color: colors.walletInk }} />
-          : <Text style={{ color: colors.walletMuted, fontSize: type.body }}>{wallet ? "Balance unavailable" : "No business wallet yet."}</Text>}
+          : <Text style={{ color: colors.walletMuted, fontSize: type.body }}>{wallet || (!updatedAt && error) ? "Balance unavailable" : "No business wallet yet."}</Text>}
 
       </>}
     </WalletSurface>

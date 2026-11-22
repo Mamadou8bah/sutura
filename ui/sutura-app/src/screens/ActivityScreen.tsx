@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import { FlatList, RefreshControl, StyleSheet, View } from "react-native";
 import { Money } from "../components/Money";
 import { SkeletonRows } from "../components/Skeleton";
-import { StaleNotice } from "../components/StaleNotice";
 import { NativePressable as Pressable, NativeText as Text } from "../components/NativeControls";
 import { Ionicons } from "@expo/vector-icons";
 import { TransactionRow } from "../components/TransactionRow";
@@ -24,7 +23,7 @@ function periodStart(period:Period) {
 }
 export function ActivityScreen() {
  const {colors}=useTheme();const styles=useThemedStyles(createStyles);
- const {data,selectedWallet,loading,loaded,refreshData,refreshError,lastUpdated}=useWallet();
+ const {data,selectedWallet,loading,loaded,refreshData,dataUnavailable}=useWallet();
  const [mode,setMode]=useState<Mode>("history");const [period,setPeriod]=useState<Period>("month");const [periodOpen,setPeriodOpen]=useState(false);
  const currency=selectedWallet.currency;
  const transactions=useMemo(()=>{
@@ -46,13 +45,12 @@ export function ActivityScreen() {
  refreshControl={<RefreshControl refreshing={loading&&loaded} onRefresh={()=>void refreshData()} tintColor={colors.slate500} colors={[colors.orange]}/>}
  ListHeaderComponent={<View style={styles.header}>
   <View style={styles.titleRow}><Text accessibilityRole="header" style={styles.title}>Activity</Text><Text style={styles.currency}>{currency}</Text></View>
-  {refreshError?<StaleNotice message={refreshError} since={lastUpdated} busy={loading} onRetry={()=>void refreshData()}/>:null}
   <View accessibilityRole="tablist" style={styles.tabs}>{([{id:"history",label:"History"},{id:"expenses",label:"Expenses"},{id:"income",label:"Income"}] as const).map(tab=><Pressable key={tab.id} accessibilityRole="tab" accessibilityLabel={tab.label} accessibilityState={{selected:mode===tab.id}} onPress={()=>setMode(tab.id)} style={[styles.tab,mode===tab.id&&styles.activeTab]}><Text style={[styles.tabText,mode===tab.id&&{color:colors.primary}]}>{tab.label}</Text></Pressable>)}</View>
   <Pressable accessibilityRole="button" accessibilityLabel="Filter activity period" onPress={()=>setPeriodOpen(true)} style={styles.period} accessibilityHint="Opens period options"><Ionicons name="calendar-outline" size={16} color={colors.slate500}/><Text style={styles.periodText}>{periods.find(item=>item.id===period)?.label}</Text><Ionicons name="chevron-down" size={14} color={colors.slate500}/></Pressable>
-  <View style={styles.summary}><View style={styles.metrics}>{summary.map(metric=><View key={metric.label} style={styles.metric}><Text style={styles.metricLabel}>{metric.label}</Text><Money amount={metric.amount} currency={currency} style={styles.metricValue}/></View>)}</View><Text style={styles.caption}>Completed payments only · {currency}</Text></View>
+  {!dataUnavailable && <View style={styles.summary}><View style={styles.metrics}>{summary.map(metric=><View key={metric.label} style={styles.metric}><Text style={styles.metricLabel}>{metric.label}</Text><Money amount={metric.amount} currency={currency} style={styles.metricValue}/></View>)}</View><Text style={styles.caption}>Completed payments only · {currency}</Text></View>}
   <View style={styles.titleRow}><Text accessibilityRole="header" style={styles.sectionTitle}>{mode==="history"?"Transactions":mode==="income"?"Incoming payments":"Outgoing payments"}</Text><Text style={styles.caption}>{transactions.length}</Text></View>
  </View>}
- ListEmptyComponent={!loaded?<SkeletonRows rows={5} label="Loading activity"/>:<View style={styles.empty}><Ionicons name="receipt-outline" size={24} color={colors.slate500}/><Text style={styles.emptyTitle}>No {mode==="history"?"transactions":mode} in this period</Text><Text style={styles.emptyHint}>Try another period. Your {currency} payments will appear here.</Text></View>}
+ ListEmptyComponent={!loaded?<SkeletonRows rows={5} label="Loading activity"/>:<View style={styles.empty}><Ionicons name="receipt-outline" size={24} color={colors.slate500}/><Text style={styles.emptyTitle}>{dataUnavailable ? "Activity unavailable" : `No ${mode==="history"?"transactions":mode} in this period`}</Text>{!dataUnavailable && <Text style={styles.emptyHint}>Try another period. Your {currency} payments will appear here.</Text>}</View>}
  renderItem={({item}: {item: CustomerTransaction})=><TransactionRow txn={item}/>}/>
  <SelectionSheet visible={periodOpen} title="Activity period" onClose={()=>setPeriodOpen(false)}>{periods.map(option=><Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={option.label} accessibilityState={{checked:period===option.id}} onPress={()=>{setPeriod(option.id);setPeriodOpen(false);}} style={styles.periodOption}><Text style={styles.periodText}>{option.label}</Text>{period===option.id&&<Ionicons name="checkmark" size={20} color={colors.orange}/>}</Pressable>)}</SelectionSheet>
  </View>;

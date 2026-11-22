@@ -19,3 +19,9 @@ ui/*/dist/
 ui/*/android/
 ui/*/ios/
 ui/*/.ota-validation/
+
+# Downloaded EAS signing material stays on the build machine.
+ui/*/credentials.json
+ui/*/credentials/
+ui/*/*.jks
+ui/*/*.keystore

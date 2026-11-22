@@ -9,18 +9,16 @@ import { RefreshControl, StyleSheet, View} from "react-native";
 import { ScreenTitle } from "../components/AppHeader";
 import { PrimaryButton } from "../components/ui";
 import { WalletAction } from "../components/WalletAction";
-import { StaleNotice } from "../components/StaleNotice";
 import { useWallet } from "../context/WalletContext";
 import { fonts, radii, spacing, type, type ThemeColors } from "../theme";
 
 export function WalletsScreen() {
   const { colors } = useTheme();
   const styles = useThemedStyles(createStyles);
-  const { data, setTab, setSelectedWalletId, selectedWalletId, balanceHidden, loading, loaded, refreshData, refreshError, lastUpdated } = useWallet();
+  const { data, setTab, setSelectedWalletId, selectedWalletId, balanceHidden, loading, loaded, refreshData, dataUnavailable } = useWallet();
   return <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}
     refreshControl={<RefreshControl refreshing={loading && loaded} onRefresh={() => void refreshData()} tintColor={colors.slate500} colors={[colors.orange]} />}>
     <ScreenTitle title="Wallets" />
-    {refreshError ? <StaleNotice message={refreshError} since={lastUpdated} busy={loading} onRetry={() => void refreshData()} /> : null}
     {data.wallets.length > 0 && <View style={styles.card}><WalletOverview selectable={false} /></View>}
     {data.wallets.length > 0 && <View style={styles.actions}>
       {[{ label: "Top up", icon: "add" as const, tab: "topup" as const }, { label: "Withdraw", icon: "remove" as const, tab: "withdraw" as const }, { label: "Send", icon: "paper-plane-outline" as const, tab: "send" as const }].map(action =>
@@ -32,7 +30,7 @@ export function WalletsScreen() {
         <Ionicons name="add" size={24} color={colors.primary} />
       </Pressable>
     </View>
-    {data.wallets.length === 0 && <Text style={styles.empty}>No wallets yet. Create your first wallet to hold a balance.</Text>}
+    {data.wallets.length === 0 && <Text style={styles.empty}>{dataUnavailable ? "Wallets unavailable" : "No wallets yet. Create your first wallet to hold a balance."}</Text>}
     {data.wallets.map(wallet => {
       const selected = wallet.id === selectedWalletId;
       return <Pressable key={wallet.id} accessibilityRole="radio" accessibilityState={{ checked: selected }}
