@@ -2,6 +2,7 @@ package com.mamadou.sutura.common.config;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,10 +14,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class CorsConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource(
-      @Value("${sutura.cors.allowed-origins:}") String origins) {
+      @Value("${sutura.cors.allowed-origins:}") String origins,
+      @Value("${sutura.cors.web-origin:}") String webOrigin) {
     CorsConfiguration config = new CorsConfiguration();
     config.setAllowedOrigins(
-        Arrays.stream(origins.split(",")).map(String::trim).filter(s -> !s.isEmpty()).toList());
+        Stream.concat(Stream.of(webOrigin), Arrays.stream(origins.split(",")))
+            .map(String::trim).filter(s -> !s.isEmpty()).distinct().toList());
     config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     config.setAllowedHeaders(
         List.of(

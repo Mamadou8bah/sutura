@@ -53,6 +53,17 @@ class ProductionStartupValidatorTest {
   }
 
   @Test
+  void firstPartyWebOriginMustBeAnExactHttpsOrigin() {
+    for (String origin : new String[] {"https://*.vercel.app", "https://sutura-wallet.vercel.app/login", "http://sutura-wallet.vercel.app"}) {
+      var env = valid().withProperty("sutura.cors.web-origin", origin);
+      assertThrows(IllegalStateException.class, () -> new ProductionStartupValidator(env).afterPropertiesSet());
+    }
+    assertDoesNotThrow(() -> new ProductionStartupValidator(valid()
+        .withProperty("sutura.cors.web-origin", "https://sutura-wallet.vercel.app")
+        .withProperty("sutura.cors.allowed-origins", "")).afterPropertiesSet());
+  }
+
+  @Test
   void backendCanStartBeforeSentinelAndFrontendWithoutDisablingFraudProtection() {
     var env = valid().withProperty("sutura.fraud-detection.connected", "false")
         .withProperty("sutura.fraud-detection.base-url", "")

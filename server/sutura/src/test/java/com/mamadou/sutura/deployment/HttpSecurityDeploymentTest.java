@@ -18,6 +18,7 @@ import org.springframework.web.context.WebApplicationContext;
       "management.endpoint.health.probes.enabled=true",
       "management.endpoint.health.group.readiness.include=readinessState,db,redis",
       "sutura.cors.allowed-origins=https://app.example.com",
+      "sutura.cors.web-origin=https://sutura-wallet.vercel.app",
       "sutura.payments.approved-payout-recovery-enabled=false"
     })
 @ActiveProfiles("test")
@@ -60,6 +61,20 @@ class HttpSecurityDeploymentTest {
                 .header("Access-Control-Request-Method", "POST"))
         .andExpect(status().isForbidden())
         .andExpect(header().doesNotExist("Access-Control-Allow-Origin"));
+  }
+
+  @Test
+  void deployedSuturaWebsiteCanPreflightLoginAndReadAuthenticationErrors() throws Exception {
+    mvc.perform(options("/api/auth/login")
+            .header("Origin", "https://sutura-wallet.vercel.app")
+            .header("Access-Control-Request-Method", "POST")
+            .header("Access-Control-Request-Headers", "content-type"))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Access-Control-Allow-Origin", "https://sutura-wallet.vercel.app"));
+    mvc.perform(get("/api/v1/admin/operations/customers")
+            .header("Origin", "https://sutura-wallet.vercel.app"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(header().string("Access-Control-Allow-Origin", "https://sutura-wallet.vercel.app"));
   }
 
   @Test

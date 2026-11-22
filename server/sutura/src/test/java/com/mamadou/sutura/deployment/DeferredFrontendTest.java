@@ -13,11 +13,21 @@ import org.springframework.web.server.ResponseStatusException;
 class DeferredFrontendTest {
   @Test
   void emptyFrontendOriginsDenyAllCrossOriginBrowserClients() {
-    var config = new CorsConfig().corsConfigurationSource("")
+    var config = new CorsConfig().corsConfigurationSource("", "")
         .getCorsConfiguration(new MockHttpServletRequest("OPTIONS", "/api/auth/login"));
     assertNotNull(config);
     assertNull(config.checkOrigin("https://untrusted.invalid"));
     assertTrue(config.getAllowedOrigins().isEmpty());
+  }
+
+  @Test
+  void firstPartyWebsiteWorksWhenAdditionalOriginListIsEmpty() {
+    var config = new CorsConfig().corsConfigurationSource("", "https://sutura-wallet.vercel.app")
+        .getCorsConfiguration(new MockHttpServletRequest("OPTIONS", "/api/auth/login"));
+    assertNotNull(config);
+    assertEquals("https://sutura-wallet.vercel.app", config.checkOrigin("https://sutura-wallet.vercel.app"));
+    assertNull(config.checkOrigin("https://untrusted.invalid"));
+    assertNull(config.checkOrigin("https://sutura-wallet.vercel.app.untrusted.invalid"));
   }
 
   @Test

@@ -79,7 +79,9 @@ public class ProductionStartupValidator implements InitializingBean {
     }
     if (jwt.equals("ZGV2ZWxvcG1lbnQtc2VjcmV0LWtleS1mb3ItcGF5Zmxvdy1hcHAtMzItYnl0ZXM="))
       fail("jwt.secret", "must not use the development key");
-    for (String origin : env.getProperty("sutura.cors.allowed-origins", "").split(",")) {
+    String browserOrigins = env.getProperty("sutura.cors.web-origin", "") + ","
+        + env.getProperty("sutura.cors.allowed-origins", "");
+    for (String origin : browserOrigins.split(",")) {
       if (origin.isBlank()) continue; // No frontend yet: allow no cross-origin browser clients.
       URI uri = url("sutura.cors.allowed-origins", origin.trim(), true);
       if (uri.getRawPath() != null && !uri.getRawPath().isEmpty())

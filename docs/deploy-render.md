@@ -16,7 +16,7 @@ Private Key Value URLs normally omit authentication. The validator allows this o
 2. Supply the separate Sentinel URL, tenant code, API key and matching callback signing secret. Do not use localhost for another Render service.
 3. Supply ModemPay sandbox keys and webhook signing secret. Run sandbox acceptance before switching to live credentials.
 4. Configure Jokoor SMS delivery with `JOKOOR_API_KEY` and Resend email delivery with `SUTURA_EMAIL_API_KEY`. Verify the sender address/domain with the email provider. Set `SUTURA_ALERT_EMAIL` to a monitored operations inbox. Production refuses noop OTP delivery and requires a second factor for every sign-in.
-5. Set `SUTURA_CORS_ALLOWED_ORIGINS` to exact HTTPS web origins separated by commas, with no paths or trailing slashes. Native apps do not require CORS entries.
+5. Set `SUTURA_WEB_ORIGIN=https://sutura-wallet.vercel.app` for the deployed website (also the production default). Add any other browser clients to `SUTURA_CORS_ALLOWED_ORIGINS` as exact HTTPS origins separated by commas, with no paths or trailing slashes. Native apps do not require CORS entries. A local `.env` change must also be applied in Render's Environment settings when overriding these values.
 
 Render prompts for `sync: false` variables on initial creation. Add later secret variables manually in service Environment settings. Keep secrets out of source, logs and chat. The Blueprint generates JWT_SECRET. Independent webhook signing secrets must contain at least 32 characters and match their senders.
 
