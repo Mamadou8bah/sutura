@@ -49,6 +49,8 @@ export type TransactionResponse = {
   createdAt: string;
   sourceWalletId?: number;
   destinationWalletId?: number;
+  sourceName?: string;
+  destinationName?: string;
 };
 
 export type TransferResponse = {

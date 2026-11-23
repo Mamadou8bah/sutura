@@ -31,7 +31,8 @@ public class ProviderDepositSettlementService {
         var product = transactions.findForUpdateByReference(reference).orElseThrow();
         if (!compliance.assess(product, deposit.getUser(), deposit.getWallet(), "DEPOSIT")) {
             deposit.setStatus(product.getStatus() == TransactionStatus.FAILED
-                    ? Deposit.DepositStatus.FAILED : Deposit.DepositStatus.PENDING_REVIEW);
+                    ? Deposit.DepositStatus.FAILED : product.getSentinelRecommendation() == null
+                        ? Deposit.DepositStatus.PENDING : Deposit.DepositStatus.PENDING_REVIEW);
             deposit.setFailureReason(product.getFailureReason());
             deposits.save(deposit);
             return;

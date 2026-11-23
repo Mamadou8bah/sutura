@@ -25,7 +25,7 @@ export function TransactionRow({ txn, onPress }: { txn: CustomerTransaction; onP
     <View style={styles.icon}><Ionicons name={txn.type === "DEPOSIT" ? "add-outline" : txn.type === "WITHDRAWAL" ? "cash-outline" : isCredit ? "arrow-down-outline" : "arrow-up-outline"} size={20} color={colors.primary} /></View>
     <View style={styles.body}>
       <Text style={styles.name} numberOfLines={2}>{txn.counterparty}</Text>
-      <Text style={styles.meta}>{formatTimestamp(txn.time)}</Text>
+      <Text style={styles.meta}>{txn.type === "TRANSFER_IN" ? "Transfer from" : txn.type === "TRANSFER_OUT" ? "Transfer to" : transactionTypeLabel(txn.type)} · {formatTimestamp(txn.time)}</Text>
     </View>
     <View style={styles.right}>
       <Money amount={txn.amount} currency={txn.currency} sign={sign} style={[styles.amount, isCredit && { color: colors.successFg }]} />

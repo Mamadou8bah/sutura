@@ -71,7 +71,7 @@ export function ScanScreen() {
       <SwipeToConfirm label="Swipe to Pay" busy={busy} disabled={!canPay} onConfirm={() => void pay()} />
     </View>
   </SelectionSheet>}
-  {result && <SelectionSheet visible title={result.status === "PAID" ? "Payment Successful" : result.status === "REVIEW" ? "Payment under review" : "Payment status"}
+  {result && <SelectionSheet visible title={result.status === "PAID" ? "Payment Successful" : result.status === "PROCESSING" ? "Payment processing" : result.status === "REVIEW" ? "Payment under review" : "Payment status"}
     onClose={reset}>
     <View style={{ gap: 12 }}>
       <View style={{ alignItems: "center", paddingVertical: 8 }}>

@@ -18,7 +18,8 @@ class ModemPayClientTest {
     private MockRestServiceServer server;
     @BeforeEach void setup() {
         var config = new ModemPayConfig();
-        config.setApiUrl("https://provider.example"); config.setApiKey("test-only-key");
+        config.setApiUrl("https://provider.example"); config.setApiKey("sk_test_fixture");
+        config.setPayoutsEnabled(true);
         client = new ModemPayClient(config);
         server = MockRestServiceServer.bindTo((RestTemplate) ReflectionTestUtils.getField(client, "restTemplate")).build();
     }
@@ -63,5 +64,36 @@ class ModemPayClientTest {
         request.setWithdrawalMethod("wave"); request.setPhoneNumber("7000001"); request.setBeneficiaryName("Test User");
         request.setReference("withdrawal-ref"); request.setIdempotencyKey("payout-key");
         assertThat(client.createPayout(request).getId()).isEqualTo("transfer-1"); server.verify();
+    }
+
+    @Test void walletCheckoutUsesProviderMethodNamesAndReturnsToTheApp() {
+        server.expect(requestTo("https://provider.example/v1/payments"))
+            .andExpect(header("Authorization", "Bearer sk_test_fixture"))
+            .andExpect(jsonPath("$.data.payment_methods[0]").value("wallet"))
+            .andExpect(jsonPath("$.data.customer_phone").value("+2207000001"))
+            .andExpect(jsonPath("$.data.return_url").value("suturaapp://payment-return"))
+            .andExpect(jsonPath("$.data.skip_url_validation").value(true))
+            .andRespond(withSuccess("{\"data\":{\"payment_link\":\"https://test.checkout.modempay.com/pay\"}}", MediaType.APPLICATION_JSON));
+        var request = new CreateChargeRequest();request.setAmount(BigDecimal.TEN);request.setCurrency("GMD");
+        request.setPaymentMethod("mobile_money");request.setPhoneNumber("+2207000001");
+        client.createCharge(request);server.verify();
+    }
+
+    @Test void rejectsUnsupportedCurrencyPrecisionAmountAndMethodBeforeProviderContact() {
+        assertThatThrownBy(() -> client.validateCheckout(BigDecimal.ONE,"GMD","checkout")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> client.validateCheckout(BigDecimal.TEN,"USD","checkout")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> client.validateCheckout(new BigDecimal("10.001"),"GMD","checkout")).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> client.validateCheckout(BigDecimal.TEN,"GMD","wave")).isInstanceOf(IllegalArgumentException.class);
+        server.verify();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"http://checkout.modempay.com/pay","https://attacker.example/pay","https://checkout.modempay.com@attacker.example/pay","https://test.checkout.modempay.com/pay"})
+    void liveCheckoutRejectsUntrustedOrTestRedirects(String url) {
+        ((ModemPayConfig)ReflectionTestUtils.getField(client,"config")).setApiKey("sk_live_fixture");
+        server.expect(requestTo("https://provider.example/v1/payments"))
+            .andRespond(withSuccess("{\"data\":{\"payment_link\":\""+url+"\"}}",MediaType.APPLICATION_JSON));
+        var request=new CreateChargeRequest();request.setAmount(BigDecimal.TEN);request.setCurrency("GMD");
+        assertThatThrownBy(() -> client.createCharge(request)).isInstanceOf(IllegalStateException.class);server.verify();
     }
 }

@@ -21,7 +21,9 @@ class TransferComplianceTest {
     private final FraudDetectionService fraud = mock(FraudDetectionService.class);
     private final TransactionRepository repository = mock(TransactionRepository.class);
     private final TransactionService transactions = mock(TransactionService.class);
-    private final TransferComplianceService service = new TransferComplianceService(fraud, repository, transactions);
+    private final com.mamadou.sutura.transfer.repository.TransferJobRepository jobs = mock(com.mamadou.sutura.transfer.repository.TransferJobRepository.class);
+    private final TransferComplianceService service = new TransferComplianceService(fraud, repository, transactions,
+        jobs);
     private Transaction tx;
 
     @BeforeEach void setup() {
@@ -50,11 +52,21 @@ class TransferComplianceTest {
         verify(transactions).markFailed(eq(tx), anyString());
     }
 
-    @Test void unavailableScoringCreatesDurableFailureWithoutThrowingAwayProductRecord() {
+    @Test void anExplicitBlockExceptionCannotProceed() {
         when(fraud.evaluateTransaction(any(), any(), any(), any(), any(), any()))
-                .thenThrow(new FraudBlockedException("timeout", 1, "block"));
+                .thenThrow(new FraudBlockedException("blocked", 1, "block"));
         assertThat(service.assess(tx)).isFalse();
-        verify(transactions).markFailed(tx, "Sentinel scoring unavailable or invalid");
+        verify(transactions).markFailed(tx, "Sentinel rejected this transfer");
+    }
+
+    @Test void infrastructureFailureKeepsThePaymentPendingAndQueuesItsRetry() {
+        when(fraud.evaluateTransaction(any(),any(),any(),any(),any(),any()))
+            .thenThrow(new com.mamadou.sutura.fraud.exception.SentinelUnavailableException("Sleeping"));
+        assertThat(service.assess(tx)).isFalse();
+        assertThat(tx.getStatus()).isEqualTo(TransactionStatus.PENDING);
+        assertThat(tx.getSentinelRecommendation()).isNull();
+        verify(jobs).save(any(com.mamadou.sutura.transfer.entity.TransferJob.class));
+        verify(transactions,never()).markFailed(any(),any());
     }
 
     private FraudDecisionResponse decision(String value, boolean withCase) {

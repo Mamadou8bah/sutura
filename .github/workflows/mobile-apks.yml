@@ -60,8 +60,22 @@ jobs:
           PY
           signer="$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n 1)"
           "$signer" verify --verbose --print-certs "${{ matrix.app }}-latest.apk"
+          "$signer" verify --print-certs "${{ matrix.app }}-latest.apk" > apk-certificate.txt
           "$(dirname "$signer")/aapt" dump badging "${{ matrix.app }}-latest.apk" > apk-metadata.txt
           grep -E '^(package:|sdkVersion:|targetSdkVersion:|native-code:)' apk-metadata.txt
+          python - "${{ matrix.app }}" <<'PY'
+          import json, pathlib, re, sys
+          app = sys.argv[1]
+          expected = json.loads(pathlib.Path('../../.github/mobile-signing-certificates.json').read_text())[app]
+          actual = re.findall(r'certificate SHA-256 digest: ([a-fA-F0-9]+)', pathlib.Path('apk-certificate.txt').read_text())
+          if not actual or {value.lower() for value in actual} != {expected}:
+              raise SystemExit('Signing certificate changed; refusing an incompatible app update')
+          metadata = pathlib.Path('apk-metadata.txt').read_text()
+          if not re.search(r"native-code:.*'arm64-v8a'", metadata):
+              raise SystemExit('APK does not support ARM64 phones')
+          version = re.search(r"versionCode='(\d+)'", metadata).group(1)
+          pathlib.Path(f'{app}.version').write_text(version)
+          PY
           sha256sum "${{ matrix.app }}-latest.apk" > "${{ matrix.app }}-latest.apk.sha256"
       - name: Upload APK download
         uses: actions/upload-artifact@v4
@@ -70,13 +84,68 @@ jobs:
           path: |
             ui/${{ matrix.app }}/${{ matrix.app }}-latest.apk
             ui/${{ matrix.app }}/${{ matrix.app }}-latest.apk.sha256
+            ui/${{ matrix.app }}/${{ matrix.app }}.version
           if-no-files-found: error
           retention-days: 14
           compression-level: 0
 
+  install:
+    name: Test Android installation (${{ matrix.app }})
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - app: sutura-app
+            package: gm.sutura.customer
+          - app: sutura-agent
+            package: gm.sutura.agent
+          - app: merchant-app
+            package: gm.sutura.merchant
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.app }}-apk
+          path: current
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Download the previous published APK for upgrade testing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download --repo "$GITHUB_REPOSITORY" \
+            --pattern '${{ matrix.app }}-latest.apk' --pattern '${{ matrix.app }}-latest.apk.sha256' --dir previous
+          (cd current && sha256sum --check '${{ matrix.app }}-latest.apk.sha256')
+          (cd previous && sha256sum --check '${{ matrix.app }}-latest.apk.sha256')
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Verify fresh install, upgrade and launch
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          disable-animations: true
+          script: |
+            adb install --no-streaming current/${{ matrix.app }}-latest.apk
+            adb shell pm path ${{ matrix.package }}
+            adb uninstall ${{ matrix.package }}
+            adb install --no-streaming previous/${{ matrix.app }}-latest.apk
+            adb install -r --no-streaming current/${{ matrix.app }}-latest.apk
+            adb shell am start -W -n ${{ matrix.package }}/.MainActivity
+            sleep 5
+            adb shell pidof ${{ matrix.package }}
+
   publish:
     name: Publish direct APK downloads
-    needs: build
+    needs: [build, install]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -95,6 +164,9 @@ jobs:
         run: |
           for app in sutura-app sutura-agent merchant-app; do
             (cd apks && sha256sum --check "$app-latest.apk.sha256")
+            version="$(cat "apks/$app.version")"
+            cp "apks/$app-latest.apk" "apks/$app-v$version.apk"
+            (cd apks && sha256sum "$app-v$version.apk" > "$app-v$version.apk.sha256")
           done
           gh release create "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" --title "Sutura Android apps (${GITHUB_SHA:0:7})" --draft \
@@ -114,5 +186,8 @@ jobs:
           for app in sutura-app sutura-agent merchant-app; do
             (cd verified-downloads && sha256sum --check "$app-latest.apk.sha256")
             "$signer" verify --verbose "verified-downloads/$app-latest.apk"
+            version="$(cat "apks/$app.version")"
+            (cd verified-downloads && sha256sum --check "$app-v$version.apk.sha256")
+            cmp "verified-downloads/$app-latest.apk" "verified-downloads/$app-v$version.apk"
           done
           gh release edit "$RELEASE_TAG" --repo "$GITHUB_REPOSITORY" --draft=false --latest

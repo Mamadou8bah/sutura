@@ -81,7 +81,7 @@ public class DepositService {
         }
 
         boolean internalMerchantFlow = isInternalMerchantFlow(actor, request);
-        if (!internalMerchantFlow) modemPayClient.requireEnabled();
+        if (!internalMerchantFlow) modemPayClient.validateCheckout(request.getAmount(), currency, request.getPaymentMethod());
 
         String reference = generateReference();
 
@@ -146,9 +146,6 @@ public class DepositService {
     }
 
     private boolean isInternalMerchantFlow(User actor, CreateDepositRequest request) {
-        if (SecurityRoleUtils.isMerchant(actor)) {
-            return true;
-        }
         return request.getPaymentMethod() == null || request.getPaymentMethod().isBlank()
                 || "agent".equalsIgnoreCase(request.getPaymentMethod());
     }
@@ -203,7 +200,7 @@ public class DepositService {
                 }
             }
         } catch (Exception ex) {
-            log.warn("ModemPay charge creation failed for deposit {}: {}", deposit.getReference(), ex.getMessage());
+            log.warn("ModemPay checkout unavailable for deposit {} ({})", deposit.getReference(), ex.getClass().getSimpleName());
         }
     }
 

@@ -46,7 +46,7 @@ class FraudDetectionServiceTest {
   void disconnectedSentinelStopsPaymentsBeforeAnyExternalOrLedgerRead() {
     properties.setConnected(false);
     assertThatThrownBy(() -> service.evaluateTransaction("pending", null, null, BigDecimal.ONE, "transfer", null))
-        .isInstanceOf(FraudBlockedException.class);
+        .isInstanceOf(com.mamadou.sutura.fraud.exception.SentinelUnavailableException.class);
     assertThatThrownBy(() -> service.enforceDecision(null)).isInstanceOf(FraudBlockedException.class);
     verifyNoInteractions(client, balances, transactions);
   }
@@ -73,7 +73,29 @@ class FraudDetectionServiceTest {
             () ->
                 service.checkBeforeExecution(
                     "transfer-42", user, wallet, new BigDecimal("100.00"), "transfer"))
-        .isInstanceOf(FraudBlockedException.class);
+        .isInstanceOf(com.mamadou.sutura.fraud.exception.SentinelUnavailableException.class);
+  }
+
+  @Test
+  void retryReusesTheOriginalScoringPayloadEvenWhenBalanceAndTimeChange() {
+    var stored=com.mamadou.sutura.transaction.entity.Transaction.builder().id(42L).build();
+    when(transactions.findById(42L)).thenReturn(java.util.Optional.of(stored));
+    when(transactions.findRecipientCustomerId(42L,9L)).thenReturn(java.util.Optional.of(8L));
+    var account=new com.mamadou.sutura.ledger.entity.LedgerAccount();
+    var wallet=Wallet.builder().id(9L).currency("GMD").ledgerAccount(account).build();
+    var user=User.builder().id(7L).build();
+    when(balances.computeBalance(account)).thenReturn(new BigDecimal("100.00"),new BigDecimal("50.00"));
+    when(client.score(any())).thenThrow(new ResourceAccessException("Sleeping")).thenReturn(decision("allow"));
+    service.prepareRequest("stable-ref",user,wallet,BigDecimal.TEN,"transfer",42L);
+    verifyNoInteractions(client);
+    assertThatThrownBy(() -> service.evaluateTransaction("stable-ref",user,wallet,BigDecimal.TEN,"transfer",42L))
+        .isInstanceOf(com.mamadou.sutura.fraud.exception.SentinelUnavailableException.class);
+    assertThat(stored.getSentinelRequestPayload()).isNotBlank();
+    service.evaluateTransaction("stable-ref",user,wallet,BigDecimal.TEN,"transfer",42L);
+    var captured=org.mockito.ArgumentCaptor.forClass(com.mamadou.sutura.fraud.dto.TransactionEventRequest.class);
+    verify(client,times(2)).score(captured.capture());
+    assertThat(captured.getAllValues().get(0)).isEqualTo(captured.getAllValues().get(1));
+    verify(balances,times(1)).computeBalance(account);
   }
 
   @Test

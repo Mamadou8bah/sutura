@@ -124,7 +124,7 @@ public class PaymentLinkService {
     request.setAmount(link.getAmount());
     request.setDescription("Merchant collection: " + link.getReference());
     request.setReference("collection-" + java.util.UUID.randomUUID());
-    var result = transfers.transfer(request, "collection:" + link.getReference());
+    var result = transfers.queue(request, "collection:" + link.getReference());
     link.setTransactionReference(result.getTransaction().getReference());
     link.setPayerId(payer.getId());
     link.setPayerWalletId(result.getTransaction().getSourceWalletId());
@@ -139,7 +139,7 @@ public class PaymentLinkService {
       response.setStatus(
           switch (tx.getStatus()) {
             case COMPLETED -> "PAID";
-            case PENDING -> "REVIEW";
+            case PENDING -> tx.getSentinelRecommendation() == null ? "PROCESSING" : "REVIEW";
             case REVERSED -> "REFUNDED";
             default -> "FAILED";
           });

@@ -95,7 +95,7 @@ class PostgresMigrationTest {
 
   @Test
   void freshDatabaseMigratesAndHibernateValidates() {
-    assertEquals("19", flyway.info().current().getVersion().toString());
+    assertEquals("20", flyway.info().current().getVersion().toString());
     assertEquals(0, flyway.migrate().migrationsExecuted);
     assertTrue(
         jdbc.queryForObject(

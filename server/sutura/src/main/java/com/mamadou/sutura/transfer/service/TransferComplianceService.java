@@ -15,6 +15,7 @@ public class TransferComplianceService {
     private final FraudDetectionService fraudDetectionService;
     private final TransactionRepository repository;
     private final TransactionService transactionService;
+    private final com.mamadou.sutura.transfer.repository.TransferJobRepository jobs;
 
     /** Return true only when a validated allow result permits execution. */
     public boolean assess(Transaction transaction) {
@@ -23,8 +24,14 @@ public class TransferComplianceService {
             decision = fraudDetectionService.evaluateTransaction(transaction.getReference(),
                     transaction.getInitiatedBy(), transaction.getSourceWallet(), transaction.getAmount(),
                     "transfer", transaction.getId());
+        } catch (com.mamadou.sutura.fraud.exception.SentinelUnavailableException pending) {
+            transaction.setFailureReason("Waiting for Sentinel; processing will continue automatically");
+            repository.save(transaction);
+            if (jobs.findById(transaction.getId()).isEmpty())
+                jobs.save(new com.mamadou.sutura.transfer.entity.TransferJob(transaction.getId()));
+            return false;
         } catch (FraudBlockedException e) {
-            transactionService.markFailed(transaction, "Sentinel scoring unavailable or invalid");
+            transactionService.markFailed(transaction, "Sentinel rejected this transfer");
             return false;
         }
         if (decision == null) {
@@ -32,6 +39,7 @@ public class TransferComplianceService {
             return false;
         }
         transaction.setSentinelRecommendation(decision.decision());
+        transaction.setFailureReason(null);
         if (decision.features() != null) {
             Object txId = decision.features().get("sentinelTransactionId");
             Object caseId = decision.features().get("sentinelCaseId");

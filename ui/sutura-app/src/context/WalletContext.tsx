@@ -337,9 +337,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           walletId,
           amount,
           currency: wallet.currency,
-          paymentMethod: method === "agent" ? undefined : "mobile_money",
+          paymentMethod: method === "agent" ? undefined : "checkout",
           phoneNumber: phone || undefined,
-          description: method === "agent" ? "Agent cash-in" : "Mobile money top-up",
+          description: method === "agent" ? "Agent cash-in" : "Wallet top-up",
           idempotencyKey: `dep_${Date.now()}`,
         });
         if (method === "agent") {

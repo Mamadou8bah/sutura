@@ -86,7 +86,7 @@ public class WithdrawalService {
         }
 
         boolean internalMerchantFlow = isInternalMerchantFlow(actor, request);
-        if (!internalMerchantFlow) modemPayClient.requireEnabled();
+        if (!internalMerchantFlow) modemPayClient.requirePayoutsEnabled();
 
         if (!internalMerchantFlow && (!java.util.Set.of("wave", "afrimoney").contains(request.getWithdrawalMethod())
                 || request.getPhoneNumber() == null || request.getPhoneNumber().isBlank()))
@@ -147,7 +147,7 @@ public class WithdrawalService {
         template.executeWithoutResult(status -> {
             var stored = withdrawalRepository.findForCompletion(reference).orElseThrow();
             if (stored.getWithdrawalMethod() == null || stored.getStatus() != Withdrawal.WithdrawalStatus.APPROVED) return;
-            modemPayClient.requireEnabled();
+            modemPayClient.requirePayoutsEnabled();
             var product = transactionRepository.findForUpdateByReference(reference).orElseThrow();
             if (compliance.assess(product, stored.getUser(), stored.getWallet(), "WITHDRAWAL")) reservations.reserve(stored);
             else {

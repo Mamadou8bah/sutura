@@ -45,7 +45,8 @@ public class FraudDetectionClient {
                 counterparty == null ? null : counterparty.toString(),
                 event.metadata() == null || event.metadata().get("operation_type") == null ? null
                         : event.metadata().get("operation_type").toString().toUpperCase(Locale.ROOT),
-                event.metadata() != null && event.metadata().get("available_balance") instanceof java.math.BigDecimal balance ? balance : null);
+                event.metadata() != null && event.metadata().get("available_balance") instanceof Number balance
+                    ? new java.math.BigDecimal(balance.toString()) : null);
         long start = System.nanoTime();
         SentinelScoreResponse response = requestScore(url, request);
         validateResponse(event, response);

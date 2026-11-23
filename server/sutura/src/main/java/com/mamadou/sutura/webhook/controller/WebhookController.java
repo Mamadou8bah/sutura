@@ -23,6 +23,7 @@ public class WebhookController {
     private final WebhookService webhookService;
     private final WebhookRetryService webhookRetryService;
     private final ModemPayWebhookService modemPayWebhookService;
+    private final com.mamadou.sutura.webhook.service.NativePaymentInbox incomingPayments;
 
     @PostMapping("/modempay/deposits")
     public ResponseEntity<WebhookResponse> modemPayDeposit(
@@ -70,11 +71,11 @@ public class WebhookController {
             }
 
             // Process webhook
-            modemPayWebhookService.processWebhook(rawPayload, signature);
+            incomingPayments.accept(rawPayload, signature);
 
 
             return ResponseEntity.ok(
-                    new ModemPayWebhookResponse("SUCCESS", "Webhook processed successfully")
+                    new ModemPayWebhookResponse("SUCCESS", "Webhook received for processing")
             );
 
         } catch (SecurityException e) {

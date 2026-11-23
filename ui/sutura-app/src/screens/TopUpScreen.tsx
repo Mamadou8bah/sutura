@@ -42,6 +42,9 @@ export function TopUpScreen() {
 
   const review = () => {
     if (!isValidAmount(amount.trim())) { setError("Enter an amount from 0.01 to 1,000,000,000,000, with at most four decimal places."); return; }
+    if (method === "mobile_money" && (selectedWallet.currency !== "GMD" || Number(amount) < 10 || (amount.split(".")[1]?.length ?? 0) > 2)) {
+      setError("Online top-ups require a GMD wallet and at least GMD 10, with at most two decimal places."); return;
+    }
     if (method === "mobile_money" && !normalizePhone(phone)) { setError("Enter a valid mobile-money phone number."); return; }
     Keyboard.dismiss(); setError(null); setReviewing(true);
   };
@@ -68,10 +71,10 @@ export function TopUpScreen() {
         <ReviewRow label="Sutura fee" value={formatMoney(SUTURA_FEE, currency)} money />
         <ReviewRow label="Added to wallet" value={formatMoney(value - SUTURA_FEE, currency, 4)} money />
         <ReviewRow label="Wallet" value={`${selectedWallet.name} · ${currency}`} />
-        <ReviewRow label="Method" value={method === "mobile_money" ? `Mobile money · ${normalizePhone(phone) ?? phone}` : "Cash at a Sutura agent"} last />
+        <ReviewRow label="Method" value={method === "mobile_money" ? "Mobile money or card · ModemPay" : "Cash at a Sutura agent"} last />
       </ReviewCard>
       <Text style={styles.note}>{method === "mobile_money"
-        ? "You'll finish the payment on your mobile-money provider's page. Your provider may charge its own fee."
+        ? "Complete your payment on ModemPay's secure checkout. Your provider may charge a fee. Your balance updates after confirmation."
         : "You'll get a QR code to show the agent. The money is added when the agent completes the cash-in."}</Text>
       <FormError message={error} />
       <SwipeToConfirm label="Swipe to Continue" busy={busy} onConfirm={() => void submit()} />
@@ -85,7 +88,7 @@ export function TopUpScreen() {
       <AmountHero flat amount={amount} onChange={value => { setAmount(value); setError(null); }} currency={currency} />
       <Pressable accessibilityRole="button" accessibilityLabel="Change payment method" onPress={() => setChoosingMethod(true)} style={styles.methodRow}>
         <Ionicons name={method === "mobile_money" ? "phone-portrait-outline" : "cash-outline"} size={21} color={colors.accentText} />
-        <Text style={styles.methodLabel}>{method === "mobile_money" ? "Mobile money" : "Agent cash-in"}</Text>
+        <Text style={styles.methodLabel}>{method === "mobile_money" ? "Mobile money or card" : "Agent cash-in"}</Text>
         <Text style={styles.change}>Change</Text>
       </Pressable>
       {method === "mobile_money" ? <FormField label="Phone number">
@@ -99,7 +102,7 @@ export function TopUpScreen() {
     <SelectionSheet visible={choosingMethod} title="Add Money" onClose={() => setChoosingMethod(false)}>
       <Text style={styles.note}>Choose how you want to fund your wallet.</Text>
       <View style={{ gap: 8, marginTop: 12 }}>
-        {([{ id: "mobile_money", label: "Mobile money", icon: "phone-portrait-outline" },
+        {([{ id: "mobile_money", label: "Mobile money or card", icon: "phone-portrait-outline" },
           { id: "agent", label: "Agent cash-in", icon: "cash-outline" }] as const).map(option =>
           <Pressable key={option.id} accessibilityRole="button" accessibilityLabel={option.label} onPress={() => {
             setMethod(option.id);

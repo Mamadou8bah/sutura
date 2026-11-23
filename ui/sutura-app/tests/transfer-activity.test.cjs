@@ -8,6 +8,14 @@ vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname, '../s
 const transaction = (changes = {}) => ({ id: 1, reference: 'request-a', type: 'TRANSFER', sourceWalletId: 8,
   amount: 100, currency: 'GMD', description: 'Transfer to Awa', status: 'PENDING', createdAt: '2026-11-21T10:00:00Z', ...changes });
 
+test('incoming transfers identify the sender rather than reusing the senders description', () => {
+  const tx = transaction({ destinationWalletId: 9, sourceName: 'Mamadou Bah', destinationName: 'Awa Jallow' });
+  assert.equal(api.toActivity(tx, [9]).counterparty, 'Mamadou Bah');
+  assert.equal(api.toActivity(tx, [9]).type, 'TRANSFER_IN');
+  assert.equal(api.toActivity(tx, [8]).counterparty, 'Awa Jallow');
+  assert.equal(api.toActivity(tx, [8]).type, 'TRANSFER_OUT');
+});
+
 test('accepted pending transfer is processing, never shown as completed or under review without a review verdict', () => {
   assert.equal(api.toActivity(transaction(), [8]).status, 'PROCESSING');
   assert.equal(api.toActivity(transaction({ sentinelRecommendation: 'review' }), [8]).status, 'UNDER_REVIEW');

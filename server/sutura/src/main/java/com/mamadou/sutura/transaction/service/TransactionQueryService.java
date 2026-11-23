@@ -89,10 +89,16 @@ public class TransactionQueryService {
     }
 
     private Specification<Transaction> ownedBy(Long userId) {
-        return (root, cq, cb) -> cb.or(
+        return (root, cq, cb) -> {
+            if (cq != null && Transaction.class.equals(cq.getResultType())) {
+                root.fetch("sourceWallet", jakarta.persistence.criteria.JoinType.LEFT).fetch("user", jakarta.persistence.criteria.JoinType.LEFT);
+                root.fetch("destinationWallet", jakarta.persistence.criteria.JoinType.LEFT).fetch("user", jakarta.persistence.criteria.JoinType.LEFT);
+            }
+            return cb.or(
                 cb.equal(root.get("sourceWallet").get("user").get("id"), userId),
                 cb.equal(root.get("destinationWallet").get("user").get("id"), userId)
-        );
+            );
+        };
     }
 
     private Specification<Transaction> matches(TransactionFilterRequest filter) {

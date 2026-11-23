@@ -14,6 +14,7 @@ public class WebhookRetryService {
   private final WebhookEventRepository webhookEventRepository;
   private final WebhookService webhookService;
   private final com.mamadou.sutura.audit.repository.AuditLogRepository audit;
+  private final NativePaymentInbox incomingPayments;
 
   @org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
   @Transactional
@@ -36,7 +37,11 @@ public class WebhookRetryService {
           false, event.getId(), event.getStatus(), "Cannot replay a signature-failed webhook");
     }
 
-    var result = webhookService.processStoredEvent(event);
+    WebhookResponse result;
+    if ("MODEMPAY_NATIVE".equals(event.getProvider())) {
+      incomingPayments.process(event.getId());
+      result = new WebhookResponse(!"FAILED".equals(event.getStatus()), event.getId(), event.getStatus(), "Payment receipt checked");
+    } else result = webhookService.processStoredEvent(event);
     audit.save(
         com.mamadou.sutura.audit.entity.AuditLog.builder()
             .actorId(actor.getId())

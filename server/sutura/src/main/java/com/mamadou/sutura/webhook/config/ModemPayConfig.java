@@ -22,6 +22,7 @@ import org.springframework.context.annotation.Configuration;
 public class ModemPayConfig {
     /** Disable external payment operations while the provider is not configured. */
     private boolean enabled = true;
+    private boolean payoutsEnabled = false;
 
     /**
      * Webhook signing secret for signature verification
@@ -52,6 +53,8 @@ public class ModemPayConfig {
      * Default: https://api.modempay.com
      */
     private String apiUrl = "https://api.modempay.com";
+
+    private String walletReturnUrl = "suturaapp://payment-return";
 
     /**
      * Enable webhook signature verification

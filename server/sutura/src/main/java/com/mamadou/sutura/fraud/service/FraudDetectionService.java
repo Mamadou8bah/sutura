@@ -35,6 +35,9 @@ public class FraudDetectionService {
   private final FraudEvaluationLogService fraudEvaluationLogService;
   private final com.mamadou.sutura.ledger.service.LedgerBalanceComputationService balances;
   private final com.mamadou.sutura.transaction.repository.TransactionRepository transactions;
+  private final com.fasterxml.jackson.databind.ObjectMapper requestMapper = new com.fasterxml.jackson.databind.ObjectMapper()
+      .findAndRegisterModules().enable(com.fasterxml.jackson.databind.DeserializationFeature.USE_BIG_DECIMAL_FOR_FLOATS)
+      .enable(com.fasterxml.jackson.databind.DeserializationFeature.USE_LONG_FOR_INTS);
 
   public FraudDecisionResponse evaluateTransaction(
       String transactionId,
@@ -47,15 +50,10 @@ public class FraudDetectionService {
       return null;
     }
     if (!properties.isConnected()) {
-      throw new FraudBlockedException("Transaction stopped: Sentinel is not connected yet", 1.0, "block");
+      throw new com.mamadou.sutura.fraud.exception.SentinelUnavailableException("Sentinel is not connected yet");
     }
 
-    TransactionEventRequest event = buildEvent(transactionId, user, wallet, amount, operationType);
-    if (persistedTransactionId != null && "transfer".equalsIgnoreCase(operationType)) {
-      transactions
-          .findRecipientCustomerId(persistedTransactionId, wallet.getId())
-          .ifPresent(id -> event.metadata().put("counterparty", id.toString()));
-    }
+    TransactionEventRequest event = snapshotRequest(transactionId, user, wallet, amount, operationType, persistedTransactionId);
 
     try {
       FraudDecisionResponse decision = fraudDetectionClient.score(event);
@@ -78,11 +76,40 @@ public class FraudDetectionService {
       // Only log the exception type: low-level messages can contain URLs or secrets.
       if (ex.getCause() != null) failure += "/" + ex.getCause().getClass().getSimpleName();
       log.error("Fraud detection API unavailable for transaction {} ({})", transactionId, failure);
-      throw new FraudBlockedException(
-          "Transaction stopped: Sentinel unavailable or returned an invalid decision",
-          1.0,
-          "block");
+      throw new com.mamadou.sutura.fraud.exception.SentinelUnavailableException(
+          "Sentinel unavailable or returned an invalid decision");
     }
+  }
+
+  /** Called in a short committed preparation transaction before background HTTP work. */
+  @org.springframework.transaction.annotation.Transactional
+  public void prepareRequest(String reference, User user, Wallet wallet, BigDecimal amount, String operation, Long id) {
+    snapshotRequest(reference, user, wallet, amount, operation, id);
+  }
+
+  private TransactionEventRequest snapshotRequest(String transactionId, User user, Wallet wallet,
+      BigDecimal amount, String operationType, Long persistedTransactionId) {
+    TransactionEventRequest event;
+    var stored = persistedTransactionId == null ? null : transactions.findById(persistedTransactionId).orElse(null);
+    try {
+      if (stored != null && stored.getSentinelRequestPayload() != null) {
+        event = requestMapper.readValue(stored.getSentinelRequestPayload(), TransactionEventRequest.class);
+      } else {
+        event = buildEvent(transactionId, user, wallet, amount, operationType);
+        if (persistedTransactionId != null && "transfer".equalsIgnoreCase(operationType)) {
+          transactions.findRecipientCustomerId(persistedTransactionId, wallet.getId())
+              .ifPresent(id -> event.metadata().put("counterparty", id.toString()));
+        }
+        if (stored != null) {
+          stored.setSentinelRequestPayload(requestMapper.writeValueAsString(event));
+          transactions.save(stored);
+        }
+      }
+    } catch (com.fasterxml.jackson.core.JsonProcessingException invalidSnapshot) {
+      throw new com.mamadou.sutura.fraud.exception.SentinelUnavailableException("Saved Sentinel request could not be read");
+    }
+
+    return event;
   }
 
   public void enforceDecision(FraudDecisionResponse decision) {

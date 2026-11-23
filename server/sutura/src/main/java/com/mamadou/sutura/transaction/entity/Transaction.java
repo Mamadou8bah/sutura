@@ -91,6 +91,9 @@ public class Transaction {
     private String sentinelTransactionId;
     @Column(length = 16)
     private String sentinelRecommendation;
+    @com.fasterxml.jackson.annotation.JsonIgnore
+    @Column(columnDefinition = "TEXT")
+    private String sentinelRequestPayload;
     private Long sentinelCustomerId;
     @Column(length = 120)
     private String sentinelExternalReference;

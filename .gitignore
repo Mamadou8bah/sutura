@@ -25,3 +25,6 @@ ui/*/credentials.json
 ui/*/credentials/
 ui/*/*.jks
 ui/*/*.keystore
+# Firebase admin credentials are server secrets; google-services.json is client configuration.
+**/*firebase-adminsdk*.json
+**/*service-account*.json

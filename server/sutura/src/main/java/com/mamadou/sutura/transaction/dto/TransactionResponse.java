@@ -17,6 +17,8 @@ public class TransactionResponse {
     private TransactionStatus status;
     private Long sourceWalletId;
     private Long destinationWalletId;
+    private String sourceName;
+    private String destinationName;
     private BigDecimal amount;
     private String currency;
     private String description;

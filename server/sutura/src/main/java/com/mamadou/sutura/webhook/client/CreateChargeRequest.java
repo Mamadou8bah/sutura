@@ -14,5 +14,6 @@ public class CreateChargeRequest {
     private String description;
     private String reference; // our internal reference
     private String idempotencyKey;
+    private String returnUrl;
     private Map<String, Object> metadata;
 }

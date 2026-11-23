@@ -20,6 +20,8 @@ public class TransactionMapper {
                 .status(transaction.getStatus())
                 .sourceWalletId(walletId(transaction.getSourceWallet()))
                 .destinationWalletId(walletId(transaction.getDestinationWallet()))
+                .sourceName(ownerName(transaction.getSourceWallet()))
+                .destinationName(ownerName(transaction.getDestinationWallet()))
                 .amount(transaction.getAmount())
                 .currency(transaction.getCurrency())
                 .description(transaction.getDescription())
@@ -56,6 +58,12 @@ public class TransactionMapper {
                 .updatedAt(transaction.getUpdatedAt())
                 .ledgerPostings(ledgerPostings)
                 .build();
+    }
+
+    private String ownerName(com.mamadou.sutura.wallet.entity.Wallet wallet) {
+        if (wallet == null || wallet.getUser() == null) return null;
+        var user = wallet.getUser();
+        return (user.getFirstName() + " " + user.getLastName()).trim();
     }
 
     private Long walletId(com.mamadou.sutura.wallet.entity.Wallet wallet) {

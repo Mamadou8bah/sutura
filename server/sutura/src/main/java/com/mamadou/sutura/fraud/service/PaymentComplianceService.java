@@ -37,6 +37,7 @@ public class PaymentComplianceService {
                 transactionService.markFailed(tx, "Sentinel decision is required"); return false;
             }
             tx.setSentinelRecommendation(result.decision());
+            tx.setFailureReason(null);
             if (result.features() != null) {
                 Object caseId = result.features().get("sentinelCaseId");
                 Object scoreId = result.features().get("sentinelTransactionId");
@@ -49,8 +50,11 @@ public class PaymentComplianceService {
                 tx.setFailureReason("Pending Sentinel case review"); transactions.save(tx); return false;
             }
             transactionService.markFailed(tx, "Sentinel blocked the operation or returned incomplete review");
+        } catch (com.mamadou.sutura.fraud.exception.SentinelUnavailableException pending) {
+            tx.setFailureReason("Waiting for Sentinel; processing will continue automatically");
+            transactions.save(tx);
         } catch (FraudBlockedException ex) {
-            transactionService.markFailed(tx, "Sentinel unavailable or invalid; operation stopped");
+            transactionService.markFailed(tx, "Sentinel rejected this operation");
         }
         return false;
     }

@@ -10,7 +10,9 @@ export function toActivity(t: TransactionResponse, ownedWalletIds: number[]): Cu
     id: String(t.id), reference: t.reference,
     type: transfer ? outgoing ? "TRANSFER_OUT" : "TRANSFER_IN"
       : t.type.includes("DEPOSIT") || t.type === "WALLET_CREDIT" ? "DEPOSIT" : "WITHDRAWAL",
-    counterparty: t.description || t.reference, amount: Number(t.amount), currency: t.currency,
+    counterparty: transfer
+      ? (outgoing ? t.destinationName : t.sourceName) || (outgoing ? `Wallet ${t.destinationWalletId ?? "recipient"}` : `Wallet ${t.sourceWalletId ?? "sender"}`)
+      : t.description || t.reference, amount: Number(t.amount), currency: t.currency,
     status: transfer && t.status === "PENDING"
       ? t.sentinelRecommendation?.toLowerCase() === "review" ? "UNDER_REVIEW" : "PROCESSING"
       : t.status as CustomerTransaction["status"],

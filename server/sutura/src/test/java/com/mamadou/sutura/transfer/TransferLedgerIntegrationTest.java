@@ -40,6 +40,7 @@ import static org.mockito.Mockito.*;
         "sutura.sentinel-webhook.signing-secret=integration-test-secret-0123456789",
         "sutura.sentinel-webhook.tenant-code=TEST",
         "sutura.webhooks.modempay.signing-secret=provider-test-secret",
+        "sutura.webhooks.modempay.api-key=sk_test_fixture",
         "sutura.payments.approved-payout-recovery-enabled=false",
         "sutura.transfers.worker-enabled=false"})
 @ActiveProfiles("test")
@@ -72,6 +73,9 @@ class TransferLedgerIntegrationTest {
     @Autowired com.mamadou.sutura.withdrawal.service.WithdrawalReservationService reservations;
     @Autowired com.mamadou.sutura.webhook.service.ProviderDepositSettlementService providerDeposits;
     @Autowired com.mamadou.sutura.webhook.service.ModemPayWebhookService providerCallbacks;
+    @Autowired com.mamadou.sutura.webhook.service.NativePaymentInbox incomingPayments;
+    @Autowired com.mamadou.sutura.webhook.repository.WebhookEventRepository incomingEvents;
+    @Autowired org.springframework.web.context.WebApplicationContext webContext;
     @Autowired com.mamadou.sutura.withdrawal.repository.WithdrawalRepository withdrawalRepository;
     @MockitoBean com.mamadou.sutura.webhook.client.ModemPayClient provider;
     @MockitoBean FraudDetectionService fraud;
@@ -178,14 +182,21 @@ class TransferLedgerIntegrationTest {
         assertThat(transactions.findById(review).orElseThrow().getStatus()).isEqualTo(TransactionStatus.PENDING);
         assertThat(transferJobs.findById(review).orElseThrow().getFinishedAt()).isNotNull();
         authenticate(sender);
-        doThrow(new com.mamadou.sutura.fraud.exception.FraudBlockedException("Unavailable", 1.0, "block"))
+        doThrow(new com.mamadou.sutura.fraud.exception.SentinelUnavailableException("Sleeping"))
                 .when(fraud).evaluateTransaction(any(), any(), any(), any(), any(), any());
         Long outage = transfers.queue(request("50"), "queue-outage-" + UUID.randomUUID()).getTransaction().getId();
         SecurityContextHolder.clearContext();
         backgroundTransfers.process(outage);
         backgroundTransfers.process(outage);
-        assertThat(transactions.findById(outage).orElseThrow().getStatus()).isEqualTo(TransactionStatus.FAILED);
+        assertThat(transactions.findById(outage).orElseThrow().getStatus()).isEqualTo(TransactionStatus.PENDING);
+        assertThat(transferJobs.findById(outage).orElseThrow().getFinishedAt()).isNull();
         assertBalances("100", "0");
+        var retry=transferJobs.findById(outage).orElseThrow();
+        assertThat(retry.getNextAttemptAt()).isAfter(java.time.Instant.now());
+        caseId = "case-" + UUID.randomUUID(); decision("allow");retry.setNextAttemptAt(java.time.Instant.now().minusSeconds(1));transferJobs.save(retry);
+        backgroundTransfers.process(outage);backgroundTransfers.process(outage);
+        assertBalances("50","50");
+        assertThat(transactions.findById(outage).orElseThrow().getStatus()).isEqualTo(TransactionStatus.COMPLETED);
     }
 
     @Test void pendingMerchantCannotCreateCollectionsOrReceiveTransfer() {
@@ -398,11 +409,11 @@ class TransferLedgerIntegrationTest {
         assertThat(transactions.findByReference(withdrawal.getReference()).orElseThrow().getLedgerTraceId()).isEqualTo(withdrawal.getReference());
     }
 
-    @Test void cashCompletionRechecksScoringAndRejectsOrdinaryUsers() {
+    @Test void cashCompletionRechecksGenuineBlockAndRejectsOrdinaryUsers() {
         var deposit = deposits.createDeposit(cashDeposit("30", "cash-key"), sender.getId(), false);
         assertThatThrownBy(() -> agentOperations.complete(deposit.getReference(), sender)).hasMessageContaining("Only agents");
         when(fraud.evaluateTransaction(anyString(), any(), any(), any(), anyString(), any()))
-                .thenThrow(new com.mamadou.sutura.fraud.exception.FraudBlockedException("Scoring unavailable", 1, "block"));
+                .thenThrow(new com.mamadou.sutura.fraud.exception.FraudBlockedException("Sentinel blocked", 1, "block"));
         assertThat(agentOperations.complete(deposit.getReference(), agent()).getStatus()).isEqualTo("FAILED");
         assertThat(transactions.findByReference(deposit.getReference()).orElseThrow().getStatus()).isEqualTo(TransactionStatus.FAILED);
         assertBalances("100", "0");
@@ -550,7 +561,9 @@ class TransferLedgerIntegrationTest {
     @Test void merchantCollectionPaysOnceAndRejectsAnotherPayer() {
         var link = collection("30");
         var first = collections.pay(link.getReference(), source);
-        assertThat(first.getStatus()).isEqualTo("PAID");
+        assertThat(first.getStatus()).isEqualTo("PROCESSING");
+        backgroundTransfers.process(transactions.findByReference(first.getTransactionReference()).orElseThrow().getId());
+        assertThat(collections.lookup(link.getReference()).getStatus()).isEqualTo("PAID");
         assertThat(collections.pay(link.getReference(), source).getTransactionReference()).isEqualTo(first.getTransactionReference());
         assertBalances("70", "30");
         authenticate(user());
@@ -561,7 +574,9 @@ class TransferLedgerIntegrationTest {
     @Test void merchantCollectionReviewUsesExistingSignedApprovalFlow() throws Exception {
         var link = collection("30"); decision("review");
         var pending = collections.pay(link.getReference(), source);
-        assertThat(pending.getStatus()).isEqualTo("REVIEW");
+        assertThat(pending.getStatus()).isEqualTo("PROCESSING");
+        backgroundTransfers.process(transactions.findByReference(pending.getTransactionReference()).orElseThrow().getId());
+        assertThat(collections.lookup(link.getReference()).getStatus()).isEqualTo("REVIEW");
         assertBalances("100", "0");
         callback(pending.getTransactionReference(), "APPROVE", "collection-" + UUID.randomUUID());
         assertThat(collections.lookup(link.getReference()).getStatus()).isEqualTo("PAID");
@@ -578,6 +593,48 @@ class TransferLedgerIntegrationTest {
         request.setWalletId(source); request.setAmount(BigDecimal.TEN); request.setCurrency("GMD");
         assertThatThrownBy(() -> collections.create(recipient.getId(), request)).hasMessageContaining("does not belong");
         assertBalances("100", "0");
+    }
+
+    @Test void merchantWalletPaymentWaitsForSleepingSentinelAndResumesOnce() {
+        var link=collection("30");
+        when(fraud.evaluateTransaction(any(),any(),any(),any(),any(),any()))
+            .thenThrow(new com.mamadou.sutura.fraud.exception.SentinelUnavailableException("Sleeping"));
+        var pending=collections.pay(link.getReference(),source);
+        assertThat(pending.getStatus()).isEqualTo("PROCESSING");assertBalances("100","0");
+        var tx=transactions.findByReference(pending.getTransactionReference()).orElseThrow();
+        assertThat(transferJobs.findById(tx.getId())).isPresent();
+        backgroundTransfers.process(tx.getId());
+        var retry=transferJobs.findById(tx.getId()).orElseThrow();
+        assertThat(retry.getFinishedAt()).isNull();
+        retry.setNextAttemptAt(java.time.Instant.now().minusSeconds(1));transferJobs.save(retry);
+        decision("allow");backgroundTransfers.process(tx.getId());backgroundTransfers.process(tx.getId());
+        assertThat(collections.lookup(link.getReference()).getStatus()).isEqualTo("PAID");assertBalances("70","30");
+    }
+
+    @Test void authenticatedCashInIsAcknowledgedDurablyAndResumesAfterSentinelWakes() throws Exception {
+        var req=cashDeposit("30","asynchronous-cash-in");req.setPaymentMethod("checkout");
+        var deposit=deposits.createDeposit(req,sender.getId(),false);
+        String body="{\"event\":\"charge.succeeded\",\"payload\":{\"id\":\""+deposit.getExternalPaymentId()+"\",\"amount\":30,\"currency\":\"GMD\",\"test_mode\":true,\"metadata\":{\"sutura_reference\":\""+deposit.getReference()+"\"}}}";
+        SecurityContextHolder.clearContext();
+        var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.webAppContextSetup(webContext)
+            .apply(org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity()).build();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/api/v1/webhooks/modem-pay/charges")
+                .contentType(org.springframework.http.MediaType.APPLICATION_JSON).header("x-modem-signature",providerSignature(body)).content(body))
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.status().isOk());
+        incomingPayments.accept(body,providerSignature(body));
+        var receipts=incomingEvents.findAll().stream().filter(e -> deposit.getReference().equals(e.getExternalReference())).toList();
+        assertThat(receipts).hasSize(1);verifyNoInteractions(fraud);assertBalances("100","0");
+        var event=receipts.get(0);
+        when(fraud.evaluateTransaction(any(),any(),any(),any(),any(),any()))
+            .thenThrow(new com.mamadou.sutura.fraud.exception.SentinelUnavailableException("Sleeping"));
+        incomingPayments.process(event.getId());incomingPayments.process(event.getId());
+        event=incomingEvents.findById(event.getId()).orElseThrow();assertThat(event.getStatus()).isEqualTo("RETRY");
+        assertThat(event.getNextAttemptAt()).isAfter(java.time.LocalDateTime.now());assertBalances("100","0");
+        assertThat(transactions.findByReference(deposit.getReference()).orElseThrow().getStatus()).isEqualTo(TransactionStatus.PENDING);
+        decision("allow");event.setNextAttemptAt(java.time.LocalDateTime.now().minusSeconds(1));incomingEvents.save(event);
+        incomingPayments.process(event.getId());incomingPayments.process(event.getId());
+        assertBalances("130","0");assertThat(postings.findByTraceIdOrderByIdAsc(deposit.getReference())).hasSize(2);
+        assertThat(incomingEvents.findById(event.getId()).orElseThrow().getStatus()).isEqualTo("PROCESSED");
     }
 
     private com.mamadou.sutura.paymentlink.dto.PaymentLinkResponse collection(String amount) {
@@ -837,9 +894,10 @@ class TransferLedgerIntegrationTest {
     }
 
     private void decision(String value) {
-        when(fraud.evaluateTransaction(anyString(), any(), any(), any(), anyString(), any())).thenAnswer(call ->
+        doAnswer(call ->
                 new FraudDecisionResponse(call.getArgument(0), value, .75, List.of("Test decision"), 1, null,
-                        Map.of("sentinelCaseId", caseId, "sentinelTransactionId", "sent-" + call.getArgument(0))));
+                        Map.of("sentinelCaseId", caseId, "sentinelTransactionId", "sent-" + call.getArgument(0))))
+            .when(fraud).evaluateTransaction(anyString(), any(), any(), any(), anyString(), any());
     }
 
     private static LedgerPostingRequest.Entry entry(String code, LedgerPostingSide side) {

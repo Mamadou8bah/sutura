@@ -47,11 +47,9 @@ public class WebhookEvent {
     @Column(nullable = false)
     private int attempts;
 
-    @Lob
     @Column(nullable = false, columnDefinition = "TEXT")
     private String rawPayload;
 
-    @Lob
     @Column(columnDefinition = "TEXT")
     private String headers;
 
@@ -61,11 +59,13 @@ public class WebhookEvent {
     private LocalDateTime receivedAt;
 
     private LocalDateTime processedAt;
+    private LocalDateTime nextAttemptAt;
 
     @PrePersist
     public void onCreate() {
         if (receivedAt == null) {
             receivedAt = LocalDateTime.now();
         }
+        if (nextAttemptAt == null) nextAttemptAt = LocalDateTime.now();
     }
 }

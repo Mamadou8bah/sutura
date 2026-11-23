@@ -53,6 +53,9 @@ public class ModemPayWebhookPayload {
         @JsonProperty("status")
         private String status;  // succeeded, pending, cancelled, failed
 
+        @JsonProperty("test_mode")
+        private Boolean testMode;
+
         @JsonProperty("customer_name")
         private String customerName;
 

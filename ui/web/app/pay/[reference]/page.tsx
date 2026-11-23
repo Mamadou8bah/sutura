@@ -22,6 +22,7 @@ import {
 
 const statusCopy: Record<string, string> = {
   ACTIVE: "Ready to pay",
+  PROCESSING: "Payment is processing. You can check its status here.",
   REVIEW: "Under review. No money has moved yet.",
   PAID: "Paid",
   FAILED: "This payment was declined. No money was taken.",
